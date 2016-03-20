@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-organize-music-library_2016-01.py , Built on Spyder for Python 2.7
-James Watson, 2015 December
+organize-music-library.py , Built on Spyder for Python 2.7
+James Watson, 2016 March
 Organize music library, try to gracefully handle duplicates and problem files
 
   == NOTES ==
@@ -50,6 +50,14 @@ print "Library Dir : ", str(PARENTDIR) # directory containing that directory
 
 DISALLOWEDCHARS = "\\/><|:&; \r\t\n.\"\'?" # Do not create a directory with these chars
 
+def strip_the(artistName):
+    """ Strip a musical artist's name of a leading 'the ' , case insensitive """
+    # Note this will have no effec if 'proper_dir_name' has already been run!
+    if artistName and artistName[:4].lower() == "the ": 
+        return artistName[4:]
+    else:
+        return artistName
+
 def proper_dir_name(trialStr):
     """ Return a string stripped of all disallowed chars """
     rtnStr = ""
@@ -58,17 +66,10 @@ def proper_dir_name(trialStr):
             if char not in DISALLOWEDCHARS:
                 rtnStr += char
     return rtnStr
-    
-def strip_the(artistName):
-    """ Strip a musical artist's name of a leading 'the ' """
-    if artistName and artistName[:4].lower() == "the ":
-        return artistName[4:]
-    else:
-        return artistName
-        
+            
 def proper_artist_dir(trialStr):
     """ Return a musical artist's name stripped of disallowed chars and any leading 'the ' """
-    return strip_the(proper_dir_name(trialStr)).encode('ascii','ignore')
+    return proper_dir_name(strip_the(trialStr)).encode('ascii','ignore')
 
 # = End Names =
 
@@ -150,14 +151,19 @@ ERRLIST = [] # List of errors for this session
 DISALLOWEDEXTS = ['txt', 'py'] # folders with these file extensions should not be moved from the source dir
 DUPFOLDERNAME = "zzz_Duplicates" # folder name to store dupicate files
 
+def repair_music_library_structure():
+    """ Walk the entire music library, restore to an assumed structure so that follow-on music additions work as expected """
+    pass
+
 def sort_all_songs(arg, dirname, names):
+    pass
     """ Copy all songs in 'SOURCEDIR' to 'PARENTDIR', sorted by artist 
     
     This fuction is designed to be used with 'os.path.walk' in order the recursively search and process the source
     directory 
     
     Assumes that 'CURRENTLOG' is an open TXT file available for writing """
-    global SOURCEDIR, PARENTDIR, NUMPROCESSED, PROCESSTIME, CURRENTLOG, ERRLIST
+""" global SOURCEDIR, PARENTDIR, NUMPROCESSED, PROCESSTIME, CURRENTLOG, ERRLIST
     for item in names: # For each item in the present directory
         NUMPROCESSED += 1
         if NUMPROCESSED % 100 == 0: # Report the amount of time that it took to process the last 100 files
@@ -300,6 +306,7 @@ def sort_all_songs(arg, dirname, names):
                         type, value, traceback = sys.exc_info()
                         ERRLIST.append('Python says: %s , %s , %s' % (str(type), str(value), str(traceback)))
                         CURRENTLOG.write( errMsg + endl )
+"""
     
 # == End File Organization ==
 
@@ -309,12 +316,13 @@ def sort_all_songs(arg, dirname, names):
 ALLEMPTYDIRS = [] # list of directories to delete
 
 def find_empty_dirs(searchDir, safeToDel = False):
+    pass
     """ Find all the empty directories and tag them for deletion in 'ALLEMPTYDIRS' 
     
     Note: Because the searching and deleting functions are separate, a dir full of only empty dirs will not appear empty,
     therefore this function must be run after each lowest level of empty dir deletions has taken place. This is not 
     efficient """
-    global ALLEMPTYDIRS # Allow editing of directory list
+""" global ALLEMPTYDIRS # Allow editing of directory list
     namesInDir = os.listdir(searchDir) # get a list of items in 'searchDir'
     if len(namesInDir) > 0: # if items found
         for name in namesInDir: # for each of the items found
@@ -328,10 +336,11 @@ def find_empty_dirs(searchDir, safeToDel = False):
         if safeToDel:
             ALLEMPTYDIRS.append( searchDir )  # Add this to the list of dirs to delete
     # After operating on all the names in this dir
-        
+"""       
 def purge_empty_dirs(searchDir):
+    pass
     """ Search for and delete all empty dirs in 'searchDir', recursively """
-    global ALLEMPTYDIRS
+""" global ALLEMPTYDIRS
     find_empty_dirs(searchDir)
     if len(ALLEMPTYDIRS) == 0:
         print "purge_empty_dirs : No empty dirs to delete!"
@@ -350,7 +359,7 @@ def purge_empty_dirs(searchDir):
                     CURRENTLOG.write( errMsg + endl )
             ALLEMPTYDIRS = [] # Reset empty dirs
             find_empty_dirs(searchDir)
-
+"""
 # == End Cleanup ==
 
 
@@ -359,6 +368,7 @@ def purge_empty_dirs(searchDir):
 # ~ Prep Work ~
 open_new_log()
 
+"""
 # Check that conditions are met for running the file sorting function
 if not os.path.exists(SOURCEDIR):
     print "Source path " + str(SOURCEDIR) + " not found!"
@@ -381,7 +391,7 @@ else:
     for err in ERRLIST:
         CURRENTLOG.write( err + endl )
     CURRENTLOG.write( section('End') )
-    
+"""
 # ~ Cleanup Work ~
 close_current_log() # Record time of script end and close the log file
 
