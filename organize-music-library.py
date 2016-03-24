@@ -5,12 +5,8 @@ James Watson, 2016 March
 Organize music library, try to gracefully handle duplicates and problem files
 
   == NOTES ==
-* This file makes the following assumptions about the host file structure based on an "Inbox" model of organization.
-  That is, new files are assumed to be placed in a special folder pending organization by this script
-  - This file must be run from the directory containing the files to be sorted
-    ^ Logs for file operations will be in the same directory as this file
-  - The location of the sorted files is in the parent directory of the directory
-    containing this file
+* Abandoned file location assumptions.  File locations are declared explicitly in the file or via the menu
+  and verified automatically before each run
 """
 
 # == Init Environment ==
@@ -52,7 +48,7 @@ DISALLOWEDCHARS = "\\/><|:&; \r\t\n.\"\'?" # Do not create a directory with thes
 
 def strip_the(artistName):
     """ Strip a musical artist's name of a leading 'the ' , case insensitive """
-    # Note this will have no effec if 'proper_dir_name' has already been run!
+    # Note this will have no effect if 'proper_dir_name' has already been run!
     if artistName and artistName[:4].lower() == "the ": 
         return artistName[4:]
     else:
@@ -70,6 +66,7 @@ def proper_dir_name(trialStr):
 def proper_artist_dir(trialStr):
     """ Return a musical artist's name stripped of disallowed chars and any leading 'the ' """
     return proper_dir_name(strip_the(trialStr)).encode('ascii','ignore')
+    #                      ^-- Must call this before 'proper_dir_name' in order for it to work
 
 # = End Names =
 
@@ -151,9 +148,10 @@ ERRLIST = [] # List of errors for this session
 DISALLOWEDEXTS = ['txt', 'py'] # folders with these file extensions should not be moved from the source dir
 DUPFOLDERNAME = "zzz_Duplicates" # folder name to store dupicate files
 
-def repair_music_library_structure():
-    """ Walk the entire music library, restore to an assumed structure so that follow-on music additions work as expected """
-    pass
+def repair_music_library_structure(srchDir, currLog):
+    """ Walk the entire music library 'srchDir', restore to an assumed structure, write results to currLog """
+    for dirName, subdirList, fileList in os.walk(srchDir):
+        pass
 
 def sort_all_songs(arg, dirname, names):
     pass
