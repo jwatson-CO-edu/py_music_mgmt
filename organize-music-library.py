@@ -139,6 +139,30 @@ def close_current_log():
 # == End Logging ==
 
 
+# == Directory Manipulation ==
+
+def parent_folder(path, nLevelsUp):
+    """ Return the containing directory that is 'nLevelsUp' from 'path' """
+    if nLevelsUp == 0:
+        return path
+    else:
+        return parent_folder(os.path.dirname(path), nLevelsUp-1)
+        
+def last_X_to_end(longStr,charX):
+    """ Return the portion of 'longStr' that is occurs after the last instance of 'charX' is present, otherwise return 'longStr' """
+    rtnStr = ''
+    charDex = -1
+    while longStr[charDex] != charX and charDex >= -len(longStr):
+        rtnStr = longStr[charDex] + rtnStr
+        charDex -= 1
+    return rtnStr
+    
+def parent_folder_name_only(path, nLevelsUp):
+    """ Return the name of the containing directory that is 'nLevelsUp' from 'item' """
+    return last_X_to_end( parent_folder(path, nLevelsUp) , '/')
+
+# == End Directory ==
+
 # == Music File Organization ==
 
 NUMPROCESSED = 0 # The number of files processed this session
@@ -151,7 +175,8 @@ DUPFOLDERNAME = "zzz_Duplicates" # folder name to store dupicate files
 def repair_music_library_structure(srchDir, currLog):
     """ Walk the entire music library 'srchDir', restore to an assumed structure, write results to currLog """
     for dirName, subdirList, fileList in os.walk(srchDir):
-        pass
+        for fName in fileList:
+            fullPath = os.path.join(dirName,fName)
 
 def sort_all_songs(arg, dirname, names):
     pass
