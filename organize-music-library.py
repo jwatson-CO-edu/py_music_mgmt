@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
 organize-music-library.py , Built on Spyder for Python 2.7
@@ -7,6 +8,7 @@ Organize music library, try to gracefully handle duplicates and problem files
   == NOTES ==
 * Abandoned file location assumptions.  File locations are declared explicitly in the file or via the menu
   and verified automatically before each run
+* Adding a full timestamp down to the second to log filenames so that the number of logs in a day do not have to be counted
 """
 
 # == Init Environment ==
@@ -25,7 +27,7 @@ localize() # You can now load local modules!
 # Standard Libraries
 import os, time, shutil, sys
 #from sys import path
-from datetime import date, datetime
+import datetime
 # Special Libraries
 import eyeD3
 
@@ -35,9 +37,16 @@ endl = os.linesep # URL: http://stackoverflow.com/a/1223303
 # = Setup Directories =
 SOURCEDIR = os.path.dirname(os.path.abspath(__file__)) # URL: http://stackoverflow.com/a/7783326
 PARENTDIR = os.path.dirname(SOURCEDIR)
+VARIUSDIR = "" # FIXME: Need a convention for various artists
 
-print "Source Dir  : ", str(SOURCEDIR) # directory containing the script file
-print "Library Dir : ", str(PARENTDIR) # directory containing that directory
+def music_dir_info():
+    """ Return a string that contains information about the assumed directory structure for the music collection """
+    rtnStr = "
+    rtnStr += "Source Dir  : " + str(SOURCEDIR) + endl # directory containing the script file
+    rtnStr += "Library Dir : " + str(PARENTDIR) + endl # directory containing that directory
+    rtnStr += "Various Artists Dir (MP3) : " + str(VARIUSDIR) + endl # directory for MP3s with unreadable artist info
+    return rtnStr
+    
 # = End Directories =
 
 # == String Processing ==
@@ -57,10 +66,10 @@ def strip_the(artistName):
 def proper_dir_name(trialStr):
     """ Return a string stripped of all disallowed chars """
     rtnStr = ""
-    if trialStr:
-        for char in trialStr:
-            if char not in DISALLOWEDCHARS:
-                rtnStr += char
+    #if trialStr: # if a string was received # WHY AM I MAKING THIS CHECK?
+    for char in trialStr: # for each character of the input string
+        if char not in DISALLOWEDCHARS: # If the character is not disallowed
+            rtnStr += char # Append the char to the proper directory name
     return rtnStr
             
 def proper_artist_dir(trialStr):
@@ -72,23 +81,21 @@ def proper_artist_dir(trialStr):
 
 # = Log Names =
 
-FILEPREFIX = "Music-Lib-Org-Log_"
+nowTimeStamp = lambda: datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S') # Return a string of the date and time down to second
 
-def today_YYYY_MM_DD():
-    """ Return today's date as YYYY-MM-DD """
-    return str(date.today().year) + "-" + str(date.today().month) + "-" + str(date.today().day)
+FILEPREFIX = "Music-Lib-Org-Log_"
     
 def todays_log_name():
     """ Return a string that is the file name prefix plus today's date """
-    return FILEPREFIX + today_YYYY_MM_DD()
+    return FILEPREFIX + nowTimeStamp()
     
 LOGFILEEXTENSION = 'txt'
 
-NUMLOGSTODAY = 0 # The number of files in this dir with the file prefix and today's date
+# NUMLOGSTODAY = 0 # The number of files in this dir with the file prefix and today's date
 
 def gen_log_name():
-    """ Return the full file name of the next log assuming NUMLOGSTODAY is correct """
-    return todays_log_name() + "_" + str( 0 if NUMLOGSTODAY == 0 else NUMLOGSTODAY ) + "." + LOGFILEEXTENSION
+    """ Return the full file name of the next log """ # assuming NUMLOGSTODAY is correct 
+    return todays_log_name() # + "_" + str( 0 if NUMLOGSTODAY == 0 else NUMLOGSTODAY ) + "." + LOGFILEEXTENSION
     
 def section(titleStr):
     borderStr = '=========='
@@ -101,15 +108,15 @@ def section(titleStr):
 
 # == File Operation Logging ==
 
-def count_todays_logs():
-    global NUMLOGSTODAY
-    count = 0
-    namesInDir = os.listdir(SOURCEDIR)
-    for name in namesInDir:
-        if todays_log_name() in name:
-            count += 1
-    NUMLOGSTODAY = count
-    print "Found", NUMLOGSTODAY, "logs with today's date."
+#def count_todays_logs():
+#    global NUMLOGSTODAY
+#    count = 0
+#    namesInDir = os.listdir(SOURCEDIR)
+#    for name in namesInDir:
+#        if todays_log_name() in name:
+#            count += 1
+#    NUMLOGSTODAY = count
+#    print "Found", NUMLOGSTODAY, "logs with today's date."
  
 CURRENTLOG = None # The current log file, only one should be open at a time
    
@@ -117,7 +124,7 @@ def open_new_log():
     """ Generate the next log file in the series, open for logging, and write preamble to file """
     global CURRENTLOG
     if not CURRENTLOG: # If there is no file currently open
-        count_todays_logs()
+        #count_todays_logs()
         currentLogName = gen_log_name() # generate the name of the next log file
         CURRENTLOG = open( os.path.join( SOURCEDIR , currentLogName ) , 'w') # Open a new file in write mode
         # URL: http://stackoverflow.com/a/13891070
@@ -135,6 +142,15 @@ def close_current_log():
         CURRENTLOG = None # Mark the current log closed
     else:
         print "close_current_log : There was no log open!"
+
+def logln(logStr = ""):
+    """ Log Line: Write a line of text to the currently open log """
+    global CURRENTLOG
+    if CURRENTLOG: # If there is a log open, write 'logStr' to it on its own line
+        CURRENTLOG.write( str( logStr ) + endl )
+    else: # else there was no log open, warn user
+        print "logln : There was no log open!"
+    
 
 # == End Logging ==
 
@@ -173,10 +189,50 @@ DISALLOWEDEXTS = ['txt', 'py'] # folders with these file extensions should not b
 DUPFOLDERNAME = "zzz_Duplicates" # folder name to store dupicate files
 
 def repair_music_library_structure(srchDir, currLog):
-    """ Walk the entire music library 'srchDir', restore to an assumed structure, write results to currLog """
-    for dirName, subdirList, fileList in os.walk(srchDir):
-        for fName in fileList:
-            fullPath = os.path.join(dirName,fName)
+    """ Walk the entire music library 'srchDir', restore to an assumed structure, write results to CURRENTLOG """
+    if not CURRENTLOG: # If there is no log currently open, open one
+        open_new_log()
+    logln( "START , " + nowTimeStamp() + ": Music directory cleanup with 'repair_music_library_structure'" )
+        
+    copyList = [] # list of copy operations to carry out  
+    
+    for dirName, subdirList, fileList in os.walk(srchDir): # for each subdir in 'srchDir', including 'srchDir'
+        for fName in fileList: # for each file in this subdir
+            fullPath = os.path.join(dirName,fName) # construct the full path for this file
+            extension = os.path.splitext(fName)[1] # Retrieve the file extension of the current item
+            mp3TagsLoaded = False
+            if extension == '.mp3': # If found mp3
+            
+                # = Attept to load tags for an MP3 file = 
+                audiofile = None # var for current file
+                try: 
+                    audiofile = eyeD3.Tag() # Instantiate an audio metadata object
+                    audiofile.link(fullPath) # Grab info from an actual audio file
+                    mp3TagsLoaded = True # Flag success for an MP3 load
+                except Exception as err: # eyeD3 could not read the tags or otherwise load the file, report
+                    errMsg = "Problem reading " + str(fullPath) + " tags!" + ", Python says: " + err
+                    print errMsg
+                    ERRLIST.append( errMsg )
+                    errType, value, traceback = sys.exc_info() # URL, get exception details:http://stackoverflow.com/a/15890953
+                    ERRLIST.append('Python says: %s , %s , %s' % (str(errType), str(value), str(traceback)))
+                    logln( errMsg )
+                # = End tag load = 
+                    
+                # 2.a Generate the name of the subdir where this file belongs
+                if mp3TagsLoaded:
+                    properDirName = proper_artist_dir( audiofile.getArtist() )
+                else:
+                    
+                
+            # 1. Find out if this current subdir is where the file belongs
+            # 2. If the current subdir does not meet standards
+            
+            # 2.b Find out if that subdir exists
+            # 2.b.a If the proper dir does not exist, create it
+            # 2.c Add the current file to the copy list to be sent to the proper directory
+    
+    logln( "END , " + nowTimeStamp() + ": Music directory cleanup with 'repair_music_library_structure'" )        
+    close_current_log() # close the current log # Assumes that a log is open
 
 def sort_all_songs(arg, dirname, names):
     pass
