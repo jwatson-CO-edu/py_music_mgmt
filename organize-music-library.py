@@ -9,6 +9,9 @@ Organize music library, try to gracefully handle duplicates and problem files
 * Abandoned file location assumptions.  File locations are declared explicitly in the file or via the menu
   and verified automatically before each run
 * Adding a full timestamp down to the second to log filenames so that the number of logs in a day do not have to be counted
+
+  == TODO ==
+* All of my files with extension "Mp3" and "MP3" seem to be corrupted, find something to do with these
 """
 
 # == Init Environment ==
@@ -37,11 +40,11 @@ endl = os.linesep # URL: http://stackoverflow.com/a/1223303
 # = Setup Directories =
 SOURCEDIR = os.path.dirname(os.path.abspath(__file__)) # URL: http://stackoverflow.com/a/7783326
 PARENTDIR = os.path.dirname(SOURCEDIR)
-VARIUSDIR = "" # FIXME: Need a convention for various artists
+VARIUSDIR = "" # TODO: Need a convention for various artists
 
 def music_dir_info():
     """ Return a string that contains information about the assumed directory structure for the music collection """
-    rtnStr = "
+    rtnStr = ""
     rtnStr += "Source Dir  : " + str(SOURCEDIR) + endl # directory containing the script file
     rtnStr += "Library Dir : " + str(PARENTDIR) + endl # directory containing that directory
     rtnStr += "Various Artists Dir (MP3) : " + str(VARIUSDIR) + endl # directory for MP3s with unreadable artist info
@@ -86,12 +89,12 @@ nowTimeStamp = lambda: datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S') # R
 FILEPREFIX = "Music-Lib-Org-Log_"
     
 def todays_log_name():
-    """ Return a string that is the file name prefix plus today's date """
+    """ Return a string that is the file name prefix plus today's date and time """
     return FILEPREFIX + nowTimeStamp()
     
 LOGFILEEXTENSION = 'txt'
 
-# NUMLOGSTODAY = 0 # The number of files in this dir with the file prefix and today's date
+# NUMLOGSTODAY = 0 # The number of files in this dir with the file prefix and today's date # NOT IN USE
 
 def gen_log_name():
     """ Return the full file name of the next log """ # assuming NUMLOGSTODAY is correct 
@@ -194,11 +197,13 @@ def repair_music_library_structure(srchDir, currLog):
         open_new_log()
     logln( "START , " + nowTimeStamp() + ": Music directory cleanup with 'repair_music_library_structure'" )
         
-    copyList = [] # list of copy operations to carry out  
+    cpmvList = [] # list of copy / move operations to carry out, each element takes the form
+    # ( SOURCE , DESTINATION , one of {cp,mv,rm} )
     
     for dirName, subdirList, fileList in os.walk(srchDir): # for each subdir in 'srchDir', including 'srchDir'
         for fName in fileList: # for each file in this subdir
             fullPath = os.path.join(dirName,fName) # construct the full path for this file
+            containingFolder = parent_folder_name_only(fullPath, 1) # Name of folder containing this file
             extension = os.path.splitext(fName)[1] # Retrieve the file extension of the current item
             mp3TagsLoaded = False
             if extension == '.mp3': # If found mp3
@@ -220,9 +225,14 @@ def repair_music_library_structure(srchDir, currLog):
                     
                 # 2.a Generate the name of the subdir where this file belongs
                 if mp3TagsLoaded:
-                    properDirName = proper_artist_dir( audiofile.getArtist() )
+                    # 1. Find out if this current subdir is where the file belongs
+                    properDirName = proper_artist_dir( audiofile.getArtist() ) # We have tags so generate proper dir name
+                    if not containingFolder == properDirName: # If the current dir does not march the proper dir?
+                        cpmvList.append( (fullPath , ) )
+                    # else, this file is already in the proper folder
                 else:
-                    
+                    # 1. Find out if this current subdir is where the file belongs
+                    pass
                 
             # 1. Find out if this current subdir is where the file belongs
             # 2. If the current subdir does not meet standards
@@ -231,7 +241,7 @@ def repair_music_library_structure(srchDir, currLog):
             # 2.b.a If the proper dir does not exist, create it
             # 2.c Add the current file to the copy list to be sent to the proper directory
     
-    logln( "END , " + nowTimeStamp() + ": Music directory cleanup with 'repair_music_library_structure'" )        
+    logln( "END , " + nowTimeStamp() + ": Music directory cleanup with 'repair_music_library_structure'" )
     close_current_log() # close the current log # Assumes that a log is open
 
 def sort_all_songs(arg, dirname, names):
