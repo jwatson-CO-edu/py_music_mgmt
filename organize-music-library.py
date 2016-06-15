@@ -38,16 +38,29 @@ import eyeD3
 endl = os.linesep # URL: http://stackoverflow.com/a/1223303
 
 # = Setup Directories =
-SOURCEDIR = os.path.dirname(os.path.abspath(__file__)) # URL: http://stackoverflow.com/a/7783326
-PARENTDIR = os.path.dirname(SOURCEDIR)
-VARIUSDIR = "" # TODO: Need a convention for various artists
+SEARCHDIR = 'FIXME' # Directory to search/walk for music files
+MUSLIBDIR = 'FIXME' # Music Library directory
+VARIUSDIR = 'FIXME' # TODO: Need a convention for various artists
+RUNLOGDIR = 'FIXME' # Directory for logs
+SEARCHVLD = False # Is the search dir valid?
+MUSLIBVLD = False # Is the library dir valid?
+VARIUSVLD = False # Is the various dir valid?
+RUNLOGVLD = False # Is the logging dir valid?
+LIBRARYOK = False # Are our directory assumptions met?
 
-def music_dir_info():
-    """ Return a string that contains information about the assumed directory structure for the music collection """
+def music_dir_validation():
+    """ Validate directories, set flags, and inform user """
+    global SEARCHVLD, MUSLIBVLD, VARIUSVLD, LIBRARYOK
+    SEARCHVLD = os.path.isdir(SEARCHDIR) # Is the search dir valid?
+    MUSLIBVLD = os.path.isdir(MUSLIBDIR) # Is the library dir valid?
+    VARIUSVLD = os.path.isdir(VARIUSDIR) # Is the various dir valid?
+    RUNLOGVLD = os.path.isdir(RUNLOGDIR) # Is the logging dir valid?
+    LIBRARYOK = SEARCHVLD and MUSLIBVLD and VARIUSVLD and RUNLOGVLD # Are our directory assumptions met?
     rtnStr = ""
-    rtnStr += "Source Dir  : " + str(SOURCEDIR) + endl # directory containing the script file
-    rtnStr += "Library Dir : " + str(PARENTDIR) + endl # directory containing that directory
-    rtnStr += "Various Artists Dir (MP3) : " + str(VARIUSDIR) + endl # directory for MP3s with unreadable artist info
+    rtnStr += "Search Dir  : " + str(SEARCHDIR) + " is " + "NOT" if not SEARCHVLD else "" + "valid" + endl # directory containing the script file
+    rtnStr += "Library Dir : " + str(MUSLIBDIR) + " is " + "NOT" if not MUSLIBVLD else ""  + "valid" + endl # directory containing that directory
+    rtnStr += "Various Artists Dir (MP3) : " + str(VARIUSDIR) + " is " + "NOT" if not VARIUSVLD else ""  + "valid" + endl # directory for MP3s with unreadable artist info
+    rtnStr += "Script is" + "NOT" if not LIBRARYOK else "" + "ready to run!"
     return rtnStr
     
 # = End Directories =
