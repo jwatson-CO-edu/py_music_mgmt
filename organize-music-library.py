@@ -40,7 +40,7 @@ endl = os.linesep # URL: http://stackoverflow.com/a/1223303
 # = Setup Directories =
 SEARCHDIR = 'FIXME' # Directory to search/walk for music files
 MUSLIBDIR = 'FIXME' # Music Library directory
-VARIUSDIR = 'FIXME' # TODO: Need a convention for various artists
+VARIUSDIR = 'FIXME' # Directory for MP3s with unreadable or missing tags
 RUNLOGDIR = 'FIXME' # Directory for logs
 SEARCHVLD = False # Is the search dir valid?
 MUSLIBVLD = False # Is the library dir valid?
@@ -142,7 +142,7 @@ def open_new_log():
     if not CURRENTLOG: # If there is no file currently open
         #count_todays_logs()
         currentLogName = gen_log_name() # generate the name of the next log file
-        CURRENTLOG = open( os.path.join( SOURCEDIR , currentLogName ) , 'w') # Open a new file in write mode
+        CURRENTLOG = open( os.path.join( RUNLOGDIR , currentLogName ) , 'w') # Open a new file in write mode
         # URL: http://stackoverflow.com/a/13891070
         CURRENTLOG.write( "Opened new file " + currentLogName + " at " + datetime.fromtimestamp(time.time()).strftime('%H:%M:%S') + endl )
         #CURRENTLOG.write( section( 'File Operations' ) + endl )
@@ -237,16 +237,22 @@ def repair_music_library_structure(srchDir, currLog):
                 # = End tag load = 
                     
                 # 2.a Generate the name of the subdir where this file belongs
-                if mp3TagsLoaded:
+                if mp3TagsLoaded: # If MP3 metadata is available for this file
                     # 1. Find out if this current subdir is where the file belongs
                     properDirName = proper_artist_dir( audiofile.getArtist() ) # We have tags so generate proper dir name
-                    if not containingFolder == properDirName: # If the current dir does not march the proper dir?
-                        cpmvList.append( (fullPath , ) )
+                    if not containingFolder == properDirName: # 2. If the current subdir does not meet standards
+                        targetDir = os.path.join( MUSLIBDIR , properDirName )
+                        if os.path.isdir( targetDir ): # 2.b Find out if that subdir exists
+                            pass
+                        else:
+                            # 2.b.a If the proper dir does not exist, create it
+                        # 2.c Add the current file to the copy list to be sent to the proper directory
+                        cpmvList.append( (fullPath , os.path.join( MUSLIBDIR , properDirName ) , 'mv' ) )
                     # else, this file is already in the proper folder
-                else:
-                    # 1. Find out if this current subdir is where the file belongs
-                    pass
-                
+                else: # else tags were not able to be loaded from this MP3 file
+                    # Send it to the various artist dir, if it is not already there
+                    if not containingFolder == VARIUSDIR:
+                        cpmvList.append( (fullPath , os.path.join( MUSLIBDIR , properDirName ) , 'mv' ) )
             # 1. Find out if this current subdir is where the file belongs
             # 2. If the current subdir does not meet standards
             
