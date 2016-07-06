@@ -9,6 +9,7 @@ Organize music library, try to gracefully handle duplicates and problem files
 * Abandoned file location assumptions.  File locations are declared explicitly in the file or via the menu
   and verified automatically before each run
 * Adding a full timestamp down to the second to log filenames so that the number of logs in a day do not have to be counted
+* BACKUP YOUR PLAYLISTS BEFORE RUNNING THIS FILE! It is unknown if MusicBee will be able to find them after they are moved
 
   == TODO ==
 * All of my files with extension "Mp3" and "MP3" seem to be corrupted, find something to do with these
@@ -42,26 +43,28 @@ SEARCHDIR = 'FIXME' # Directory to search/walk for music files
 MUSLIBDIR = 'FIXME' # Music Library directory
 VARIUSDIR = 'FIXME' # Directory for MP3s with unreadable or missing tags
 RUNLOGDIR = 'FIXME' # Directory for logs
-SEARCHVLD = False # Is the search dir valid?
-MUSLIBVLD = False # Is the library dir valid?
-VARIUSVLD = False # Is the various dir valid?
-RUNLOGVLD = False # Is the logging dir valid?
-LIBRARYOK = False # Are our directory assumptions met?
+CORRPTDIR = 'FIXME' # Directory for corrupted files
+#SEARCHVLD = False # Is the search dir valid?
+#MUSLIBVLD = False # Is the library dir valid?
+#VARIUSVLD = False # Is the various dir valid?
+#RUNLOGVLD = False # Is the logging dir valid?
+#LIBRARYOK = False # Are our directory assumptions met?
 
+def validate_dirs_writable(*dirList):
+    """ Return true if every directory in 'dirList' both exists and is writable, otherwise return false """
+    # NOTE: This function exits on the first failed check and does not provide info for any subsequent element of 'dirList'
+    for directory in dirList:
+        if not os.path.isdir(directory):
+            print "Directory",directory,"does not exist!"
+            return False
+        if not os.access(directory, os.W_OK): # URL, Check write permission: http://stackoverflow.com/a/2113511/893511
+            print "System does not have write permission for",directory,"!"
+            return False
+    return True
+            
 def music_dir_validation():
-    """ Validate directories, set flags, and inform user """
-    global SEARCHVLD, MUSLIBVLD, VARIUSVLD, LIBRARYOK
-    SEARCHVLD = os.path.isdir(SEARCHDIR) # Is the search dir valid?
-    MUSLIBVLD = os.path.isdir(MUSLIBDIR) # Is the library dir valid?
-    VARIUSVLD = os.path.isdir(VARIUSDIR) # Is the various dir valid?
-    RUNLOGVLD = os.path.isdir(RUNLOGDIR) # Is the logging dir valid?
-    LIBRARYOK = SEARCHVLD and MUSLIBVLD and VARIUSVLD and RUNLOGVLD # Are our directory assumptions met?
-    rtnStr = ""
-    rtnStr += "Search Dir  : " + str(SEARCHDIR) + " is " + "NOT" if not SEARCHVLD else "" + "valid" + endl # directory containing the script file
-    rtnStr += "Library Dir : " + str(MUSLIBDIR) + " is " + "NOT" if not MUSLIBVLD else ""  + "valid" + endl # directory containing that directory
-    rtnStr += "Various Artists Dir (MP3) : " + str(VARIUSDIR) + " is " + "NOT" if not VARIUSVLD else ""  + "valid" + endl # directory for MP3s with unreadable artist info
-    rtnStr += "Script is" + "NOT" if not LIBRARYOK else "" + "ready to run!"
-    return rtnStr
+    """ Validate music library directories """
+    return validate_dirs_writable( SEARCHDIR , MUSLIBDIR , VARIUSDIR , RUNLOGDIR , CORRPTDIR )
     
 # = End Directories =
 
@@ -201,7 +204,8 @@ NUMPROCESSED = 0 # The number of files processed this session
 PROCESSTIME = time.clock() # Time since the last milestone
 MISCFOLDERNAME = "Various" # Name of the folder for files without a readable artist name
 ERRLIST = [] # List of errors for this session
-DISALLOWEDEXTS = ['txt', 'py'] # folders with these file extensions should not be moved from the source dir
+DISALLOWEDEXTS = [ '.txt' , '.py' ] # folders with these file extensions should not be moved from the source dir
+CRRPTDFILEEXTS = [ '.Mp3' , '.MP3' ] # files with these extensions seem to have problems in MusicBee
 DUPFOLDERNAME = "zzz_Duplicates" # folder name to store dupicate files
 
 def repair_music_library_structure(srchDir, currLog):
@@ -242,23 +246,32 @@ def repair_music_library_structure(srchDir, currLog):
                     properDirName = proper_artist_dir( audiofile.getArtist() ) # We have tags so generate proper dir name
                     if not containingFolder == properDirName: # 2. If the current subdir does not meet standards
                         targetDir = os.path.join( MUSLIBDIR , properDirName )
-                        if os.path.isdir( targetDir ): # 2.b Find out if that subdir exists
-                            pass
-                        else:
+                        if not os.path.isdir( targetDir ): # 2.b Find out if that subdir exists
                             # 2.b.a If the proper dir does not exist, create it
+                            os.mkdir( targetDir )
                         # 2.c Add the current file to the copy list to be sent to the proper directory
-                        cpmvList.append( (fullPath , os.path.join( MUSLIBDIR , properDirName ) , 'mv' ) )
+                        cpmvList.append( (fullPath , targetDir , 'mv' ) ) # Move the file to the dir in either case
                     # else, this file is already in the proper folder
                 else: # else tags were not able to be loaded from this MP3 file
                     # Send it to the various artist dir, if it is not already there
                     if not containingFolder == VARIUSDIR:
-                        cpmvList.append( (fullPath , os.path.join( MUSLIBDIR , properDirName ) , 'mv' ) )
-            # 1. Find out if this current subdir is where the file belongs
-            # 2. If the current subdir does not meet standards
+                        cpmvList.append( (fullPath , VARIUSDIR , 'mv' ) )
+            # 1. Get the file extension, already stored in 'extension'
+            elif extension not in DISALLOWEDEXTS: # The file is not an MP3, organize it by file type
+                if extension in CRRPTDFILEEXTS:
+                    pass # FIXME: START HERE!
+            # else extension is disallowed and should be left alone (ex. log files, Python files)
+                # 2. Generate the proper folder name 
+                # 3. Find out if this current subdir is where the file belongs
+                # 4. If the current subdir does not meet standards
+                
+                    # 4.b Find out if that subdir exists
+                    # 4.b.a If the proper dir does not exist, create it
+                    # 4.c Add the current file to the copy list to be sent to the proper directory
+                # TODO: See if there are ways to read tags in other filetypes
+                
             
-            # 2.b Find out if that subdir exists
-            # 2.b.a If the proper dir does not exist, create it
-            # 2.c Add the current file to the copy list to be sent to the proper directory
+            
     
     logln( "END , " + nowTimeStamp() + ": Music directory cleanup with 'repair_music_library_structure'" )
     close_current_log() # close the current log # Assumes that a log is open
