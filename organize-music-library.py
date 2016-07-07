@@ -5,15 +5,46 @@ organize-music-library.py , Built on Spyder for Python 2.7
 James Watson, 2016 March
 Organize music library, try to gracefully handle duplicates and problem files
 
+  == PROJECT ==
+1. Library Repair - IN PROPGRESS
+   1.a. Test Log-Only on a small dir, try to test all cases
+        * MP3 is in the correct dir
+        * MP3 is not in the correct dir
+        * MP3 has unreadable artist
+        * MP3 has empty astist string
+        * Disallowed file EXT
+        * Non-MP3 files in the correct dir
+        * Non-MP3 files in the wrong dir
+   1.b. Test Log-only on music library and inspect for bad moves
+2. Empty Dir Cleaning - NOT STARTED
+3. Inbox Processing - NOT STARTED
+
   == NOTES ==
 * Abandoned file location assumptions.  File locations are declared explicitly in the file or via the menu
   and verified automatically before each run
 * Adding a full timestamp down to the second to log filenames so that the number of logs in a day do not have to be counted
-* BACKUP YOUR PLAYLISTS BEFORE RUNNING THIS FILE! It is unknown if MusicBee will be able to find them after they are moved
+
+  == USAGE ==
+1. BACKUP YOUR PLAYLISTS AND MUSIC BEFORE RUNNING THIS FILE! 
+   It is unknown how MusicBee will handle playlists and metadata after the music is moved
+2. Verify that the global directory vars are pointing to the correct locations
 
   == TODO ==
-* All of my files with extension "Mp3" and "MP3" seem to be corrupted, find something to do with these
+* Handle the case where the artist tag is readable but empty
+* All of the 'cpmvList' entries seem the be malformed, review the 'shutil' docs for what the move function wants
+* The repair function should record all move/erase decisions, even when no action is taken
+* The sort-inbox function should only record actions taken
+* Perhaps encapsulate the meat of repair/sort in a single function that is run with options. The operations are nearly identical
+* See if there are ways to read tags in other filetypes
+
 """
+
+# == Run Flags ==
+# Use these flags to change how the script runs
+SCRAPECRRPTEXT = True # If there are particular file extensions that your music player chokes on, set this flag to True
+#                       and edit 'CRRPTDFILEEXTS' before running the script
+# == End Flags ==
+
 
 # == Init Environment ==
 
@@ -258,21 +289,20 @@ def repair_music_library_structure(srchDir, currLog):
                         cpmvList.append( (fullPath , VARIUSDIR , 'mv' ) )
             # 1. Get the file extension, already stored in 'extension'
             elif extension not in DISALLOWEDEXTS: # The file is not an MP3, organize it by file type
-                if extension in CRRPTDFILEEXTS:
-                    pass # FIXME: START HERE!
+                if SCRAPECRRPTEXT and (extension in CRRPTDFILEEXTS): # If there are problem extensions and if this is one of them
+                    cpmvList.append( (fullPath , CORRPTDIR , 'mv' ) ) 
+                else:
+                    # 2. Generate the proper folder name 
+                    properDirName = extension[1:].upper()
+                    if not containingFolder == properDirName: # 2. If the current subdir does not meet standards
+                        targetDir = os.path.join( MUSLIBDIR , properDirName )
+                        if not os.path.isdir( targetDir ): # 2.b Find out if that subdir exists
+                            # 2.b.a If the proper dir does not exist, create it
+                            os.mkdir( targetDir )
+                        # 2.c Add the current file to the copy list to be sent to the proper directory
+                        cpmvList.append( (fullPath , targetDir , 'mv' ) ) # Move the file to the dir in either case
+                    # else, this file is already in the proper folder
             # else extension is disallowed and should be left alone (ex. log files, Python files)
-                # 2. Generate the proper folder name 
-                # 3. Find out if this current subdir is where the file belongs
-                # 4. If the current subdir does not meet standards
-                
-                    # 4.b Find out if that subdir exists
-                    # 4.b.a If the proper dir does not exist, create it
-                    # 4.c Add the current file to the copy list to be sent to the proper directory
-                # TODO: See if there are ways to read tags in other filetypes
-                
-            
-            
-    
     logln( "END , " + nowTimeStamp() + ": Music directory cleanup with 'repair_music_library_structure'" )
     close_current_log() # close the current log # Assumes that a log is open
 
