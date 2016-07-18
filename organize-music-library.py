@@ -62,24 +62,21 @@ localize() # You can now load local modules!
 # Standard Libraries
 import os, time, shutil, sys
 #from sys import path
-import datetime
+from datetime import datetime
 # Special Libraries
-import eyeD3
+# import eyeD3 # TODO: Find out what version of eyeD3 to use!
 
 # ~ Shortcuts and Aliases ~
 endl = os.linesep # URL: http://stackoverflow.com/a/1223303
 
 # = Setup Directories =
-SEARCHDIR = 'FIXME' # Directory to search/walk for music files
-MUSLIBDIR = 'FIXME' # Music Library directory
-VARIUSDIR = 'FIXME' # Directory for MP3s with unreadable or missing tags
-RUNLOGDIR = 'FIXME' # Directory for logs
-CORRPTDIR = 'FIXME' # Directory for corrupted files
-#SEARCHVLD = False # Is the search dir valid?
-#MUSLIBVLD = False # Is the library dir valid?
-#VARIUSVLD = False # Is the various dir valid?
-#RUNLOGVLD = False # Is the logging dir valid?
-#LIBRARYOK = False # Are our directory assumptions met?
+SEARCHDIR = '/media/jwatson/FILEPILE/Python/py-music-mgmt/test_lib' # FIXME: This is a test dir
+MUSLIBDIR = '/media/jwatson/FILEPILE/Python/py-music-mgmt/test_lib' # FIXME: This is a test dir
+VARIUSDIR = '/media/jwatson/FILEPILE/Python/py-music-mgmt/test_lib/Various' # FIXME: This is a test dir
+RUNLOGDIR = '/media/jwatson/FILEPILE/Python/py-music-mgmt/test_lib/logs' # FIXME: This is a test dir
+CORRPTDIR = '/media/jwatson/FILEPILE/Python/py-music-mgmt/test_lib/Corrupt' # FIXME: This is a test dir
+
+# TODO: Create a function to set up the above environment
 
 def validate_dirs_writable(*dirList):
     """ Return true if every directory in 'dirList' both exists and is writable, otherwise return false """
@@ -131,7 +128,7 @@ def proper_artist_dir(trialStr):
 
 # = Log Names =
 
-nowTimeStamp = lambda: datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S') # Return a string of the date and time down to second
+nowTimeStamp = lambda: datetime.now().strftime('%Y-%m-%d_%H-%M-%S') # Return a string of the date and time down to second
 
 FILEPREFIX = "Music-Lib-Org-Log_"
     
@@ -178,7 +175,8 @@ def open_new_log():
         currentLogName = gen_log_name() # generate the name of the next log file
         CURRENTLOG = open( os.path.join( RUNLOGDIR , currentLogName ) , 'w') # Open a new file in write mode
         # URL: http://stackoverflow.com/a/13891070
-        CURRENTLOG.write( "Opened new file " + currentLogName + " at " + datetime.fromtimestamp(time.time()).strftime('%H:%M:%S') + endl )
+        CURRENTLOG.write( "Opened new file " + currentLogName + " at " + #datetime.today()datetime.fromtimestamp(time.time()).strftime('%H:%M:%S') + endl )
+                          datetime.today().strftime('%H:%M:%S') + endl + endl )
         #CURRENTLOG.write( section( 'File Operations' ) + endl )
     else: # Else there was already a file open, warn the user
         print "open_new_log : There is already a log open!"
@@ -193,11 +191,15 @@ def close_current_log():
     else:
         print "close_current_log : There was no log open!"
 
-def logln(logStr = ""):
+def logln(*logItems):
     """ Log Line: Write a line of text to the currently open log """
     global CURRENTLOG
     if CURRENTLOG: # If there is a log open, write 'logStr' to it on its own line
-        CURRENTLOG.write( str( logStr ) + endl )
+        temp = ''
+        for msg in logItems:
+            temp += str(msg) + ' ' # Auto-insert spaces between args just like 'print <OUTPUT>,'
+        temp += endl
+        CURRENTLOG.write( str( temp ) + endl )
     else: # else there was no log open, warn user
         print "logln : There was no log open!"
     
@@ -518,6 +520,8 @@ def purge_empty_dirs(searchDir):
 
 # ~ Prep Work ~
 open_new_log()
+
+logln( "Directories are ready for repair:" , music_dir_validation() )
 
 """
 # Check that conditions are met for running the file sorting function
