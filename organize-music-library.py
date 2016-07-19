@@ -64,7 +64,7 @@ import os, time, shutil, sys
 #from sys import path
 from datetime import datetime
 # Special Libraries
-# import eyeD3 # TODO: Find out what version of eyeD3 to use!
+import eyed3 # This script was built for eyed3 0.7.9
 
 # ~ Shortcuts and Aliases ~
 endl = os.linesep # URL: http://stackoverflow.com/a/1223303
@@ -261,11 +261,14 @@ def repair_music_library_structure(srchDir, currLog):
                 # = Attept to load tags for an MP3 file = 
                 audiofile = None # var for current file
                 try: 
-                    audiofile = eyeD3.Tag() # Instantiate an audio metadata object
-                    audiofile.link(fullPath) # Grab info from an actual audio file
-                    mp3TagsLoaded = True # Flag success for an MP3 load
+                    # audiofile = eyed3.Tag() 
+                    audiofile = eyed3.core.load(fullPath) # Load the file
+                    audiofileTag = audiofile.tag # Instantiate an audio metadata object
+                    #audiofile.link(fullPath) # Grab info from an actual audio file
+                    if audiofileTag:
+                        mp3TagsLoaded = True # Flag success for an MP3 load
                 except Exception as err: # eyeD3 could not read the tags or otherwise load the file, report
-                    errMsg = "Problem reading " + str(fullPath) + " tags!" + ", Python says: " + err
+                    errMsg = "Problem reading " + str(fullPath) + " tags!" + ", Python says: " + str(err)
                     print errMsg
                     ERRLIST.append( errMsg )
                     errType, value, traceback = sys.exc_info() # URL, get exception details:http://stackoverflow.com/a/15890953
@@ -276,7 +279,7 @@ def repair_music_library_structure(srchDir, currLog):
                 # 2.a Generate the name of the subdir where this file belongs
                 if mp3TagsLoaded: # If MP3 metadata is available for this file
                     # 1. Find out if this current subdir is where the file belongs
-                    properDirName = proper_artist_dir( audiofile.getArtist() ) # We have tags so generate proper dir name
+                    properDirName = proper_artist_dir( audiofileTag.artist ) # We have tags so generate proper dir name
                     if not containingFolder == properDirName: # 2. If the current subdir does not meet standards
                         targetDir = os.path.join( MUSLIBDIR , properDirName )
                         if not os.path.isdir( targetDir ): # 2.b Find out if that subdir exists
@@ -522,6 +525,7 @@ def purge_empty_dirs(searchDir):
 open_new_log()
 
 logln( "Directories are ready for repair:" , music_dir_validation() )
+repair_music_library_structure( SEARCHDIR , CURRENTLOG )
 
 """
 # Check that conditions are met for running the file sorting function
