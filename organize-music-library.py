@@ -131,13 +131,12 @@ def proper_artist_dir(trialStr):
 nowTimeStamp = lambda: datetime.now().strftime('%Y-%m-%d_%H-%M-%S') # Return a string of the date and time down to second
 
 FILEPREFIX = "Music-Lib-Org-Log_"
+LOGFILEEXTENSION = '.txt'
     
 def todays_log_name():
-    """ Return a string that is the file name prefix plus today's date and time """
-    return FILEPREFIX + nowTimeStamp()
+    """ Return a string that is the file name prefix plus today's date and time plus the proper file extension """
+    return FILEPREFIX + nowTimeStamp() + LOGFILEEXTENSION
     
-LOGFILEEXTENSION = 'txt'
-
 # NUMLOGSTODAY = 0 # The number of files in this dir with the file prefix and today's date # NOT IN USE
 
 def gen_log_name():
@@ -236,7 +235,7 @@ def parent_folder_name_only(path, nLevelsUp):
 NUMPROCESSED = 0 # The number of files processed this session
 PROCESSTIME = time.clock() # Time since the last milestone
 MISCFOLDERNAME = "Various" # Name of the folder for files without a readable artist name
-ERRLIST = [] # List of errors for this session
+#ERRLIST = [] 
 DISALLOWEDEXTS = [ '.txt' , '.py' ] # folders with these file extensions should not be moved from the source dir
 CRRPTDFILEEXTS = [ '.Mp3' , '.MP3' ] # files with these extensions seem to have problems in MusicBee
 DUPFOLDERNAME = "zzz_Duplicates" # folder name to store dupicate files
@@ -249,6 +248,7 @@ def repair_music_library_structure(srchDir, currLog):
         
     cpmvList = [] # list of copy / move operations to carry out, each element takes the form
     # ( SOURCE , DESTINATION , one of {cp,mv,rm} )
+    errList = [] # List of errors for this session
     
     for dirName, subdirList, fileList in os.walk(srchDir): # for each subdir in 'srchDir', including 'srchDir'
         for fName in fileList: # for each file in this subdir
@@ -267,13 +267,14 @@ def repair_music_library_structure(srchDir, currLog):
                     #audiofile.link(fullPath) # Grab info from an actual audio file
                     if audiofileTag:
                         mp3TagsLoaded = True # Flag success for an MP3 load
-                except Exception as err: # eyeD3 could not read the tags or otherwise load the file, report
-                    errMsg = "Problem reading " + str(fullPath) + " tags!" + ", Python says: " + str(err)
-                    print errMsg
-                    ERRLIST.append( errMsg )
+                except Exception: # eyeD3 could not read the tags or otherwise load the file, report
                     errType, value, traceback = sys.exc_info() # URL, get exception details:http://stackoverflow.com/a/15890953
-                    ERRLIST.append('Python says: %s , %s , %s' % (str(errType), str(value), str(traceback)))
-                    logln( errMsg )
+                    errMsg = "Problem reading " + str(fullPath) + " tags!" + ", 'Python says: %s , %s , %s".format(str(errType), str(value), str(traceback))
+                    print errMsg
+                    errList.append( errMsg )
+                    
+                    #errList.append('Python says: %s , %s , %s' % (str(errType), str(value), str(traceback)))
+                    #logln( errMsg )
                 # = End tag load = 
                     
                 # 2.a Generate the name of the subdir where this file belongs
@@ -309,7 +310,8 @@ def repair_music_library_structure(srchDir, currLog):
                     # else, this file is already in the proper folder
             # else extension is disallowed and should be left alone (ex. log files, Python files)
     logln( "END , " + nowTimeStamp() + ": Music directory cleanup with 'repair_music_library_structure'" )
-    close_current_log() # close the current log # Assumes that a log is open
+    #close_current_log() # close the current log # Assumes that a log is open
+    return cpmvList, errList
 
 def sort_all_songs(arg, dirname, names):
     pass
@@ -525,7 +527,17 @@ def purge_empty_dirs(searchDir):
 open_new_log()
 
 logln( "Directories are ready for repair:" , music_dir_validation() )
-repair_music_library_structure( SEARCHDIR , CURRENTLOG )
+moveList, errors = repair_music_library_structure( SEARCHDIR , CURRENTLOG )
+
+logln("-- File Operations List --")
+for item in moveList:
+    logln( "\t" + str(item) )
+logln("-- End Operations --")
+
+logln("-- File Errors List --")
+for item in errors:
+    logln( "\t" + str(item) )
+logln("-- End Errors --")
 
 """
 # Check that conditions are met for running the file sorting function
