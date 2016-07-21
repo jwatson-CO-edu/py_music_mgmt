@@ -30,6 +30,10 @@ Organize music library, try to gracefully handle duplicates and problem files
 2. Verify that the global directory vars are pointing to the correct locations
 
   == TODO ==
+* Section numbers using 'util.Counter' from Berkeley, candidate for "ResearchEnv"
+    1 Maybe keep it as a library that gets loaded in full in the background without the user calling it
+    2 It seems a little bit silly to have ResearchUtils.Util, consider pasting the whole shebang into "ResearchEnv.py" with 
+      the appropriate license information
 * Handle the case where the artist tag is readable but empty
 * All of the 'cpmvList' entries seem the be malformed, review the 'shutil' docs for what the move function wants
 * The repair function should record all move/erase decisions, even when no action is taken
@@ -197,7 +201,7 @@ def logln(*logItems):
         temp = ''
         for msg in logItems:
             temp += str(msg) + ' ' # Auto-insert spaces between args just like 'print <OUTPUT>,'
-        temp += endl
+        #temp += endl # double space not necessary
         CURRENTLOG.write( str( temp ) + endl )
     else: # else there was no log open, warn user
         print "logln : There was no log open!"
@@ -249,6 +253,8 @@ def repair_music_library_structure(srchDir, currLog):
     cpmvList = [] # list of copy / move operations to carry out, each element takes the form
     # ( SOURCE , DESTINATION , one of {cp,mv,rm} )
     errList = [] # List of errors for this session
+    idleList = [] # List of files that will not be moved
+    # ( "No Action," , FULLPATH )
     
     for dirName, subdirList, fileList in os.walk(srchDir): # for each subdir in 'srchDir', including 'srchDir'
         for fName in fileList: # for each file in this subdir
@@ -288,11 +294,14 @@ def repair_music_library_structure(srchDir, currLog):
                             os.mkdir( targetDir )
                         # 2.c Add the current file to the copy list to be sent to the proper directory
                         cpmvList.append( (fullPath , targetDir , 'mv' ) ) # Move the file to the dir in either case
-                    # else, this file is already in the proper folder
+                    else: # else, this file is already in the proper folder
+                        idleList.append( ( "No Action," , fullPath ) )
                 else: # else tags were not able to be loaded from this MP3 file
                     # Send it to the various artist dir, if it is not already there
                     if not containingFolder == VARIUSDIR:
                         cpmvList.append( (fullPath , VARIUSDIR , 'mv' ) )
+                    else: # else, this file is already in the proper folder
+                        idleList.append( ( "No Action," , fullPath ) )
             # 1. Get the file extension, already stored in 'extension'
             elif extension not in DISALLOWEDEXTS: # The file is not an MP3, organize it by file type
                 if SCRAPECRRPTEXT and (extension in CRRPTDFILEEXTS): # If there are problem extensions and if this is one of them
@@ -307,11 +316,14 @@ def repair_music_library_structure(srchDir, currLog):
                             os.mkdir( targetDir )
                         # 2.c Add the current file to the copy list to be sent to the proper directory
                         cpmvList.append( (fullPath , targetDir , 'mv' ) ) # Move the file to the dir in either case
-                    # else, this file is already in the proper folder
+                    else: # else, this file is already in the proper folder
+                        idleList.append( ( "No Action," , fullPath ) )
             # else extension is disallowed and should be left alone (ex. log files, Python files)
-    logln( "END , " + nowTimeStamp() + ": Music directory cleanup with 'repair_music_library_structure'" )
+            else: # else, this file is already in the proper folder
+                idleList.append( ( "No Action," , fullPath ) )
+    logln( "END   , " + nowTimeStamp() + ": Music directory cleanup with 'repair_music_library_structure'" )
     #close_current_log() # close the current log # Assumes that a log is open
-    return cpmvList, errList
+    return cpmvList, errList, idleList
 
 def sort_all_songs(arg, dirname, names):
     pass
@@ -527,7 +539,7 @@ def purge_empty_dirs(searchDir):
 open_new_log()
 
 logln( "Directories are ready for repair:" , music_dir_validation() )
-moveList, errors = repair_music_library_structure( SEARCHDIR , CURRENTLOG )
+moveList, errors, noAction = repair_music_library_structure( SEARCHDIR , CURRENTLOG )
 
 logln("-- File Operations List --")
 for item in moveList:
@@ -538,6 +550,11 @@ logln("-- File Errors List --")
 for item in errors:
     logln( "\t" + str(item) )
 logln("-- End Errors --")
+
+logln("-- Skipped Files List --")
+for item in noAction:
+    logln( "\t" + str(item) )
+logln("-- End Skipped --")
 
 """
 # Check that conditions are met for running the file sorting function
