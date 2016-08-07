@@ -8,16 +8,17 @@ Organize music library, try to gracefully handle duplicates and problem files
   == PROJECT ==
 1. Library Repair - IN PROPGRESS
    1.a. Test Log-Only on a small dir, try to test all cases
-        * MP3 is in the correct dir
-        * MP3 is not in the correct dir
-        * MP3 has unreadable artist
-        * MP3 has empty astist string
-        * Disallowed file EXT
-        * Non-MP3 files in the correct dir
-        * Non-MP3 files in the wrong dir
+        * MP3 is in the correct dir ------- [X]
+        * MP3 is not in the correct dir --- [X]
+        * MP3 has unreadable artist ------- [?] , TODO: Test - Watch for corrupted EXT files in the dry run
+        * MP3 has empty artist string ----- [X] , 
+        * Disallowed file EXT ------------- [?] , TODO: Test - Watch for corrupted EXT files in the dry run
+        * Non-MP3 files in the correct dir  [X]
+        * Non-MP3 files in the wrong subdir [X]
    1.b. Test Log-only on music library and inspect for bad moves
 2. Empty Dir Cleaning - NOT STARTED
 3. Inbox Processing - NOT STARTED
+4. Adapt #1 for 2 & 3
 
   == NOTES ==
 * Abandoned file location assumptions.  File locations are declared explicitly in the file or via the menu
@@ -31,9 +32,6 @@ Organize music library, try to gracefully handle duplicates and problem files
 
   == TODO ==
 * Section numbers using 'util.Counter' from Berkeley, candidate for "ResearchEnv"
-    1 Maybe keep it as a library that gets loaded in full in the background without the user calling it
-    2 It seems a little bit silly to have ResearchUtils.Util, consider pasting the whole shebang into "ResearchEnv.py" with 
-      the appropriate license information
 * Handle the case where the artist tag is readable but empty
 * All of the 'cpmvList' entries seem the be malformed, review the 'shutil' docs for what the move function wants
 * The repair function should record all move/erase decisions, even when no action is taken
@@ -43,56 +41,75 @@ Organize music library, try to gracefully handle duplicates and problem files
 
 """
 
+# == Init Environment ==================================================================================================
+import sys, os.path
+SOURCEDIR = os.path.dirname(os.path.abspath(__file__)) # URL, dir containing source file: http://stackoverflow.com/a/7783326
+
+def first_valid_dir(dirList):
+    """ Return the first valid directory in 'dirList', otherwise return False if no valid directories exist in the list """
+    rtnDir = False
+    for drctry in dirList:
+        if os.path.exists( drctry ):
+			rtnDir = drctry 
+			break
+    return rtnDir
+        
+def add_first_valid_dir_to_path(dirList):
+    """ Add the first valid directory in 'dirList' to the system path """
+    # In lieu of actually installing the library, just keep a list of all the places it could be in each environment
+    validDir = first_valid_dir(dirList)
+    if validDir:
+        if validDir in sys.path:
+            print "Already in sys.path:", validDir
+        else:
+            sys.path.append( validDir )
+            print 'Loaded:', str(validDir)
+    else:
+        raise ImportError("None of the specified directories were loaded") # Assume that not having this loaded is a bad thing
+# List all the places where the research environment could be
+add_first_valid_dir_to_path( [ '/home/jwatson/regrasp_planning/researchenv',
+                               '/media/jwatson/FILEPILE/Python/ResearchEnv',
+                               'F:\Python\ResearchEnv',
+                               '/media/mawglin/FILEPILE/Python/ResearchEnv'] )
+
+# ~~ Libraries ~~
+# ~ Standard Libraries ~
+import os, time, shutil, sys
+from datetime import datetime
+# ~ Special Libraries ~
+import eyed3 # This script was built for eyed3 0.7.9
+# ~ Local Libraries ~
+from ResearchEnv import * # Load the custom environment
+from ResearchUtils.DebugLog import *
+
+# == End Init ==========================================================================================================
+
+set_dbg_lvl(1) # Debug log file creation
+
 # == Run Flags ==
 # Use these flags to change how the script runs
 SCRAPECRRPTEXT = True # If there are particular file extensions that your music player chokes on, set this flag to True
 #                       and edit 'CRRPTDFILEEXTS' before running the script
 # == End Flags ==
 
+PARENTDIR = first_valid_dir( [ '/media/jwatson/FILEPILE/Python/py-music-mgmt/test_lib' , 
+                               'F:/Python/py-music-mgmt/test_lib'] )
+if not PARENTDIR:
+    raise IOError("Parent directory structure not found")
 
-# == Init Environment ==
+dbgLog(1, "Parent dir:", PARENTDIR)
 
-# ~ PATH Changes ~ 
-def localize():
-    """ Add the current directory to Python path if it is not already there """
-    from sys import path # I know it is bad style to load modules in function
-    import os.path as os_path
-    containerDir = os_path.dirname(__file__)
-    if containerDir not in path:
-        path.append( containerDir )
-
-localize() # You can now load local modules!
-
-# Standard Libraries
-import os, time, shutil, sys
-#from sys import path
-from datetime import datetime
-# Special Libraries
-import eyed3 # This script was built for eyed3 0.7.9
-
-# ~ Shortcuts and Aliases ~
-endl = os.linesep # URL: http://stackoverflow.com/a/1223303
-
+# None of the segments sent to 'os.path.join' after the first should start with a "/", otherwise previous segments will 
+#be discarded, URL: http://stackoverflow.com/questions/17429044/constructing-absolute-path-with-os-join
 # = Setup Directories =
-SEARCHDIR = '/media/jwatson/FILEPILE/Python/py-music-mgmt/test_lib' # FIXME: This is a test dir
-MUSLIBDIR = '/media/jwatson/FILEPILE/Python/py-music-mgmt/test_lib' # FIXME: This is a test dir
-VARIUSDIR = '/media/jwatson/FILEPILE/Python/py-music-mgmt/test_lib/Various' # FIXME: This is a test dir
-RUNLOGDIR = '/media/jwatson/FILEPILE/Python/py-music-mgmt/test_lib/logs' # FIXME: This is a test dir
-CORRPTDIR = '/media/jwatson/FILEPILE/Python/py-music-mgmt/test_lib/Corrupt' # FIXME: This is a test dir
+SEARCHDIR = PARENTDIR # FIXME: This is a test dir
+MUSLIBDIR = PARENTDIR # FIXME: This is a test dir
+VARIUSDIR = os.path.join( PARENTDIR , 'Various' ) # FIXME: This is a test dir
+RUNLOGDIR = os.path.join( PARENTDIR , 'logs' ) # FIXME: This is a test dir
+dbgLog(1, "Running log dir:", RUNLOGDIR)
+CORRPTDIR = os.path.join( PARENTDIR , 'Corrupt' ) # FIXME: This is a test dir
 
 # TODO: Create a function to set up the above environment
-
-def validate_dirs_writable(*dirList):
-    """ Return true if every directory in 'dirList' both exists and is writable, otherwise return false """
-    # NOTE: This function exits on the first failed check and does not provide info for any subsequent element of 'dirList'
-    for directory in dirList:
-        if not os.path.isdir(directory):
-            print "Directory",directory,"does not exist!"
-            return False
-        if not os.access(directory, os.W_OK): # URL, Check write permission: http://stackoverflow.com/a/2113511/893511
-            print "System does not have write permission for",directory,"!"
-            return False
-    return True
             
 def music_dir_validation():
     """ Validate music library directories """
@@ -117,11 +134,13 @@ def strip_the(artistName):
 def proper_dir_name(trialStr):
     """ Return a string stripped of all disallowed chars """
     rtnStr = ""
-    #if trialStr: # if a string was received # WHY AM I MAKING THIS CHECK?
-    for char in trialStr: # for each character of the input string
-        if char not in DISALLOWEDCHARS: # If the character is not disallowed
-            rtnStr += char # Append the char to the proper directory name
-    return rtnStr
+    if trialStr: # if a string was received 
+	for char in trialStr: # for each character of the input string
+	    if char not in DISALLOWEDCHARS: # If the character is not disallowed
+		rtnStr += char # Append the char to the proper directory name
+	return rtnStr
+    else:
+	return None
             
 def proper_artist_dir(trialStr):
     """ Return a musical artist's name stripped of disallowed chars and any leading 'the ' """
@@ -132,7 +151,8 @@ def proper_artist_dir(trialStr):
 
 # = Log Names =
 
-nowTimeStamp = lambda: datetime.now().strftime('%Y-%m-%d_%H-%M-%S') # Return a string of the date and time down to second
+nowTimeStamp = lambda: datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S') # http://stackoverflow.com/a/5215012/893511
+""" Return a formatted timestamp string, useful for logging and debugging """
 
 FILEPREFIX = "Music-Lib-Org-Log_"
 LOGFILEEXTENSION = '.txt'
@@ -179,7 +199,7 @@ def open_new_log():
         CURRENTLOG = open( os.path.join( RUNLOGDIR , currentLogName ) , 'w') # Open a new file in write mode
         # URL: http://stackoverflow.com/a/13891070
         CURRENTLOG.write( "Opened new file " + currentLogName + " at " + #datetime.today()datetime.fromtimestamp(time.time()).strftime('%H:%M:%S') + endl )
-                          datetime.today().strftime('%H:%M:%S') + endl + endl )
+                          nowTimeStamp() + endl + endl )
         #CURRENTLOG.write( section( 'File Operations' ) + endl )
     else: # Else there was already a file open, warn the user
         print "open_new_log : There is already a log open!"
@@ -188,7 +208,7 @@ def close_current_log():
     """ Close the current log if there is one open and mark the global var closed """
     global CURRENTLOG
     if CURRENTLOG:
-        CURRENTLOG.write( "Closed file at " + datetime.fromtimestamp(time.time()).strftime('%H:%M:%S') + endl )
+        CURRENTLOG.write( endl + "Closed file at " + nowTimeStamp() + endl )
         CURRENTLOG.close()
         CURRENTLOG = None # Mark the current log closed
     else:
@@ -255,6 +275,7 @@ def repair_music_library_structure(srchDir, currLog):
     errList = [] # List of errors for this session
     idleList = [] # List of files that will not be moved
     # ( "No Action," , FULLPATH )
+    mkdrList = [] # List of directories to create
     
     for dirName, subdirList, fileList in os.walk(srchDir): # for each subdir in 'srchDir', including 'srchDir'
         for fName in fileList: # for each file in this subdir
@@ -284,20 +305,27 @@ def repair_music_library_structure(srchDir, currLog):
                 # = End tag load = 
                     
                 # 2.a Generate the name of the subdir where this file belongs
-                if mp3TagsLoaded: # If MP3 metadata is available for this file
+                if mp3TagsLoaded and audiofileTag.artist: # If MP3 metadata is available for this file
                     # 1. Find out if this current subdir is where the file belongs
+		    # FIXME: Need to account for an empty artist tag
                     properDirName = proper_artist_dir( audiofileTag.artist ) # We have tags so generate proper dir name
                     if not containingFolder == properDirName: # 2. If the current subdir does not meet standards
                         targetDir = os.path.join( MUSLIBDIR , properDirName )
                         if not os.path.isdir( targetDir ): # 2.b Find out if that subdir exists
-                            # 2.b.a If the proper dir does not exist, create it
-                            os.mkdir( targetDir )
+                            try:
+				# 2.b.a If the proper dir does not exist, create it
+				os.mkdir( targetDir )
+			    except OSError as err:
+				errStr = "Unable to create dir " + str(targetDir) + endl + str(err)
+				errList.append( errStr )
                         # 2.c Add the current file to the copy list to be sent to the proper directory
                         cpmvList.append( (fullPath , targetDir , 'mv' ) ) # Move the file to the dir in either case
                     else: # else, this file is already in the proper folder
                         idleList.append( ( "No Action," , fullPath ) )
                 else: # else tags were not able to be loaded from this MP3 file
                     # Send it to the various artist dir, if it is not already there
+		    errMsg = "MP3 did not have a readable artist, sent to " + str(VARIUSDIR) + endl + str(fullPath)
+		    errList.append( errMsg )
                     if not containingFolder == VARIUSDIR:
                         cpmvList.append( (fullPath , VARIUSDIR , 'mv' ) )
                     else: # else, this file is already in the proper folder
@@ -312,8 +340,12 @@ def repair_music_library_structure(srchDir, currLog):
                     if not containingFolder == properDirName: # 2. If the current subdir does not meet standards
                         targetDir = os.path.join( MUSLIBDIR , properDirName )
                         if not os.path.isdir( targetDir ): # 2.b Find out if that subdir exists
-                            # 2.b.a If the proper dir does not exist, create it
-                            os.mkdir( targetDir )
+			    try:
+				# 2.b.a If the proper dir does not exist, create it
+				os.mkdir( targetDir )
+			    except OSError as err:
+				errStr = "Unable to create dir " + str(targetDir) + endl + str(err)
+				errList.append( errStr )
                         # 2.c Add the current file to the copy list to be sent to the proper directory
                         cpmvList.append( (fullPath , targetDir , 'mv' ) ) # Move the file to the dir in either case
                     else: # else, this file is already in the proper folder
