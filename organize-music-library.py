@@ -31,6 +31,9 @@ Organize music library, try to gracefully handle duplicates and problem files
 2. Verify that the global directory vars are pointing to the correct locations
 
   == TODO ==
+* Find out where all the IOErrors are coming from
+  - Handle IOErrors
+* Print basic overall stats
 * Section numbers using 'util.Counter' from Berkeley, candidate for "ResearchEnv"
 * Handle the case where the artist tag is readable but empty
 * All of the 'cpmvList' entries seem the be malformed, review the 'shutil' docs for what the move function wants
@@ -92,7 +95,8 @@ SCRAPECRRPTEXT = True # If there are particular file extensions that your music 
 #                       and edit 'CRRPTDFILEEXTS' before running the script
 # == End Flags ==
 
-PARENTDIR = first_valid_dir( [ '/media/jwatson/FILEPILE/Python/py-music-mgmt/test_lib' , 
+PARENTDIR = first_valid_dir( [ '/home/jwatson/Music',
+                               '/media/jwatson/FILEPILE/Python/py-music-mgmt/test_lib' , 
                                'F:/Python/py-music-mgmt/test_lib'] )
 if not PARENTDIR:
     raise IOError("Parent directory structure not found")
@@ -109,11 +113,28 @@ RUNLOGDIR = os.path.join( PARENTDIR , 'logs' ) # FIXME: This is a test dir
 dbgLog(1, "Running log dir:", RUNLOGDIR)
 CORRPTDIR = os.path.join( PARENTDIR , 'Corrupt' ) # FIXME: This is a test dir
 
-# TODO: Create a function to set up the above environment
-            
+def create_dirs(*dirList): # TODO: Move to ResearchEnv
+    """ Create the directories in 'dirList', and notify the user if errors occur """
+    success = True
+    for drctry in dirList:
+	if not os.path.exists( drctry ):
+	    try:
+		os.mkdir( drctry )
+	    except Exception as err:
+		success = False
+		print "create_dirs: Could not create",drctry,":",str(err)
+	else:
+	    print "Directory",drctry,"already exists"
+    return success
+
+
 def music_dir_validation():
     """ Validate music library directories """
     return validate_dirs_writable( SEARCHDIR , MUSLIBDIR , VARIUSDIR , RUNLOGDIR , CORRPTDIR )
+
+def music_dir_prep():
+    """ Create the expected folders where they are not present """
+    return create_dirs( SEARCHDIR , MUSLIBDIR , VARIUSDIR , RUNLOGDIR , CORRPTDIR )
     
 # = End Directories =
 
@@ -296,7 +317,7 @@ def repair_music_library_structure(srchDir, currLog):
                         mp3TagsLoaded = True # Flag success for an MP3 load
                 except Exception: # eyeD3 could not read the tags or otherwise load the file, report
                     errType, value, traceback = sys.exc_info() # URL, get exception details:http://stackoverflow.com/a/15890953
-                    errMsg = "Problem reading " + str(fullPath) + " tags!" + ", 'Python says: %s , %s , %s".format(str(errType), str(value), str(traceback))
+                    errMsg = "Problem reading " + str(fullPath) + " tags!" + ", 'Python says: {0} , {1} , {2}".format(str(errType), str(value), str(traceback))
                     print errMsg
                     errList.append( errMsg )
                     
@@ -566,53 +587,63 @@ def purge_empty_dirs(searchDir):
 
 
 # == Main ==
+print "Directories are ready for repair:" , music_dir_validation()
+if not music_dir_validation():
+    print "Attempting preparation of music directories ...",
+    if music_dir_prep():
+	print "SUCCESS"
+    else:
+	print "FAILURE"
+    print "Directories are ready for repair:" , music_dir_validation()
 
-# ~ Prep Work ~
-open_new_log()
+if __name__ == "__main__" and music_dir_validation():
 
-logln( "Directories are ready for repair:" , music_dir_validation() )
-moveList, errors, noAction = repair_music_library_structure( SEARCHDIR , CURRENTLOG )
-
-logln("-- File Operations List --")
-for item in moveList:
-    logln( "\t" + str(item) )
-logln("-- End Operations --")
-
-logln("-- File Errors List --")
-for item in errors:
-    logln( "\t" + str(item) )
-logln("-- End Errors --")
-
-logln("-- Skipped Files List --")
-for item in noAction:
-    logln( "\t" + str(item) )
-logln("-- End Skipped --")
-
-"""
-# Check that conditions are met for running the file sorting function
-if not os.path.exists(SOURCEDIR):
-    print "Source path " + str(SOURCEDIR) + " not found!"
-elif not os.path.exists(PARENTDIR):
-    print "Destination path " + str(PARENTDIR) + " not found!"
-elif not CURRENTLOG:
-    print "No log file open!"
-else:
-    # Perform file organization operations    
-    CURRENTLOG.write( section('File Operations') )
-    os.path.walk(SOURCEDIR, sort_all_songs, False)
-    procMsg =  "Processed " + str(NUMPROCESSED) + " files."
-    CURRENTLOG.write( endl + procMsg + endl + endl )
-    # Find and erase all empty dirs
-    CURRENTLOG.write( section('Cleanup') )
-    #find_empty_dirs(SOURCEDIR)    
-    purge_empty_dirs(SOURCEDIR)
-    # Log all the errors encountered during organization and cleanup
-    CURRENTLOG.write( section('Errors') )
-    for err in ERRLIST:
-        CURRENTLOG.write( err + endl )
-    CURRENTLOG.write( section('End') )
-"""
-# ~ Cleanup Work ~
-close_current_log() # Record time of script end and close the log file
-
-# == End Main ==
+    # ~ Prep Work ~
+    open_new_log()
+    
+    
+    moveList, errors, noAction = repair_music_library_structure( SEARCHDIR , CURRENTLOG )
+    
+    logln("-- File Operations List --")
+    for item in moveList:
+	logln( "\t" + str(item) )
+    logln("-- End Operations --")
+    
+    logln("-- File Errors List --")
+    for item in errors:
+	logln( "\t" + str(item) )
+    logln("-- End Errors --")
+    
+    logln("-- Skipped Files List --")
+    for item in noAction:
+	logln( "\t" + str(item) )
+    logln("-- End Skipped --")
+    
+    """
+    # Check that conditions are met for running the file sorting function
+    if not os.path.exists(SOURCEDIR):
+	print "Source path " + str(SOURCEDIR) + " not found!"
+    elif not os.path.exists(PARENTDIR):
+	print "Destination path " + str(PARENTDIR) + " not found!"
+    elif not CURRENTLOG:
+	print "No log file open!"
+    else:
+	# Perform file organization operations    
+	CURRENTLOG.write( section('File Operations') )
+	os.path.walk(SOURCEDIR, sort_all_songs, False)
+	procMsg =  "Processed " + str(NUMPROCESSED) + " files."
+	CURRENTLOG.write( endl + procMsg + endl + endl )
+	# Find and erase all empty dirs
+	CURRENTLOG.write( section('Cleanup') )
+	#find_empty_dirs(SOURCEDIR)    
+	purge_empty_dirs(SOURCEDIR)
+	# Log all the errors encountered during organization and cleanup
+	CURRENTLOG.write( section('Errors') )
+	for err in ERRLIST:
+	    CURRENTLOG.write( err + endl )
+	CURRENTLOG.write( section('End') )
+    """
+    # ~ Cleanup Work ~
+    close_current_log() # Record time of script end and close the log file
+    
+    # == End Main ==
