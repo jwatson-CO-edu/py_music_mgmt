@@ -32,7 +32,10 @@ Organize music library, try to gracefully handle duplicates and problem files
 
   == TODO ==
 * Find out where all the IOErrors are coming from
-  - Handle IOErrors
+  1. Find out the total fraction of files that cause errors
+  2. Create and write a list of paths that cause the errors
+  3. Separate file to investigate the errors
+  4. Handle IOErrors in this file
 * Print basic overall stats
 * Section numbers using 'util.Counter' from Berkeley, candidate for "ResearchEnv"
 * Handle the case where the artist tag is readable but empty
@@ -77,7 +80,7 @@ add_first_valid_dir_to_path( [ '/home/jwatson/regrasp_planning/researchenv',
 
 # ~~ Libraries ~~
 # ~ Standard Libraries ~
-import os, time, shutil, sys
+import os, time, shutil, sys , traceback
 from datetime import datetime
 # ~ Special Libraries ~
 import eyed3 # This script was built for eyed3 0.7.9
@@ -316,9 +319,13 @@ def repair_music_library_structure(srchDir, currLog):
                     if audiofileTag:
                         mp3TagsLoaded = True # Flag success for an MP3 load
                 except Exception: # eyeD3 could not read the tags or otherwise load the file, report
-                    errType, value, traceback = sys.exc_info() # URL, get exception details:http://stackoverflow.com/a/15890953
-                    errMsg = "Problem reading " + str(fullPath) + " tags!" + ", 'Python says: {0} , {1} , {2}".format(str(errType), str(value), str(traceback))
-                    print errMsg
+		    print "== Error =="
+                    errType, value, tb = sys.exc_info() # URL, get exception details:http://stackoverflow.com/a/15890953
+                    #errMsg = "Problem reading " + str(fullPath) + " tags!" + ", 'Python says: {0} , {1} , {2}".format(str(errType), str(value), 
+		    #                                                                                                  traceback.format_tb(traceback))
+		    errMsg = traceback.format_exception( errType, value, tb )
+                    for line in errMsg:
+			print line
                     errList.append( errMsg )
                     
                     #errList.append('Python says: %s , %s , %s' % (str(errType), str(value), str(traceback)))
@@ -407,7 +414,7 @@ def sort_all_songs(arg, dirname, names):
                 print errMsg
                 ERRLIST.append( errMsg )
                 # URL, get exception details:http://stackoverflow.com/a/15890953
-                type, value, traceback = sys.exc_info()
+                type, value,  = sys.exc_info()
                 ERRLIST.append('Python says: %s , %s , %s' % (str(type), str(value), str(traceback)))
                 CURRENTLOG.write( errMsg + endl )
             if audiofile: #and audiofile.tag: # If file loaded and artist metadata found
