@@ -32,7 +32,7 @@ Organize music library, try to gracefully handle duplicates and problem files
 
   == TODO ==
 * Find out where all the IOErrors are coming from
-  1. Find out the total fraction of files that cause errors
+  X. Find out the total fraction of files that cause errors , COMPLETE: "Processed 5605 files with 4990 errors"
   2. Create and write a list of paths that cause the errors
   3. Separate file to investigate the errors
   4. Handle IOErrors in this file
@@ -73,10 +73,11 @@ def add_first_valid_dir_to_path(dirList):
     else:
         raise ImportError("None of the specified directories were loaded") # Assume that not having this loaded is a bad thing
 # List all the places where the research environment could be
-add_first_valid_dir_to_path( [ '/home/jwatson/regrasp_planning/researchenv',
+add_first_valid_dir_to_path( [ '/media/jwatson/FILEPILE/ME-6225_Motion-Planning/Assembly_Planner/ResearchEnv',
+                               '/media/mawglin/FILEPILE/Python/ResearchEnv',
+                               '/home/jwatson/regrasp_planning/researchenv',
                                '/media/jwatson/FILEPILE/Python/ResearchEnv',
-                               'F:\Python\ResearchEnv',
-                               '/media/mawglin/FILEPILE/Python/ResearchEnv'] )
+                               'F:\Python\ResearchEnv'] )
 
 # ~~ Libraries ~~
 # ~ Standard Libraries ~
@@ -301,8 +302,12 @@ def repair_music_library_structure(srchDir, currLog):
     # ( "No Action," , FULLPATH )
     mkdrList = [] # List of directories to create
     
+    fCount = 0
+    errCount = 0
+    
     for dirName, subdirList, fileList in os.walk(srchDir): # for each subdir in 'srchDir', including 'srchDir'
         for fName in fileList: # for each file in this subdir
+	    fCount += 1
             fullPath = os.path.join(dirName,fName) # construct the full path for this file
             containingFolder = parent_folder_name_only(fullPath, 1) # Name of folder containing this file
             extension = os.path.splitext(fName)[1] # Retrieve the file extension of the current item
@@ -327,6 +332,7 @@ def repair_music_library_structure(srchDir, currLog):
                     for line in errMsg:
 			print line
                     errList.append( errMsg )
+		    errCount += 1
                     
                     #errList.append('Python says: %s , %s , %s' % (str(errType), str(value), str(traceback)))
                     #logln( errMsg )
@@ -381,6 +387,8 @@ def repair_music_library_structure(srchDir, currLog):
             # else extension is disallowed and should be left alone (ex. log files, Python files)
             else: # else, this file is already in the proper folder
                 idleList.append( ( "No Action," , fullPath ) )
+    print 
+    print "Processed" , fCount , "files with" , errCount , "errors"
     logln( "END   , " + nowTimeStamp() + ": Music directory cleanup with 'repair_music_library_structure'" )
     #close_current_log() # close the current log # Assumes that a log is open
     return cpmvList, errList, idleList
