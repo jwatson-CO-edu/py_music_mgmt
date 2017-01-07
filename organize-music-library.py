@@ -334,6 +334,8 @@ def repair_music_library_structure(srchDir, currLog):
                     errList.append( errMsg )
 		    errCount += 1
                     
+                    accum.write( fullPath ) # Write the file path to the accumulator
+                    
                     #errList.append('Python says: %s , %s , %s' % (str(errType), str(value), str(traceback)))
                     #logln( errMsg )
                 # = End tag load = 
@@ -391,6 +393,9 @@ def repair_music_library_structure(srchDir, currLog):
     print "Processed" , fCount , "files with" , errCount , "errors"
     logln( "END   , " + nowTimeStamp() + ": Music directory cleanup with 'repair_music_library_structure'" )
     #close_current_log() # close the current log # Assumes that a log is open
+    
+    accum.out_and_clear( 'output/badFiles.txt' )
+    
     return cpmvList, errList, idleList
 
 def sort_all_songs(arg, dirname, names):
