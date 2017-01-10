@@ -3,7 +3,7 @@
 
 
 # == Init Environment ==================================================================================================
-import sys, os.path
+import sys, os.path , stat
 SOURCEDIR = os.path.dirname(os.path.abspath(__file__)) # URL, dir containing source file: http://stackoverflow.com/a/7783326
 
 def first_valid_dir(dirList):
@@ -47,19 +47,36 @@ from ResearchUtils.DebugLog import *
 # == End Init ==========================================================================================================
 
 badPaths = lines_from_file( 'output/badFiles.txt' )
-print badPaths[0]
+# print badPaths[0]
 
 totalFnum = len( badPaths )
 exists = 0
 
-for path in badPaths:
-    # 1. Test that the file exists
-    # if os.path.isfile( path.strip() ):
-    if os.path.isfile( path ): # Not finding ANY of the files, all signs point to this being a permissions problem
-	exists += 1
-    # 2. If Python does not recognize the file, find out why not
-    #
-    # 3. Try loading the file
-    # 4. Try fetching metadata
+if False:
+    print "Working directory" , os.getcwd()
+    print "changing ..."
+    os.chdir( '/home/jwatson/Music/' )
+    print "Working directory" , os.getcwd()
     
-print exists , "exist out of" , totalFnum , "bad files" # 0 exist out of 4990 bad files
+if True:
+    print stat.S_IMODE(os.stat('/home/jwatson/Music/').st_mode) # 511
+    # print os.stat('/home/jwatson/Music/').st_mode #           16895
+
+if True:
+    for path in badPaths:
+	# 1. Test that the file exists
+	# if os.path.isfile( path.strip() ):
+	# stripPath = remove_all_from( '/home/jwatson/Music/' , path )
+	# print stripPath
+	# if os.path.isfile( stripPath ): # Not finding ANY of the files, all signs point to this being a permissions problem
+	# if os.path.exists( stripPath ):
+	# if os.path.exists( path ):
+	print path
+	if os.access( path , os.F_OK ):
+	    exists += 1
+	# 2. If Python does not recognize the file, find out why not
+	#
+	# 3. Try loading the file
+	# 4. Try fetching metadata
+    
+    print exists , "exist out of" , totalFnum , "bad files" # 0 exist out of 4990 bad files

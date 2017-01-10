@@ -31,11 +31,6 @@ Organize music library, try to gracefully handle duplicates and problem files
 2. Verify that the global directory vars are pointing to the correct locations
 
   == TODO ==
-* Find out where all the IOErrors are coming from
-  X. Find out the total fraction of files that cause errors , COMPLETE: "Processed 5605 files with 4990 errors"
-  2. Create and write a list of paths that cause the errors
-  3. Separate file to investigate the errors
-  4. Handle IOErrors in this file
 * Print basic overall stats
 * Section numbers using 'util.Counter' from Berkeley, candidate for "ResearchEnv"
 * Handle the case where the artist tag is readable but empty
@@ -73,7 +68,9 @@ def add_first_valid_dir_to_path(dirList):
     else:
         raise ImportError("None of the specified directories were loaded") # Assume that not having this loaded is a bad thing
 # List all the places where the research environment could be
-add_first_valid_dir_to_path( [ '/media/jwatson/FILEPILE/ME-6225_Motion-Planning/Assembly_Planner/ResearchEnv',
+add_first_valid_dir_to_path( [ '/media/jwatson/FILEPILE/Utah_Research/Assembly_Planner/ResearchEnv',
+                               'F:\Utah_Research\Assembly_Planner\ResearchEnv',
+                               '/media/jwatson/FILEPILE/ME-6225_Motion-Planning/Assembly_Planner/ResearchEnv',
                                '/media/mawglin/FILEPILE/Python/ResearchEnv',
                                '/home/jwatson/regrasp_planning/researchenv',
                                '/media/jwatson/FILEPILE/Python/ResearchEnv',
