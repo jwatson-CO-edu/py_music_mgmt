@@ -5,6 +5,39 @@ organize-music-library.py , Built on Spyder for Python 2.7
 James Watson, 2016 March
 Organize music library, try to gracefully handle duplicates and problem files
 
+== REBOOT PLAN ==
+
+Principles
+* Test one thing at a time
+* Modular design
+* File-by-file plan
+* Maintain lists of directories to create / destroy
+
+Modules
+1. Fetch all relevant metadata and display / return
+2. Generate Simplified Band Names
+3. Generate a movement plan , per file
+4. Generate a per-file record that contains all { metadata , movement plans } , can be queried
+4. Check with directory creation plans
+5. Check with directory deletion plans
+
+Main Sequence
+1. Scan all music folders , generating movement plans , per file , NO CHECKS made for directory existence , NO CHECKS on duplicates
+   a. Test each on one file , then test on entire library
+2. Create folders in the target dir
+3. Execute movement plans
+   a. Check destination
+   b. Move
+      i. Handle duplicates : Eliminate low-quality duplicates , eliminite exact duplicates , Discriminate versions
+   c. Check success
+   d. Check gone from origin
+4. Execute directory deletion plans
+   a. Check dir empty
+   b. Delete dir
+   c. Check dir deleted
+
+== END REBOOT ==
+
   == PROJECT ==
 1. Library Repair - IN PROPGRESS
    1.a. Test Log-Only on a small dir, try to test all cases
