@@ -53,10 +53,10 @@ Main Sequence
 
 == PROJECT ==
 1. Library Repair - IN PROPGRESS
-   1.1. [ ] Fetch all relevant metadata and display / return
-   1.2. [ ] Generate Simplified Band Names
-   1.3. [ ] Generate a movement plan , per file
-   1.4. [ ] Generate a per-file record that contains all { metadata , movement plans } , can be queried
+   1.1. [X] Fetch all relevant metadata and display / return
+   1.2. [X] Generate Simplified Band Names
+   1.3. [X] Generate Simplified folder names
+   1.4. [ ] Generate a movement plan , per file
    1.5. [ ] Check with directory creation plans
    1.6. [ ] Check with directory deletion plans
 2. Empty Dir Cleaning - NOT STARTED
@@ -75,7 +75,7 @@ Main Sequence
 
 """
 
-# == Init Environment ==================================================================================================
+# == Init Environment ======================================================================================================================
 import sys, os.path
 SOURCEDIR = os.path.dirname(os.path.abspath(__file__)) # URL, dir containing source file: http://stackoverflow.com/a/7783326
 
@@ -101,13 +101,19 @@ def add_first_valid_dir_to_path(dirList):
     else:
         raise ImportError("None of the specified directories were loaded") # Assume that not having this loaded is a bad thing
 # List all the places where the research environment could be
-add_first_valid_dir_to_path( [ '/media/jwatson/FILEPILE/Utah_Research/Assembly_Planner/ResearchEnv',
-                               'F:\Utah_Research\Assembly_Planner\ResearchEnv',
-                               '/media/jwatson/FILEPILE/ME-6225_Motion-Planning/Assembly_Planner/ResearchEnv',
-                               '/media/mawglin/FILEPILE/Python/ResearchEnv',
-                               '/home/jwatson/regrasp_planning/researchenv',
-                               '/media/jwatson/FILEPILE/Python/ResearchEnv',
-                               'F:\Python\ResearchEnv'] )
+#add_first_valid_dir_to_path( [ '/media/jwatson/FILEPILE/Utah_Research/Assembly_Planner/ResearchEnv',
+                               #'F:\Utah_Research\Assembly_Planner\ResearchEnv',
+                               #'/media/jwatson/FILEPILE/ME-6225_Motion-Planning/Assembly_Planner/ResearchEnv',
+                               #'/media/mawglin/FILEPILE/Python/ResearchEnv',
+                               #'/home/jwatson/regrasp_planning/researchenv',
+                               #'/media/jwatson/FILEPILE/Python/ResearchEnv',
+                               #'F:\Python\ResearchEnv'] )
+
+# ~~ Constants , Shortcuts , Aliases ~~
+import __builtin__ # URL, add global vars across modules: http://stackoverflow.com/a/15959638/893511
+__builtin__.EPSILON = 1e-7 # Assume floating point errors below this level
+__builtin__.infty = 1e309 # URL: http://stackoverflow.com/questions/1628026/python-infinity-any-caveats#comment31860436_1628026
+__builtin__.endl = os.linesep # Line separator
 
 # ~~ Libraries ~~
 # ~ Standard Libraries ~
@@ -119,13 +125,67 @@ import eyed3 # This script was built for eyed3 0.7.9
 # from ResearchEnv import * # Load the custom environment
 # from ResearchUtils.DebugLog import *
 
-# == End Init ==========================================================================================================
+# == End Init ==============================================================================================================================
 
-TEST_LIBRARY_LOCATIONS = [ ]
-LIBDIR = first_valid_dir( TEST_LIBRARY_LOCATIONS )
+def format_epoch_timestamp( sysTime ):
+    """ Format epoch time into a readable timestamp """
+    return datetime.fromtimestamp( sysTime ).strftime('%Y-%m-%d_%H-%M-%S-%f')
+
+""" URL: https://msdn.microsoft.com/en-us/library/windows/desktop/aa365247(v=vs.85).aspx
+Use any character in the current code page for a name, including Unicode characters and characters in the extended character set (128–255), 
+except for the following reserved characters:
+< (less than)
+> (greater than)
+: (colon)
+" (double quote)
+/ (forward slash)
+\ (backslash)
+| (vertical bar or pipe)
+? (question mark)
+* (asterisk)
+"""
+
+# [X] Generate NTFS-safe Band Names with definite article removed
+
+DISALLOWEDCHARS = "\\/><|:&; \r\t\n.\"\'?*" # Do not create a directory or file with these chars
+
+def strip_the( artistName ):
+    """ Strip a musical artist's name of a leading 'the ' , case insensitive """
+    # NOTE: This must be run BEFORE 'proper_dir_name' because it relies on there being a space after "The"
+    if artistName and artistName[:4].lower() == "the ": 
+        return artistName[4:]
+    else:
+        return artistName
+
+# [X] Generate Simplified folder names # safe path with safe filename
+
+def safe_dir_name( trialStr ):
+    """ Return a string stripped of all disallowed chars """
+    rtnStr = ""
+    if trialStr: # if a string was received 
+	for char in trialStr: # for each character of the input string
+	    if char not in DISALLOWEDCHARS: # If the character is not disallowed
+		rtnStr += char # Append the char to the proper directory name
+	return rtnStr
+    else:
+	return None
+    
+def safe_artist_name( artistName ):
+    """ Return a version of the artist name that has neither the definite article nor any disallowed chars """
+    artistName = strip_the( artistName )
+    return safe_dir_name( artistName )
+
+# [X] Generate NTFS-safe filename
+
+def safe_file_name( fName ):
+    """ Return a modified file name that conforms to NTFS naming rules """ 
+    # NOTE: This function assumes it is okay to begin filenames with a digit
+    rtnName = list( os.path.splitext( fName ) ) # Split fname
+    rtnName[0] = safe_dir_name( rtnName[0] )# transform name w/o ext
+    return rtnName[0] + rtnName[1] # reapply ext & return
 
 
-# [ ] Fetch all relevant metadata and display / return
+# [X] Fetch all relevant metadata and display / return
 
 def fetch_library_metadata( libraryPath ):
     """ Get information about all the files in the 'libraryPath' """
@@ -134,28 +194,100 @@ def fetch_library_metadata( libraryPath ):
     allRecords = []
     
     # Walk the 'libraryPath'
-    for dirName , subdirList , fileList in os.walk( srchDir ): # for each subdir in 'srchDir', including 'srchDir'
+    for dirName , subdirList , fileList in os.walk( libraryPath ): # for each subdir in 'srchDir', including 'srchDir'
 	for fName in fileList: # for each file in this subdir    
 	    
 	    record = {} # Create a dictionary to store everything we find out about the file
 
 	    # Information to get:
 	    # ~ File Metadata ~
-	    record[ 'fileName' ] = fName # ----------------------- filename
+	    record[ 'folder' ] = dirName # ------------------------------------ Containing Directory
+	    record[ 'fileName' ] = fName # ------------------------------------ filename
 	    fullPath = os.path.join( dirName , fName )
-	    record[ 'fullPath' ] = fullPath # -------------------- full path
-	    record[ 'EXT' ] = os.path.splitext(fName)[1].upper() # extension
+	    record[ 'fullPath' ] = fullPath # --------------------------------- full path
+	    record[ 'EXT' ] = os.path.splitext(fName)[1][1:].upper() # -------- extension
 	    # creation date # This is not consistent across OS
-	    # modification date
-	    record[ 'size' ] = os.path.getsize( fullPath ) # ----- size on disk
+	    record[ 'modDate' ] = os.path.getmtime( fullPath ) # -------------- modification date 
+	    record[ 'modDateReadable' ] = \
+	        format_epoch_timestamp( record[ 'modDate' ] ) # --------------- modification date (human readable)
+	    record[ 'size' ] = os.path.getsize( fullPath ) # ------------------ size on disk
 	    # ~ Song Metadata ~
-	    # MP3 Artist
-	    # MP3 Title
-	    # MP3 Album
-	    # MP3 Length
+	    try:
+		audiofile = eyed3.core.load( fullPath ) # Load the file
+		audiofileTag = audiofile.tag # Instantiate an audio metadata object
+	    except:
+		audiofileTag = None
+	    if audiofileTag: # if the metadata was able to be loaded
+		record[ 'artist' ] = audiofileTag.artist # -------------------- MP3 Artist
+		record[ 'title' ] = audiofileTag.title # ---------------------- MP3 Title
+		record[ 'album' ] = audiofileTag.album # ---------------------- MP3 Album
+		record[ 'albumArtist' ] = audiofileTag.album_artist # --------- Album Artist
+		record[ 'total_seconds' ] = audiofile.info.time_secs # -------- MP3 Length
+		record[ 'mm:ss' ] = ( int( audiofile.info.time_secs / 60 ) , 
+		                      audiofile.info.time_secs % 60 )# -------- Time in mm:ss
+	    else: # else could not load MP3 tags , Load dummy data
+		record[ 'artist' ] = 'Various' # ------------------------------ MP3 Artist
+		record[ 'title' ] = None # ------------------------------------ MP3 Title
+		record[ 'album' ] = None # ------------------------------------ MP3 Album
+		record[ 'albumArtist' ] = None # ------------------------------ Album Artist
+		record[ 'total_seconds' ] = None # ---------------------------- MP3 Length
+		record[ 'mm:ss' ] = ( None , None ) # ------------------------- Time in mm:ss
 	    # ~ Generated Metadata ~
-	    # NTFS-safe filename with definite article removed
-	    # safe path with safe filename
+	    record[ 'artistSafe' ] = safe_artist_name( record[ 'artist' ] ) # - MP3 Artist (NTFS Safe)
+	    record[ 'fileNameSafe' ] = safe_file_name( record[ 'fileName' ] ) # File Name (NTFS Safe)
+	    
+	    allRecords.append( record )
+	    
+    return allRecords
+
+# [ ] Generate a movement plan , per file
+
+def create_move_plan( recordList ):
+    """ Given a 'recordList' created by 'fetch_library_metadata' generate a movement plan , per file """
+    
+    plannedMoves = []
+    
+    for record in recordList:
+	# 1.   Get the file type
+	# 1.1. The action depends on the file type
+	# 2.   Get the artist and proper file name
+	# 3.   Determine the proper folder for this file
+	# 4.   Determine whether the file is in the right folder
+	# 4.1.
+	pass # FIXME: START HERE!
+
+
+
+
+
+# == Main ==================================================================================================================================
+
+if __name__ == "__main__":
+    
+    # ~~ Locate Music Library ~~
+    #          Drive letter separator for Windows --v
+    TEST_LIBRARY_LOCATIONS = [ os.path.join( "D:" , os.sep , "Python" , "py-music-mgmt" , "Amzn_2017-01-30" ) ]
+    LIBDIR = first_valid_dir( TEST_LIBRARY_LOCATIONS )    
+    
+    if LIBDIR: # If the library was found , process it
+	
+	fileInfo = fetch_library_metadata( LIBDIR )
+	for record in fileInfo:
+	    print record
+	print
+	for key , val in fileInfo[0].iteritems():
+	    print key , '\t' , val
+	print
+	for key , val in fileInfo[-1].iteritems():
+	    print key , '\t' , val	
+	    
+    else: # else no library was found , notify
+	print "No valid directory in" , TEST_LIBRARY_LOCATIONS
+    
+    
+    
+
+# == End Main ==============================================================================================================================
 
 
 # === Spare Parts ===
@@ -214,26 +346,7 @@ def fetch_library_metadata( libraryPath ):
 
 ## = Artist Names =
 
-#DISALLOWEDCHARS = "\\/><|:&; \r\t\n.\"\'?" # Do not create a directory with these chars
 
-#def strip_the(artistName):
-    #""" Strip a musical artist's name of a leading 'the ' , case insensitive """
-    ## Note this will have no effect if 'proper_dir_name' has already been run!
-    #if artistName and artistName[:4].lower() == "the ": 
-        #return artistName[4:]
-    #else:
-        #return artistName
-
-#def proper_dir_name(trialStr):
-    #""" Return a string stripped of all disallowed chars """
-    #rtnStr = ""
-    #if trialStr: # if a string was received 
-	#for char in trialStr: # for each character of the input string
-	    #if char not in DISALLOWEDCHARS: # If the character is not disallowed
-		#rtnStr += char # Append the char to the proper directory name
-	#return rtnStr
-    #else:
-	#return None
             
 #def proper_artist_dir(trialStr):
     #""" Return a musical artist's name stripped of disallowed chars and any leading 'the ' """
