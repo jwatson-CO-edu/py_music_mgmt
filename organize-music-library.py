@@ -53,18 +53,20 @@ Main Sequence
 
 == PROJECT ==
 1. Library Repair - IN PROPGRESS
-   1.1. [X] Fetch all relevant metadata and display / return
-   1.2. [X] Generate Simplified Band Names
-   1.3. [X] Generate Simplified folder names
-   1.4. [ ] Generate a movement plan , per file
-   1.5. [ ] Check with directory creation plans
-   1.6. [ ] Check with directory deletion plans
+   1.1.   [X] Fetch all relevant metadata and display / return
+   1.2.   [X] Generate Simplified Band Names
+   1.3.   [X] Generate Simplified folder names
+   1.3.1. [ ] Log a snapshot of the library
+   1.4.   [X] Generate a movement plan , per file , with enough information to carry out the instructions
+   1.5.   [ ] Check and execute directory creation plans
+   1.6.   [ ] Check and execute file move/rename plans
+   1.6.1. [ ] Log the success of the plan execution 
+   1.7.   [ ] Check and execute directory deletion plans
 2. Empty Dir Cleaning - NOT STARTED
-3. Inbox Processing - NOT STARTED
-4. Adapt #1 for 2 & 3
+3. Inbox Processing - NOT STARTED # This should be the default action to running the main file
+4. Adapt #1 for 2 & 3 
 
   == TODO ==
-* Print basic overall stats
 * Section numbers using 'util.Counter' from Berkeley, candidate for "ResearchEnv"
 * Handle the case where the artist tag is readable but empty
 * All of the 'cpmvList' entries seem the be malformed, review the 'shutil' docs for what the move function wants
@@ -131,6 +133,8 @@ def format_epoch_timestamp( sysTime ):
     """ Format epoch time into a readable timestamp """
     return datetime.fromtimestamp( sysTime ).strftime('%Y-%m-%d_%H-%M-%S-%f')
 
+# TODO: FUNCTION TO FETCH ALL THE ALPHANUM ASCII CHARACTERS
+
 """ URL: https://msdn.microsoft.com/en-us/library/windows/desktop/aa365247(v=vs.85).aspx
 Use any character in the current code page for a name, including Unicode characters and characters in the extended character set (128–255), 
 except for the following reserved characters:
@@ -165,7 +169,11 @@ def safe_dir_name( trialStr ):
     if trialStr: # if a string was received 
 	for char in trialStr: # for each character of the input string
 	    if char not in DISALLOWEDCHARS: # If the character is not disallowed
-		rtnStr += char # Append the char to the proper directory name
+		try:
+		    char = char.encode( 'ascii' , 'ignore' ) # http://stackoverflow.com/a/2365444/893511
+		    rtnStr += char # Append the char to the proper directory name
+		except:
+		    rtnStr += 'X' # TODO: Make this a random A-Z , a-z character so that completely unreadable names are not overwritten
 	return rtnStr
     else:
 	return None
@@ -184,17 +192,16 @@ def safe_file_name( fName ):
     rtnName[0] = safe_dir_name( rtnName[0] )# transform name w/o ext
     return rtnName[0] + rtnName[1] # reapply ext & return
 
-
 # [X] Fetch all relevant metadata and display / return
 
-def fetch_library_metadata( libraryPath ):
-    """ Get information about all the files in the 'libraryPath' """
-    # The goal of this function is to get the information we need for all follow-up file operations
+def fetch_library_metadata( searchPath ):
+    """ Get information about all the files in the 'libraryPath' , this will be used to generate file management actions """
+    # The goal of this function is to get the information for everything in 'searchPath' we need for all follow-up file operations
     
     allRecords = []
     
-    # Walk the 'libraryPath'
-    for dirName , subdirList , fileList in os.walk( libraryPath ): # for each subdir in 'srchDir', including 'srchDir'
+    # Walk the 'searchPath'
+    for dirName , subdirList , fileList in os.walk( searchPath ): # for each subdir in 'srchDir', including 'srchDir'
 	for fName in fileList: # for each file in this subdir    
 	    
 	    record = {} # Create a dictionary to store everything we find out about the file
@@ -205,7 +212,7 @@ def fetch_library_metadata( libraryPath ):
 	    record[ 'fileName' ] = fName # ------------------------------------ filename
 	    fullPath = os.path.join( dirName , fName )
 	    record[ 'fullPath' ] = fullPath # --------------------------------- full path
-	    record[ 'EXT' ] = os.path.splitext(fName)[1][1:].upper() # -------- extension
+	    record[ 'EXT' ] = os.path.splitext( fName )[1][1:].upper() # -------- extension
 	    # creation date # This is not consistent across OS
 	    record[ 'modDate' ] = os.path.getmtime( fullPath ) # -------------- modification date 
 	    record[ 'modDateReadable' ] = \
@@ -240,24 +247,82 @@ def fetch_library_metadata( libraryPath ):
 	    
     return allRecords
 
-# [ ] Generate a movement plan , per file
+# [X] Generate a movement plan , per file
 
-def create_move_plan( recordList ):
+EXTIGNORE = [ item.upper() for item in [ "txt" , "py" , "pyc" ] ]
+
+def create_move_plan( recordList , libraryPath ):
     """ Given a 'recordList' created by 'fetch_library_metadata' generate a movement plan , per file """
     
     plannedMoves = []
     
     for record in recordList:
 	# 1.   Get the file type
+	ext = record[ 'EXT' ]
 	# 1.1. The action depends on the file type
-	# 2.   Get the artist and proper file name
-	# 3.   Determine the proper folder for this file
-	# 4.   Determine whether the file is in the right folder
-	# 4.1.
-	pass # FIXME: START HERE!
+	if ext not in EXTIGNORE: 
+	    if ext == 'MP3':
+		# 2.   Get the artist and proper file name , Determine the proper folder for this file
+		properDir = os.path.join( libraryPath , record[ 'artistSafe' ] ) # The file should be stored under the safe artist name
+	    else: # For non-MP3 files , the file should be in a folder that is the capitalized extension
+		properDir = os.path.join( libraryPath , ext )	    
+	    # 4.   Determine whether the file is in the right folder
+	    correctLoc = record[ 'folder' ] == properDir
+	    # 4.1. If the file is not in the right folder , move and perhaps rename
+	    if not correctLoc: # If the file is not in the proper directory , move and perhaps rename
+		# 4.1. If the file is not in the right folder , specify a move action    
+		plannedMoves.append( { 'op': 'mv' , # move operation
+		                       'orgn': record[ 'fullPath' ] , # from the current path
+		                       'orginDir' : record[ 'folder' ] ,
+		                       'dest': os.path.join( properDir , record[ 'fileNameSafe' ] ) , 
+		                       'destDir': properDir } ) # to the proper dir with a safe name
+	    elif not record[ 'fileNameSafe' ] == record[ 'fileName' ]:
+		plannedMoves.append( { 'op': 'nm' , 
+		                       'orgn': record[ 'fileName' ] , 
+		                       'orginDir' : record[ 'folder' ] , # Origin and destination folders are the same in this case
+		                       'dest': record[ 'fileNameSafe' ] ,
+		                       'destDir': record[ 'folder' ] } )
+	    # else the file is both in the proper dir and has a safe name , no action
+    return plannedMoves
+
+# [ ] Check and execute directory creation plans
+# [ ] Check and execute file move/rename plans
+
+def execute_move_plan( movePlan , simulate = false ): # Set simulate to 'True' to disable actual file operations
+    """ Carry out or simulate all dir creation / file move / file rename operations determined by 'create_move_plan' , return success """
+    opReport = []
+    for operation in movePlan:
+	if operation[ 'op' ] == 'mv':
+	    # opStatus = { 'opNum': opDex , 'opSpec': operation } # FIXME : START HERE!
+	    # Check that the origin file exists
+	    # Check that the destination directory exists
+	    # If the dest dir does not exist , create it
+	    # opStatus = { 'opNum': opDex , 'opSpec': operation } # FIXME : START HERE! , Folder creation should also have an action entry
+	    # Move the file
+	    # Check that the file was successfully moved and report status
+	    pass
+	elif operation[ 'op' ] == 'nm':
+	    # opStatus = { 'opNum': opDex , 'opSpec': operation } # FIXME : START HERE!
+	    # Check that the target file exists
+	    # if the file exists , rename
+	    # Check that the renamed file exists and report status
+	    pass
+	else: # else an unrecognized operation was requested , notify
+	    print "execute_move_plan: Operations type" , operation[ 'op' ] , "is not recognized!"
 
 
+# [ ] Check and execute directory deletion plans
 
+def del_empty_subdirs( searchDir ):
+    """ Delete all the empty subdirectories under 'searchDir', URL: http://stackoverflow.com/a/22015788/7186022 """
+    for dirpath , _ , _ in os.walk( searchDir, topdown = False ):  # Walk the directory from the bottom up
+        if dirpath == searchDir: # Do not attempt to delete the top level
+            break
+        try:
+	    # TODO: Check if the directory is actually empty before attempting deletion
+            os.rmdir( dirpath )
+        except OSError as ex:
+            print "Rejected" , ex
 
 
 # == Main ==================================================================================================================================
@@ -266,7 +331,8 @@ if __name__ == "__main__":
     
     # ~~ Locate Music Library ~~
     #          Drive letter separator for Windows --v
-    TEST_LIBRARY_LOCATIONS = [ os.path.join( "D:" , os.sep , "Python" , "py-music-mgmt" , "Amzn_2017-01-30" ) ]
+    TEST_LIBRARY_LOCATIONS = [ os.path.join( "D:" , os.sep , "Python" , "py-music-mgmt" , "Amzn_2017-01-30" ) ,
+                               "/media/jwatson/FILEPILE/Python/py-music-mgmt/Amzn_2017-01-30" ]
     LIBDIR = first_valid_dir( TEST_LIBRARY_LOCATIONS )    
     
     if LIBDIR: # If the library was found , process it
@@ -277,9 +343,10 @@ if __name__ == "__main__":
 	print
 	for key , val in fileInfo[0].iteritems():
 	    print key , '\t' , val
-	print
-	for key , val in fileInfo[-1].iteritems():
-	    print key , '\t' , val	
+	
+	moves = create_move_plan( fileInfo , LIBDIR )
+	for move in moves:
+	    print move
 	    
     else: # else no library was found , notify
 	print "No valid directory in" , TEST_LIBRARY_LOCATIONS
