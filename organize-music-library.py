@@ -121,6 +121,7 @@ __builtin__.endl = os.linesep # Line separator
 # ~ Standard Libraries ~
 import os, time, shutil, sys , traceback
 from datetime import datetime
+from random import choice
 # ~ Special Libraries ~
 import eyed3 # This script was built for eyed3 0.7.9
 # ~ Local Libraries ~
@@ -133,7 +134,8 @@ def format_epoch_timestamp( sysTime ):
     """ Format epoch time into a readable timestamp """
     return datetime.fromtimestamp( sysTime ).strftime('%Y-%m-%d_%H-%M-%S-%f')
 
-# TODO: FUNCTION TO FETCH ALL THE ALPHANUM ASCII CHARACTERS
+# URL: http://code.activestate.com/recipes/65117-converting-between-ascii-numbers-and-characters/
+ASCII_ALPHANUM = [chr(code) for code in xrange(48,57+1)]+[chr(code) for code in xrange(65,90+1)]+[chr(code) for code in xrange(97,122+1)]
 
 """ URL: https://msdn.microsoft.com/en-us/library/windows/desktop/aa365247(v=vs.85).aspx
 Use any character in the current code page for a name, including Unicode characters and characters in the extended character set (128–255), 
@@ -170,10 +172,10 @@ def safe_dir_name( trialStr ):
 	for char in trialStr: # for each character of the input string
 	    if char not in DISALLOWEDCHARS: # If the character is not disallowed
 		try:
-		    char = char.encode( 'ascii' , 'ignore' ) # http://stackoverflow.com/a/2365444/893511
+		    char = char.encode( 'ascii' , 'ignore' ) # Ignore conv errors but inconsistent # http://stackoverflow.com/a/2365444/893511
 		    rtnStr += char # Append the char to the proper directory name
 		except:
-		    rtnStr += 'X' # TODO: Make this a random A-Z , a-z character so that completely unreadable names are not overwritten
+		    rtnStr += choice( ASCII_ALPHANUM ) # Random ASCII character so that completely unreadable names are not overwritten
 	return rtnStr
     else:
 	return None
@@ -288,7 +290,7 @@ def create_move_plan( recordList , libraryPath ):
 # [ ] Check and execute directory creation plans
 # [ ] Check and execute file move/rename plans
 
-def execute_move_plan( movePlan , simulate = false ): # Set simulate to 'True' to disable actual file operations
+def execute_move_plan( movePlan , simulate = False ): # Set simulate to 'True' to disable actual file operations
     """ Carry out or simulate all dir creation / file move / file rename operations determined by 'create_move_plan' , return success """
     opReport = []
     for operation in movePlan:
