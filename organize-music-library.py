@@ -58,17 +58,15 @@ Main Sequence
    1.3.   [X] Generate Simplified folder names
    1.3.1. [ ] Log a snapshot of the library
    1.4.   [X] Generate a movement plan , per file , with enough information to carry out the instructions
-   1.5.   [ ] Check and execute directory creation plans
-   1.6.   [ ] Check and execute file move/rename plans
+   1.5.   [X] Check and execute directory creation plans
+   1.6.   [X] Check and execute file move/rename plans
    1.6.1. [ ] Log the success of the plan execution 
-   1.7.   [ ] Check and execute directory deletion plans
-2. Empty Dir Cleaning - NOT STARTED
+   1.7.   [X] Check and execute directory deletion plans
+2. Empty Dir Cleaning - COMPLETE
 3. Inbox Processing - NOT STARTED # This should be the default action to running the main file
 4. Adapt #1 for 2 & 3 
 
   == TODO ==
-* Section numbers using 'util.Counter' from Berkeley, candidate for "ResearchEnv"
-* Handle the case where the artist tag is readable but empty
 * All of the 'cpmvList' entries seem the be malformed, review the 'shutil' docs for what the move function wants
 * The repair function should record all move/erase decisions, even when no action is taken
 * The sort-inbox function should only record actions taken
@@ -122,18 +120,32 @@ __builtin__.endl = os.linesep # Line separator
 import os, time, shutil, sys , traceback
 from datetime import datetime
 from random import choice
+from copy import deepcopy
 # ~ Special Libraries ~
 import eyed3 # This script was built for eyed3 0.7.9
 # ~ Local Libraries ~
-# from ResearchEnv import * # Load the custom environment
-# from ResearchUtils.DebugLog import *
 
 # == End Init ==============================================================================================================================
 
-def format_epoch_timestamp( sysTime ):
+# == Helper Functions ==
+
+def sep( title = "" , width = 6 , char = '=' , strOut = False ): # <<< resenv
+    """ Print a separating title card for debug """
+    LINE = width * char
+    if strOut:
+        return LINE + ' ' + title + ' ' + LINE
+    else:
+        print LINE + ' ' + title + ' ' + LINE
+
+def format_epoch_timestamp( sysTime ): # TODO: Send to AsmEnv
     """ Format epoch time into a readable timestamp """
     return datetime.fromtimestamp( sysTime ).strftime('%Y-%m-%d_%H-%M-%S-%f')
+    
+# == End Helper ==
 
+
+
+# TODO: Send to AsmEnv
 # URL: http://code.activestate.com/recipes/65117-converting-between-ascii-numbers-and-characters/
 ASCII_ALPHANUM = [chr(code) for code in xrange(48,57+1)]+[chr(code) for code in xrange(65,90+1)]+[chr(code) for code in xrange(97,122+1)]
 
@@ -170,7 +182,7 @@ def safe_dir_name( trialStr ):
     rtnStr = ""
     if trialStr: # if a string was received 
 	for char in trialStr: # for each character of the input string
-	    if char not in DISALLOWEDCHARS: # If the character is not disallowed
+	    if char not in DISALLOWEDCHARS and not char.isspace(): # If the character is not disallowed and is not whitespace
 		try:
 		    char = char.encode( 'ascii' , 'ignore' ) # Ignore conv errors but inconsistent # http://stackoverflow.com/a/2365444/893511
 		    rtnStr += char # Append the char to the proper directory name
@@ -252,6 +264,7 @@ def fetch_library_metadata( searchPath ):
 # [X] Generate a movement plan , per file
 
 EXTIGNORE = [ item.upper() for item in [ "txt" , "py" , "pyc" ] ]
+MISCFOLDERNAME = "Various" # Name of the folder for files without a readable artist name
 
 def create_move_plan( recordList , libraryPath ):
     """ Given a 'recordList' created by 'fetch_library_metadata' generate a movement plan , per file """
@@ -265,7 +278,10 @@ def create_move_plan( recordList , libraryPath ):
 	if ext not in EXTIGNORE: 
 	    if ext == 'MP3':
 		# 2.   Get the artist and proper file name , Determine the proper folder for this file
-		properDir = os.path.join( libraryPath , record[ 'artistSafe' ] ) # The file should be stored under the safe artist name
+		try:
+		    properDir = os.path.join( libraryPath , record[ 'artistSafe' ] ) # The file should be stored under the safe artist name
+		except AttributeError: # Could not retrieve a safe artist , send to MISC
+		    properDir = os.path.join( libraryPath , MISCFOLDERNAME ) 
 	    else: # For non-MP3 files , the file should be in a folder that is the capitalized extension
 		properDir = os.path.join( libraryPath , ext )	    
 	    # 4.   Determine whether the file is in the right folder
@@ -280,40 +296,70 @@ def create_move_plan( recordList , libraryPath ):
 		                       'destDir': properDir } ) # to the proper dir with a safe name
 	    elif not record[ 'fileNameSafe' ] == record[ 'fileName' ]:
 		plannedMoves.append( { 'op': 'nm' , 
-		                       'orgn': record[ 'fileName' ] , 
+		                       'orgn': record[ 'fullPath' ] , 
 		                       'orginDir' : record[ 'folder' ] , # Origin and destination folders are the same in this case
-		                       'dest': record[ 'fileNameSafe' ] ,
+		                       'dest': os.path.join( record[ 'folder' ] , record[ 'fileNameSafe' ] ) , # Renamed in the same folder
 		                       'destDir': record[ 'folder' ] } )
 	    # else the file is both in the proper dir and has a safe name , no action
     return plannedMoves
 
-# [ ] Check and execute directory creation plans
-# [ ] Check and execute file move/rename plans
+# [X] Check and execute directory creation plans
+# [X] Check and execute file move/rename plans
 
-def execute_move_plan( movePlan , simulate = False ): # Set simulate to 'True' to disable actual file operations
-    """ Carry out or simulate all dir creation / file move / file rename operations determined by 'create_move_plan' , return success """
-    opReport = []
-    for operation in movePlan:
-	if operation[ 'op' ] == 'mv':
-	    # opStatus = { 'opNum': opDex , 'opSpec': operation } # FIXME : START HERE!
+def execute_move_plan( movePlan , verbose = False ): # Set simulate to 'True' to disable actual file operations
+    """ Carry out all dir creation / file move / file rename operations determined by 'create_move_plan' , return operation status """
+    opReport = deepcopy( movePlan ) # operation status , Create a deep copy of the move plan so that it can be annotated as we go
+    
+    def log_status( reportList , op ,  index , success , msg , verbose ):
+	reportList[ index ][ 'success' ] = success
+	reportList[ index ][ 'statusMsg' ] = msg
+	if verbose:
+	    print op[ 'op' ] , op[ 'orgn' ] , "Success?" , reportList[ index ][ 'success' ] , "Msg:" , reportList[ index ][ 'statusMsg' ]    
+    
+    for opDex , operation in enumerate( movePlan ):
+	opReport[ opDex ][ 'opNum' ] = opDex
+	if operation[ 'op' ] == 'mv': # MOVE operation
+	    dirSuccess = False
 	    # Check that the origin file exists
-	    # Check that the destination directory exists
-	    # If the dest dir does not exist , create it
-	    # opStatus = { 'opNum': opDex , 'opSpec': operation } # FIXME : START HERE! , Folder creation should also have an action entry
-	    # Move the file
-	    # Check that the file was successfully moved and report status
-	    pass
-	elif operation[ 'op' ] == 'nm':
-	    # opStatus = { 'opNum': opDex , 'opSpec': operation } # FIXME : START HERE!
+	    if os.path.isfile( operation[ 'orgn' ] ):
+		# Check that the destination directory exists
+		if not os.path.isdir( operation[ 'destDir' ] ):
+		    # If the dest dir does not exist , create it
+		    try: # http://stackoverflow.com/a/5032238/7186022
+			os.makedirs( operation[ 'destDir' ] )
+			dirSuccess = True
+		    except OSError as exception:
+			if exception.errno != errno.EEXIST: # For any other error than an already existent directory , raise
+			    raise
+		else: # else the directory already exists , make sure to set the flag to allow move
+		    dirSuccess = True
+		if dirSuccess: # If the directory exists
+		    # Move the file , else simulate
+		    shutil.move( operation[ 'orgn' ] , operation[ 'dest' ] )
+		    # Check that the file was successfully moved and report status		
+		    if os.path.isfile( operation[ 'dest' ] ):
+			log_status( opReport , operation , opDex , True , "SUCCESS" , verbose )
+		    else: # else could not find file at the intended destination
+			log_status( opReport , operation , opDex , False , "FAIL: FILE NOT MOVED" , verbose )			
+		else: # else the directory was not found and was not created
+		    log_status( opReport , operation , opDex , False , "FAIL: DIRECTORY NOT CREATED" , verbose )    
+	    else: # else the file was not found at the origin location
+		log_status( opReport , operation , opDex , False , "FAIL: ORIGIN FILE DNE" , verbose )    
+	elif operation[ 'op' ] == 'nm': # RENAME operation
 	    # Check that the target file exists
-	    # if the file exists , rename
-	    # Check that the renamed file exists and report status
-	    pass
+	    if os.path.isfile( operation[ 'orgn' ] ):
+		os.rename( operation[ 'orgn' ] , operation[ 'dest' ] )
+		if os.path.isfile( operation[ 'dest' ] ):
+		    log_status( opReport , operation , opDex , True , "SUCCESS" , verbose )
+		else:
+		    log_status( opReport , operation , opDex , False , "FAIL: FILE NOT RENAMED" , verbose )	    
+	    else:
+		log_status( opReport , operation , opDex , False , "FAIL: ORIGIN FILE DNE" , verbose )
 	else: # else an unrecognized operation was requested , notify
 	    print "execute_move_plan: Operations type" , operation[ 'op' ] , "is not recognized!"
+	    log_status( opReport , operation , opDex , False , "FAIL: OPERATION NOT RECOGNIZED" , verbose )
 
-
-# [ ] Check and execute directory deletion plans
+# [X] Check and execute directory deletion plans
 
 def del_empty_subdirs( searchDir ):
     """ Delete all the empty subdirectories under 'searchDir', URL: http://stackoverflow.com/a/22015788/7186022 """
@@ -326,6 +372,19 @@ def del_empty_subdirs( searchDir ):
         except OSError as ex:
             print "Rejected" , ex
 
+# == Test Functions ==
+
+def gather_files( searchPath ): # UNDO organization
+    """ Find all the singular files under 'searchPath' (recursive) and move them directly to 'searchPath' """
+    # Walk the 'searchPath'
+    for dirName , subdirList , fileList in os.walk( searchPath ): # for each subdir in 'srchDir', including 'srchDir'
+	for fName in fileList: # for each file in this subdir    
+	    fullPath = os.path.join( dirName , fName )    
+	    if os.path.isfile( fullPath ):
+		print "Moving" , fullPath , "to" , os.path.join( searchPath , fName )
+		shutil.move( fullPath , os.path.join( searchPath , fName ) )
+
+# == End Test ==
 
 # == Main ==================================================================================================================================
 
@@ -333,7 +392,8 @@ if __name__ == "__main__":
     
     # ~~ Locate Music Library ~~
     #          Drive letter separator for Windows --v
-    TEST_LIBRARY_LOCATIONS = [ os.path.join( "D:" , os.sep , "Python" , "py-music-mgmt" , "Amzn_2017-01-30" ) ,
+    TEST_LIBRARY_LOCATIONS = [ "/home/jwatson/Music" , 
+                               os.path.join( "D:" , os.sep , "Python" , "py-music-mgmt" , "Amzn_2017-01-30" ) ,
                                "/media/jwatson/FILEPILE/Python/py-music-mgmt/Amzn_2017-01-30" ]
     LIBDIR = first_valid_dir( TEST_LIBRARY_LOCATIONS )    
     
@@ -350,10 +410,18 @@ if __name__ == "__main__":
 	for move in moves:
 	    print move
 	    
+	execute_move_plan( moves , verbose = True )
+	    
     else: # else no library was found , notify
 	print "No valid directory in" , TEST_LIBRARY_LOCATIONS
     
+    modeEnum = ( "REPAIR" , "INBOX" )
+    menuRun = True
+    mode = modeEnum[ 0 ]
+    SCANDIR = LIBDIR
     
+    while( menuRun ):
+	print "Music Library Organizer Version 2017.04.14"
     
 
 # == End Main ==============================================================================================================================
@@ -533,7 +601,7 @@ if __name__ == "__main__":
 
 #NUMPROCESSED = 0 # The number of files processed this session
 #PROCESSTIME = time.clock() # Time since the last milestone
-#MISCFOLDERNAME = "Various" # Name of the folder for files without a readable artist name
+#
 ##ERRLIST = [] 
 #DISALLOWEDEXTS = [ '.txt' , '.py' ] # folders with these file extensions should not be moved from the source dir
 #CRRPTDFILEEXTS = [ '.Mp3' , '.MP3' ] # files with these extensions seem to have problems in MusicBee
