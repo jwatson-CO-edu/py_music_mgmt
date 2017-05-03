@@ -56,22 +56,19 @@ Main Sequence
    1.1.   [X] Fetch all relevant metadata and display / return
    1.2.   [X] Generate Simplified Band Names
    1.3.   [X] Generate Simplified folder names
-   1.3.1. [ ] Log a snapshot of the library
+   1.3.1. [X] Log a snapshot of the library
    1.4.   [X] Generate a movement plan , per file , with enough information to carry out the instructions
    1.5.   [X] Check and execute directory creation plans
    1.6.   [X] Check and execute file move/rename plans
-   1.6.1. [ ] Log the success of the plan execution 
+   1.6.1. [X] Log the success of the plan execution 
    1.7.   [X] Check and execute directory deletion plans
+   1.8.   [X] Implement a user menu
 2. Empty Dir Cleaning - COMPLETE
 3. Inbox Processing - NOT STARTED # This should be the default action to running the main file
 4. Adapt #1 for 2 & 3 
 
   == TODO ==
-* All of the 'cpmvList' entries seem the be malformed, review the 'shutil' docs for what the move function wants
-* The repair function should record all move/erase decisions, even when no action is taken
-* The sort-inbox function should only record actions taken
-* Perhaps encapsulate the meat of repair/sort in a single function that is run with options. The operations are nearly identical
-* See if there are ways to read tags in other filetypes
+
 
 """
 
@@ -121,30 +118,49 @@ import os, time, shutil, sys , traceback
 from datetime import datetime
 from random import choice
 from copy import deepcopy
+from xml.dom.minidom import parseString
 # ~ Special Libraries ~
 import eyed3 # This script was built for eyed3 0.7.9
+from dicttoxml import dicttoxml # For logging
 # ~ Local Libraries ~
 
 # ~~ Script Signature ~~
-__progname__ = "PROGRAM NAME"
-__version__  = "YYYY.MM.DD"
+__progname__ = "Music Library Organizer"
+__version__  = "2017.04.21"
 def __prog_signature__(): return __progname__ + " , Version " + __version__ # Return a string representing program name and verions
 
 # == End Init ==============================================================================================================================
 
 # == Helper Functions ==
 
-def sep( title = "" , width = 6 , char = '=' , strOut = False ): # <<< resenv
-    """ Print a separating title card for debug """
+def sep( title = "" , width = 6 , char = '=' , strOut = False ): 
+    """ Print a separating title card for debug , if 'strOut' return the string instead """
     LINE = width * char
     if strOut:
         return LINE + ' ' + title + ' ' + LINE
     else:
         print LINE + ' ' + title + ' ' + LINE
 
-def format_epoch_timestamp( sysTime ): # TODO: Send to AsmEnv
+def format_epoch_timestamp( sysTime ): # TODO: Send to HARMLESS
     """ Format epoch time into a readable timestamp """
     return datetime.fromtimestamp( sysTime ).strftime('%Y-%m-%d_%H-%M-%S-%f')
+
+def validate_dirs_writable( *dirList ): # TODO: Add to HARMLESS
+    """ Return true if every directory argument both exists and is writable, otherwise return false """
+    # NOTE: This function exits on the first failed check and does not provide info for any subsequent element of 'dirList'
+    # NOTE: Assume that a writable directory is readable
+    for directory in dirList:
+        if not os.path.isdir( directory ):
+            print "Directory" , directory , "does not exist!"
+            return False
+        if not os.access( directory , os.W_OK ): # URL, Check write permission: http://stackoverflow.com/a/2113511/893511
+            print "System does not have write permission for" , directory , "!"
+            return False
+    return True # All checks finished OK, return true
+
+def tokenize_with_wspace( rawStr , evalFunc = str ): 
+    """ Return a list of tokens taken from 'rawStr' that is partitioned with whitespace, transforming each token with 'evalFunc' """
+    return [ evalFunc( rawToken ) for rawToken in rawStr.split() ]
     
 # == End Helper ==
 
@@ -285,7 +301,8 @@ def create_move_plan( recordList , libraryPath ):
 		# 2.   Get the artist and proper file name , Determine the proper folder for this file
 		try:
 		    properDir = os.path.join( libraryPath , record[ 'artistSafe' ] ) # The file should be stored under the safe artist name
-		except AttributeError: # Could not retrieve a safe artist , send to MISC
+		except Exception: # Could not retrieve a safe artist , send to MISC
+		    # print "DEBUG:" , libraryPath , MISCFOLDERNAME
 		    properDir = os.path.join( libraryPath , MISCFOLDERNAME ) 
 	    else: # For non-MP3 files , the file should be in a folder that is the capitalized extension
 		properDir = os.path.join( libraryPath , ext )	    
@@ -316,6 +333,7 @@ def execute_move_plan( movePlan , verbose = False ): # Set simulate to 'True' to
     opReport = deepcopy( movePlan ) # operation status , Create a deep copy of the move plan so that it can be annotated as we go
     
     def log_status( reportList , op ,  index , success , msg , verbose ):
+	""" Local helper function to add success/failure data to the record of each attempted operation """
 	reportList[ index ][ 'success' ] = success
 	reportList[ index ][ 'statusMsg' ] = msg
 	if verbose:
@@ -363,72 +381,208 @@ def execute_move_plan( movePlan , verbose = False ): # Set simulate to 'True' to
 	else: # else an unrecognized operation was requested , notify
 	    print "execute_move_plan: Operations type" , operation[ 'op' ] , "is not recognized!"
 	    log_status( opReport , operation , opDex , False , "FAIL: OPERATION NOT RECOGNIZED" , verbose )
+    return opReport
 
 # [X] Check and execute directory deletion plans
 
 def del_empty_subdirs( searchDir ):
     """ Delete all the empty subdirectories under 'searchDir', URL: http://stackoverflow.com/a/22015788/7186022 """
     for dirpath , _ , _ in os.walk( searchDir, topdown = False ):  # Walk the directory from the bottom up
-        if dirpath == searchDir: # Do not attempt to delete the top level
-            break
-        try:
-	    # TODO: Check if the directory is actually empty before attempting deletion
-            os.rmdir( dirpath )
-        except OSError as ex:
-            print "Rejected" , ex
-	    
-# def log_str_ # FIXME: START HERE
+	if dirpath == searchDir: # Do not attempt to delete the top level
+	    break
+	try:
+	    if len( os.listdir( dirpath ) ) == 0: # If there are no files or subfolders in the directory
+		os.rmdir( dirpath )
+	    # else , the directory is not empty , do not attempt deletion
+	except OSError as ex:
+	    print "Rejected" , ex
 
 # == Test Functions ==
 
-def gather_files( searchPath ): # UNDO organization
-    """ Find all the singular files under 'searchPath' (recursive) and move them directly to 'searchPath' """
+def gather_files( searchPath ): 
+    """ Find all the singular files under 'searchPath' (recursive) and move them directly to 'searchPath' , undoes organiztion """
     # Walk the 'searchPath'
     for dirName , subdirList , fileList in os.walk( searchPath ): # for each subdir in 'srchDir', including 'srchDir'
-	for fName in fileList: # for each file in this subdir    
-	    fullPath = os.path.join( dirName , fName )    
-	    if os.path.isfile( fullPath ):
-		print "Moving" , fullPath , "to" , os.path.join( searchPath , fName )
-		shutil.move( fullPath , os.path.join( searchPath , fName ) )
+	if dirName != LOGDIR:
+	    for fName in fileList: # for each file in this subdir  
+		if os.path.splitext( fName )[1][1:].upper() not in EXTIGNORE:
+		    fullPath = os.path.join( dirName , fName )
+		    if os.path.isfile( fullPath ):
+			print "Moving" , fullPath , "to" , os.path.join( searchPath , fName )
+			shutil.move( fullPath , os.path.join( searchPath , fName ) )
+	else:
+	    print "Skipping the logging directory ..."
 
 # == End Test ==
 
+# == Serialization and Archival ==
+
+nowTimeStamp = lambda: datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S') # http://stackoverflow.com/a/5215012/893511
+""" Return a formatted timestamp string, useful for logging and debugging """
+
+def fname_timestamp_with_prefix( prefix , ext ):
+    """ Return a timestamped filename with a 'prefix'ed name and the specified file 'ext'ension """
+    if ext[0] == '.': # If the user passed the extension with the period , then remove it
+	ext = ext[1:]
+    return prefix + nowTimeStamp() + '.' + ext # Return the file
+
+def remove_XML_header( pString ):
+    """ Remove the front of 'pString' up to and including the first closing ">" , Removes the XML header from 'pString' """
+    skipping = True
+    skipStop = '>' 
+    rtnStr = ""
+    for char in pString:
+        if not skipping:
+            rtnStr += char        
+        if char == skipStop:
+            skipping = False
+    return rtnStr
+
+def records_to_XML_string( recordsList , outPath = None ):
+    """ Convert a 'recordsList' to a string representing an XML document """
+    rtnStr = """<?xml version="1.0" encoding="UTF-8" ?>""" + endl + """<log>""" + endl
+    for record in recordsList:
+	rtnStr += remove_XML_header( dicttoxml( record , custom_root = 'record' ) ) + endl
+    rtnStr += """</log>"""
+    if outPath: # If the user provided an output path , write the XML string to a file
+	outFile = open( outPath , 'w' )
+	outFile.write( rtnStr )
+	outFile.close()
+    return rtnStr
+
+# == End Archival ==
+
 # == User Interaction ==
+
+modeEnum = { "REPAIR": "Repair music libary" , "INBOX": "Process files from inbox" }
+mode = "REPAIR"
+# configPath = "musicOrganizer.config" 
 
 def menu_loop():
     """ Display and run the user menu """
-    
+    global mode , LIBDIR , SCANDIR , LOGDIR
     menuRun = True
 
     while( menuRun ):
 	sep( __prog_signature__() )
 	print "The library dir is set to:  " , LIBDIR
 	print "The scanning dir is set to: " , SCANDIR
+	print "The logging dir is set to:  " , LOGDIR
 	print "The current mode is:        " , mode
+	if not os.path.isdir( LOGDIR ):
+	    try:
+		os.makedirs( LOGDIR )
+	    except:
+		print "Could not create the logging directory!"
+	accessible = validate_dirs_writable( LIBDIR , SCANDIR , LOGDIR )
+	print "Directories are accessible:" , accessible
 	print \
 	      """ ~~ MENU ~~ 
-	      0. Change Mode
-	      1. Change Library Directory
-	      2. Change Scanning Directory
-	      3. Execute: Scan -> Repair -> Clean
-	      4. Quit """
+	      0. Quit
+	      1. Change Mode
+	      2. Execute: Scan -> Repair -> Clean
+	      3. Change Library Directory
+	      4. Change Scanning Directory
+	      5. Change Logging Directory 
+	      6. Flatten Library ( Gather files , Delete dirs )"""
 	try:
-	    response = int( raw_input( "Menu Choice >>" ) )
+	    response = int( raw_input( "Menu Choice >> " ) )
 	except ValueError:
 	    print "ERROR: Please enter a number corresponding to the desired menu choice!"
 	    
-	if   response == 0:
-	    sep( "Change Mode" , 1 )
-	elif response == 1:
-	    sep( "Change Library Directory" , 1 )
-	elif response == 2:
-	    sep( "Change Scanning Directory" , 1 )
-	elif response == 3:
-	    sep( "Execute: Scan -> Repair -> Clean" , 1 )
-	elif response == 4:
+	if   response == 0: 
 	    menuRun = False
 	    print "EXIT"
 	    break
+	
+	elif response == 1:
+	    sep( "Change Mode" , 1 )
+	    choices = list( modeEnum.iteritems() )
+	    for i in xrange( len( choices ) ):
+		print str(i) + ": " + str( choices[i][0] ) + " , " + str( choices[i][0] )
+	    choice = None
+	    validChoice = False
+	    while choice.__class__.__name__ != 'int' and not validChoice:
+		try:
+		    choice = int( raw_input( "Choose a mode and press enter: " ) )
+		    if choice > -1 and choice < len( choices ):
+			validChoice = True
+		    else:
+			print choice , "is not a valid option, try again."
+		except:
+		    print "ERROR: Could not parse user selection"
+	    mode = modeEnum[ choices[ choice ][0] ] # Set the mode to the user choice
+	    print "Mode was set to" , mode
+	
+	elif response == 2:
+	    sep( "Execute: Scan -> Repair -> Clean" , 1 )
+	    if not accessible: # If the user does not have access to any one of the relevant directory
+		print "ALERT: This action is barred! User does not have write permission to relevant directories or directories DNE!"
+	    else:
+		# Scan , Plan , Move
+		fileInfo = fetch_library_metadata( SCANDIR ) # For a repair , the 'SCANDIR' and 'LIBDIR' should be the same
+		moves = create_move_plan( fileInfo , LIBDIR )
+		execution = execute_move_plan( moves , verbose = True )
+		# Log everything 
+		records_to_XML_string( fileInfo  , outPath = os.path.join( LOGDIR , fname_timestamp_with_prefix( "fileLog" , 'txt' ) ) )
+		records_to_XML_string( moves     , outPath = os.path.join( LOGDIR , fname_timestamp_with_prefix( "planLog" , 'txt' ) ) ) 
+		records_to_XML_string( execution , outPath = os.path.join( LOGDIR , fname_timestamp_with_prefix( "execLog" , 'txt' ) ) )
+		# Erase empty dirs in the 'SCANDIR' (It's possible we removed a large number of files from this dir)
+		del_empty_subdirs( SCANDIR )
+	    
+	elif response == 3:
+	    sep( "Change Library Directory" , 1 )
+	    nuPath = tokenize_with_wspace( raw_input( "Enter the components of the library path, separated by spaces.\n>> " ) )
+	    try:
+		nuPath = os.path.join( nuPath )
+		if os.path.isdir( nuPath ):
+		    if validate_dirs_writable( nuPath ):
+			LIBDIR = nuPath
+		    else:
+			print "ERROR: You do not have write permission to this path!"
+		else:
+		    print "ERROR: Not a path!"
+	    except Exception as err:
+		print "ERROR: Could not change directory" , endl , err
+		    
+	elif response == 4:
+	    sep( "Change Scanning Directory" , 1 )
+	    nuPath = tokenize_with_wspace( raw_input( "Enter the components of the library path, separated by spaces.\n>> " ) )
+	    try:
+		nuPath = os.path.join( nuPath )
+		if os.path.isdir( nuPath ):
+		    if validate_dirs_writable( nuPath ):
+			SCANDIR = nuPath
+		    else:
+			print "ERROR: You do not have write permission to this path!"
+		else:
+		    print "ERROR: Not a path!"
+	    except Exception as err:
+		print "ERROR: Could not change directory" , endl , err
+		
+	elif response == 5:
+	    sep( "Change Logging Directory" , 1 ) 
+	    nuPath = tokenize_with_wspace( raw_input( "Enter the components of the library path, separated by spaces.\n>> " ) )
+	    try:
+		nuPath = os.path.join( nuPath )
+		if os.path.isdir( nuPath ):
+		    if validate_dirs_writable( nuPath ):
+			LOGDIR = nuPath
+		    else:
+			print "ERROR: You do not have write permission to this path!"
+		else:
+		    print "ERROR: Not a path!"
+	    except Exception as err:
+		print "ERROR: Could not change directory" , endl , err
+		
+	elif response == 6:
+	    sep( "Flatten Library" , 1 )
+	    print "Gathering files ..."
+	    gather_files( LIBDIR )
+	    print "Erasing empty dirs ..."
+	    del_empty_subdirs( LIBDIR )
+	    print "Complete!"
+	    
 	else:
 	    print "ERROR: Please enter a number corresponding to the desired menu choice!"    
 
@@ -440,35 +594,16 @@ if __name__ == "__main__":
     
     # ~~ Locate Music Library ~~
     #          Drive letter separator for Windows --v
-    TEST_LIBRARY_LOCATIONS = [ "/home/jwatson/Music" , 
+    TEST_LIBRARY_LOCATIONS = [ "/media/mawglin/FILEPILE/Python/py-music-mgmt/Amzn_2017-01-30" , 
+                               "/home/jwatson/Music" , 
                                os.path.join( "D:" , os.sep , "Python" , "py-music-mgmt" , "Amzn_2017-01-30" ) ,
                                "/media/jwatson/FILEPILE/Python/py-music-mgmt/Amzn_2017-01-30" ]
-    LIBDIR = first_valid_dir( TEST_LIBRARY_LOCATIONS )    
-    
-    if LIBDIR: # If the library was found , process it
-	
-	fileInfo = fetch_library_metadata( LIBDIR )
-	for record in fileInfo:
-	    print record
-	print
-	for key , val in fileInfo[0].iteritems():
-	    print key , '\t' , val
-	
-	moves = create_move_plan( fileInfo , LIBDIR )
-	for move in moves:
-	    print move
-	    
-	execute_move_plan( moves , verbose = True )
-	    
-    else: # else no library was found , notify
-	print "No valid directory in" , TEST_LIBRARY_LOCATIONS
-    
-    
-    modeEnum = ( "REPAIR" , "INBOX" )
-    menuRun = True
-    mode = modeEnum[ 0 ]
+    LIBDIR = first_valid_dir( TEST_LIBRARY_LOCATIONS )   
     SCANDIR = LIBDIR
+    print LIBDIR
+    LOGDIR = os.path.join( LIBDIR , "Logs" )
     
+    menu_loop()
     
 
 # == End Main ==============================================================================================================================
