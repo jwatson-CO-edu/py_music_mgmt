@@ -417,7 +417,7 @@ def gather_files( searchPath ):
 
 # == Serialization and Archival ==
 
-nowTimeStamp = lambda: datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S') # http://stackoverflow.com/a/5215012/893511
+nowTimeStamp = lambda: datetime.now().strftime('%Y-%m-%d_%H-%M-%S') # http://stackoverflow.com/a/5215012/893511
 """ Return a formatted timestamp string, useful for logging and debugging """
 
 def fname_timestamp_with_prefix( prefix , ext ):
@@ -594,7 +594,8 @@ if __name__ == "__main__":
     
     # ~~ Locate Music Library ~~
     #          Drive letter separator for Windows --v
-    TEST_LIBRARY_LOCATIONS = [ "/media/mawglin/FILEPILE/Python/py-music-mgmt/Amzn_2017-01-30" , 
+    TEST_LIBRARY_LOCATIONS = [ "/media/mawglin/MUSIC/Music",
+                               "/media/mawglin/FILEPILE/Python/py-music-mgmt/Amzn_2017-01-30" , 
                                "/home/jwatson/Music" , 
                                os.path.join( "D:" , os.sep , "Python" , "py-music-mgmt" , "Amzn_2017-01-30" ) ,
                                "/media/jwatson/FILEPILE/Python/py-music-mgmt/Amzn_2017-01-30" ]
