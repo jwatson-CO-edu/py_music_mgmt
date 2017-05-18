@@ -5,38 +5,25 @@
 from __future__ import division # Future imports must be called before everything else, including triple-quote docs!
 
 """
-ResearchEnv.py , Built on Wing IDE 101 for Python 2.7
-Erik Lindstrom , Adam Sperry , James Watson, 2016 October
-Helper functions for assembly planning
+MARCHHARE.py , Built on Wing IDE 101 for Python 2.7
+James Watson, 2016 October
+Module ARCHive for a Hobby and Research Environment
+Helper functions
 """
 
-# ~ PATH Changes ~ 
-import sys, os
-def localize(scriptHandle): # For some reason this is needed in Windows 10 Spyder (Py 2.7) # 2016-07-22: Seem to be okay without it?
-    """ Add the current directory to Python path if it is not already there """
-    containerDir = os.path.dirname(scriptHandle)
-    if containerDir not in sys.path:
-        sys.path.append( containerDir )
-
-def find_in_path(term):
-    """ Search for a term in 'sys.path' and print all the matching entries """
-    term = str(term).lower()
-    for key,val in sys.modules.iteritems():
-        if term in str(key).lower() or term in str(val).lower():
-            print("{: >60} {: >60} ".format(key,val))
+# == Init ==================================================================================================================================
 
 # ~~ Libraries ~~
 # ~ Standard Libraries ~
-import math, datetime, cPickle , heapq , time , operator
-from math import sqrt, ceil, trunc, sin, cos, tan, atan2, asin, acos, atan, pi, degrees, radians, log, log10, exp, e, factorial
-from random import random, randrange
-from timeit import default_timer as timer # URL, Benchmarking: http://stackoverflow.com/a/25823885
+import sys , os , datetime , cPickle , heapq , time , operator
+from math import sqrt , trunc , sin , cos , tan , atan2 , asin , acos , atan , pi , degrees , radians , factorial
+from random import random 
+#from timeit import default_timer as timer # URL, Benchmarking: http://stackoverflow.com/a/25823885
 # ~ Special Libraries ~
-import matplotlib.pyplot as plt # 2016-07-14: Spends forever building fonts at the beginning of every run!
+#import matplotlib.pyplot as plt # 2016-07-14: Spends forever building fonts at the beginning of every run!
 import numpy as np
-# ~ Local Libraries ~
-
-#set_dbg_lvl(1) # Debug 'eq_in_list'
+## ~ Cleanup ~
+#plt.close('all') # clear any figures we may have created before 
 
 # ~~ Constants , Shortcuts , Aliases ~~
 import __builtin__ # URL, add global vars across modules: http://stackoverflow.com/a/15959638/893511
@@ -45,6 +32,27 @@ __builtin__.infty = 1e309 # URL: http://stackoverflow.com/questions/1628026/pyth
 __builtin__.endl = os.linesep # Line separator
 __builtin__.pyEq = operator.eq # Default python equality
 __builtin__.piHalf = pi/2
+
+# == End Init ==============================================================================================================================
+
+
+# == PATH Manipulation ==
+
+def localize( scriptHandle ): 
+    """ Add the current directory to Python path if it is not already there """
+    containerDir = os.path.dirname( scriptHandle )
+    if containerDir not in sys.path:
+        sys.path.append( containerDir )
+
+def find_in_path( term ):
+    """ Search for a term in 'sys.path' and print all the matching entries """
+    term = str( term ).lower()
+    for key,val in sys.modules.iteritems():
+        if term in str( key ).lower() or term in str( val ).lower():
+            print( "{: >60} {: >60} ".format( key , val ) )
+
+# == End PATH ==
+
 
 # == Helper Functions ==
 
@@ -63,11 +71,11 @@ def sep( title = "" , width = 6 , char = '=' , strOut = False ): # <<< resenv
 
 # = Equality Tests =
 
-def eq(op1, op2): # <<< resenv
+def eq( op1 , op2 ): 
     """ Return true if op1 and op2 are close enough """
     return abs(op1 - op2) <= EPSILON
     
-def eq_margin( op1 , op2 , margin = EPSILON ): # >>> resenv
+def eq_margin( op1 , op2 , margin = EPSILON ): 
     """ Return true if op1 and op2 are within 'margin' of each other, where 'margin' is a positive real number """
     return abs( op1 - op2 ) <= margin
 
@@ -77,7 +85,7 @@ def equality_test_w_margin( margin = EPSILON ):
         return eq_margin( op1 , op2 , margin )
     return eq_test
 
-def round_small(val): 
+def round_small( val ): 
     """ Round a number to 0 if it is within 'EPSILON' of 0 , otherwise return the number """
     # print "Compare to zero:" ,  val
     return 0.0 if eq( val , 0.0 ) else val
@@ -85,7 +93,8 @@ def round_small(val):
 # = End Equality =
 
 def wrap_normalize( wrapBounds , number ):
-    """ Normalize 'number' to be within 'wrapBounds' on a number line that wraps to 'wrapBounds[0]' when 'wrapBounds[1]' is surpassed and vice-versa """
+    """ Normalize 'number' to be within 'wrapBounds' on a number line that wraps to 'wrapBounds[0]' when 'wrapBounds[1]' is surpassed 
+    and vice-versa """
     span = abs( wrapBounds[1] - wrapBounds[0] )
     if number < wrapBounds[0]:
         return wrapBounds[1] - ( abs( wrapBounds[0] - number ) % span )
@@ -95,7 +104,8 @@ def wrap_normalize( wrapBounds , number ):
         return number
 
 def within_wrap_bounds( wrapBounds , checkBounds , number ):
-    """ Return True if 'number' falls within 'checkBounds' on a wrapped number line defined by 'wrapBounds' , Both directions possible , closed interval """
+    """ Return True if 'number' falls within 'checkBounds' on a wrapped number line defined by 'wrapBounds' , 
+    Both directions possible , closed interval """
     # Normalize the number and the checked bounds within wrap bounds so that we can deal with them in a simple way
     number = wrap_normalize( wrapBounds , number )
     checkBounds = [ wrap_normalize( wrapBounds , checkBounds[0] ) , wrap_normalize( wrapBounds , checkBounds[1] ) ] 
@@ -105,7 +115,8 @@ def within_wrap_bounds( wrapBounds , checkBounds , number ):
         return ( number <= checkBounds[0] ) or  ( number >= checkBounds[1] )
     
 def wrap_bounds_fraction( wrapBounds , checkBounds , number ):
-    """ If 'number' is within 'checkBounds' return a number on a scale with checkBounds[0]-->0 and checkBounds[1]-->1 , else return None , Both directions possible """
+    """ If 'number' is within 'checkBounds' return a number on a scale with checkBounds[0]-->0 and checkBounds[1]-->1 , 
+    else return None , Both directions possible """
     # NOTE: 'wrapBounds' MUST be specified in increasing order!
     # Normalize the number and the checked bounds within wrap bounds so that we can deal with them in a simple way
     number = wrap_normalize( wrapBounds , number )
@@ -130,6 +141,7 @@ def roundint( num ):
     return int( round( num ) )
 
 # == End Math Helpers ==
+
 
 # == Time Reporting and Formatting ==
 
@@ -192,54 +204,55 @@ tick_progress.ticks = 0
 
 # == End Time ==
 
-# ~ Cleanup ~
-plt.close('all') # clear any figures we may have created before 
-
 
 # == Trigonometry ==
+
 # = Trig in Degrees =
-def cosd(angleDeg): # <<< resenv
+
+def cosd( angleDeg ):
     """ Return the cosine of the angle specified in degrees """
     return cos( radians( angleDeg ) )
 
-def sind(angleDeg): # <<< resenv
+def sind( angleDeg ):
     """ Return the sine of the angle specified in degrees """
     return sin( radians( angleDeg ) )
 
-def tand(angleDeg): # <<< resenv
+def tand( angleDeg ): 
     """ Return the tangent of the angle specified in degrees """
     return tan( radians( angleDeg ) )
     
-def atan2d( y , x ): # <<< resenv
+def atan2d( y , x ):
     """ Return the angle, in degrees, of a vector/phasor specified by 'y' and 'x' """
     return degrees( atan2( y , x) )
     
-def asind( ratio ): # <<< resenv
+def asind( ratio ):
     """ Return the arcsine of a ratio, degrees """
     return degrees( asin( ratio ) ) 
     
-def acosd( ratio ): # <<< resenv
+def acosd( ratio ):
     """ Return the arccosine of a ratio, degrees """
     return degrees( acos( ratio ) )
     
-def atand( ratio ): # <<< resenv
+def atand( ratio ):
     """ Return the arctangent of a ratio, degrees """
     return degrees( atan( ratio ) )
+
 # = End Deg Trig =
+
 # == End Trig ==
 
 
 # == Data Structures , Special Lists , and Iterable Operations ==
 
-def elemw(i, iterable): 
+def elemw( iterable , i ): 
     """ Return the 'i'th index of 'iterable', wrapping to index 0 at all integer multiples of 'len(iterable)' """
     return iterable[ i % ( len(iterable) ) ]
                     
-def indexw( i , iterable ): # TODO: ADD TO RESENV
+def indexw( iterable , i ): 
     """ Return the 'i'th index of 'iterable', wrapping to index 0 at all integer multiples of 'len(iterable)' """
     return i % ( len(iterable) )
 
-def eq_in_list(item, pLst, eqFunc = eq): # <<< resenv
+def eq_in_list( pLst , item , eqFunc = eq ):
     """ Return true if there is at least one element in 'pLst' that is equal to 'item' according to 'eqFunc' """
     # NOTE: This function is not recursive
     hasEq = False
@@ -250,24 +263,24 @@ def eq_in_list(item, pLst, eqFunc = eq): # <<< resenv
             break
     return hasEq
     
-def eq_list(lst1 , lst2 , eps = EPSILON ): # <<< resenv
+def eq_list( lst1 , lst2 , eps = EPSILON ): 
     """ Determine if every item in 'lst1' and 'lst2' are close enough """ 
     # NOTE: This function is not recursive
-    if len(lst1) != len(lst2): # If the lists do not have equal length, lists are not equal
+    if len( lst1 ) != len( lst2 ): # If the lists do not have equal length, lists are not equal
         return False
     else: # else lists are of equal length, iterate
-        for index in xrange(len(lst1)): # for every item in the list
-            if not abs( lst1[index] - lst2[index] ) <= eps: # test equality, if not equal, then return False
+        for index in xrange( len( lst1 ) ): # for every item in the list
+            if not abs( lst1[ index ] - lst2[ index ] ) <= eps: # test equality, if not equal, then return False
                 return False
         return True # Made it through the list without failed tests, return True
 
-def lst(*args): # <<< resenv
+def lst( *args ):
     """ Return a list composed of the arbitrary 'args' """
     return list(args)
 
-def tpl(*args): # <<< resenv
+def tpl( *args ):
     """ Return a tuple composed of the arbitrary 'args' """
-    return tuple(args)     
+    return tuple( args )     
 
 def sort_list_to_tuple( pList ):
     """ Return a tuple that contains the sorted elements of 'pList' """
@@ -277,17 +290,17 @@ def sort_tuple( tup ):
     """ Return a sorted copy of 'tup' """
     return sort_list_to_tuple( list( tup ) ) 
 
-def sum_abs_diff_lists( op1 , op2 ): # <<< resenv
+def sum_abs_diff_lists( op1 , op2 ):
     """ Return the cumulative, absolute, element-wise difference between two lists of equal length """
     # NOTE: This function is not recursive
     return sum( np.abs( np.subtract( op1 , op2 ) ) ) # NOTE: There will be an error if lists not of equal length
 
-def incr_min_step( bgn , end , stepSize ): # formerly 'incr_steps'  # <<< resenv
+def incr_min_step( bgn , end , stepSize ):
     """ Return a list of numbers from 'bgn' to 'end' (inclusive), separated by at LEAST 'stepSize'  """
     # NOTE: The actual step size will be the size that produces an evenly-spaced list of trunc( (end - bgn) / stepSize ) elements
     return np.linspace( bgn , end , num = trunc( (end - bgn) / stepSize ) , endpoint=True )
 
-def incr_max_step( bgn , end , stepSize ): # <<< resenv
+def incr_max_step( bgn , end , stepSize ):
     """ Return a list of numbers from 'bgn' to 'end' (inclusive), separated by at MOST 'stepSize'  """
     numSteps = (end - bgn) / stepSize
     rtnLst = [ bgn + i * stepSize for i in xrange( trunc(numSteps) + 1 ) ]
@@ -295,7 +308,7 @@ def incr_max_step( bgn , end , stepSize ): # <<< resenv
         rtnLst.append( end )
     return rtnLst
 
-def assoc_lists( keys , values ): # Added to ResearchEnv 2016-09-13 # <<< resenv
+def assoc_lists( keys , values ):
     """ Return a dictionary with associated 'keys' and 'values' """
     return dict( zip( keys , values ) )
 
@@ -303,9 +316,9 @@ def assoc_sort_tuples( keyList , valList ):
     """ Associate each element of 'keyList' with each element of 'valList' , sort on 'keyList' , return list of tuples """
     return [ elem for elem in sorted( zip( keyList , valList ) , key = lambda pair: pair[0] ) ]
 
-def tandem_sorted( keyList , *otherLists ): # URL , Sort two lists in tandem: http://stackoverflow.com/a/6618543/893511
+def tandem_sorted( keyList , *otherLists ): 
     """ Sort multiple lists of equal length in tandem , with the elements of each in 'otherLists' reordered to correspond with a sorted 'keyList' """
-    # keySorted = sorted( keyList )
+    # URL , Sort two lists in tandem: http://stackoverflow.com/a/6618543/893511
     bundle = sorted( zip( keyList , *otherLists ) , key = lambda elem: elem[0] ) # Sort the tuples by the key element
     # print "DEBUG , zipped lists:" , bundle
     rtnLists = [ [] for i in xrange( len( bundle[0] ) ) ]
@@ -314,9 +327,9 @@ def tandem_sorted( keyList , *otherLists ): # URL , Sort two lists in tandem: ht
             rtnLists[ index ].append( elem ) # Send the element to the appropriate list
     return rtnLists
 
-def tandem_sorted_reverse( keyList , *otherLists ): # URL , Sort two lists in tandem: http://stackoverflow.com/a/6618543/893511
+def tandem_sorted_reverse( keyList , *otherLists ): 
     """ Sort multiple lists of equal length in tandem , with the elements of each in 'otherLists' reordered to correspond with a sorted 'keyList' """
-    # keySorted = sorted( keyList )
+    # URL , Sort two lists in tandem: http://stackoverflow.com/a/6618543/893511
     bundle = sorted( zip( keyList , *otherLists ) , key = lambda elem: elem[0] , reverse = True ) # Sort the tuples by the key element
     # print "DEBUG , zipped lists:" , bundle
     rtnLists = [ [] for i in xrange( len( bundle[0] ) ) ]
@@ -333,7 +346,9 @@ def index_min( pList ): # Added , 2017-02-16
     """ Return the first index of 'pList' with the maximum numeric value """
     return pList.index( min( pList ) )
     
-def linspace_space( dim , sMin , sMax , num  ): # <<< resenv
+# [ ] TODO: ADD THE OTHER SPACES 
+
+def linspace_space( dim , sMin , sMax , num  ): 
     """ Return vector list covering a 'dim'-dimensional space with 'num' points in each dimension, from 'sMin' to 'sMax' in each dimension , O(n^2) """
     rtnLst = [] # List of vectors to return
     currDim = np.linspace( sMin , sMax , num ) # Get evenly-spaced points in this dimension
@@ -345,15 +360,15 @@ def linspace_space( dim , sMin , sMax , num  ): # <<< resenv
                 rtnLst.append( [item] + sub )
     return rtnLst
 
-def find_pop( iterable , item ): # >>> resenv
+def find_pop( iterable , item ):
     """ Pop 'item' from 'iterable' , ValueError if not in 'iterable' """
     return iterable.pop( iterable.index( item ) )
     
-def insert_sublist( bigList , index , subList ): # TODO: Add to resenv
+def insert_sublist( bigList , index , subList ): 
     """ Insert 'subList' into 'bigList' at 'index' and return resulting list """
     return bigList[ :index ] + subList + bigList[ index: ]
 
-def replace_sublist( bigList , begDex , endDex , subList ): # TODO: Add to resenv
+def replace_sublist( bigList , begDex , endDex , subList ): 
     """ Replace the elements in 'bigList' from 'begDex' to 'endDex' with 'subList' """
     return bigList[ :begDex ] + subList + bigList[ endDex: ]
 
@@ -366,7 +381,7 @@ def index_eq( pList , num , margin = EPSILON ):
     
 # = Containers for Algorithms =
 
-class Stack(list): # <<< resenv
+class Stack(list): 
     """ LIFO container based on 'list' """    
     
     def __init__( self , *args ):
@@ -383,7 +398,7 @@ class Stack(list): # <<< resenv
         """ Returns true if the Stack has no elements """
         return len(self) == 0
         
-class Queue(list): # >>> resenv
+class Queue(list): 
     """ FIFO container based on 'list' """ 
     
     def __init__( self , *args ):
@@ -406,7 +421,8 @@ class Queue(list): # >>> resenv
 
 class PriorityQueue(list): # Requires heapq 
     """ Implements a priority queue data structure. """ 
-    # NOTE: PriorityQueue does not allow you to change the priority of an item. You may insert the same item multiple times with different priorities. 
+    # NOTE: PriorityQueue does not allow you to change the priority of an item. 
+    #       You may insert the same item multiple times with different priorities. 
         
     def __init__( self , *args ):
         """ Normal 'list' init """
@@ -519,7 +535,8 @@ class LPQ( PriorityQueue ):
 
 class PQwR(list): # Requires heapq # TODO: UPDATE ASMENV
     """ Implements a priority queue data structure, replaces items with identical priorituies """ 
-    # NOTE: PriorityQueue does not allow you to change the priority of an item. You may insert the same item multiple times with different priorities. 
+    # NOTE: PriorityQueue does not allow you to change the priority of an item. 
+    #       You may insert the same item multiple times with different priorities. 
         
     def __init__( self , *args ):
         """ Normal 'list' init """
@@ -590,7 +607,7 @@ class PQwR(list): # Requires heapq # TODO: UPDATE ASMENV
         """ Return the value of the bottom priority """
         return self[-1][0]
 
-class BPQwR( PQwR ): # TODO: ADD TO ASMENV
+class BPQwR( PQwR ): 
     """ Bounded Priority Queue , does not keep more than N items in the queue """
     
     def __init__( self , boundN , *args ):
@@ -604,7 +621,7 @@ class BPQwR( PQwR ): # TODO: ADD TO ASMENV
         while len( self ) > self.bound: # If we exceeded the bounds , then discard down to the limit
             self.pop_opposite()
  
-class LPQwR( PQwR ): # TODO: ADD TO ASMENV
+class LPQwR( PQwR ): 
     """ Limited Priority Queue , does not accept items with priorities longer than 'limit' """
     
     def __init__( self , limitR , *args ):
@@ -617,7 +634,7 @@ class LPQwR( PQwR ): # TODO: ADD TO ASMENV
         if priority <= self.limit:
             PQwR.push( self , item , priority , hashable ) # The usual push
           
-class Counter(dict): # >> resenv
+class Counter(dict): 
     """ The counter object acts as a dict, but sets previously unused keys to 0 , in the style of 6300 """
     # TODO: Add Berkeley / 6300 functionality
     
@@ -648,18 +665,18 @@ def is_nonempty_list( obj ): return isinstance( obj , list ) and len( obj ) > 0 
 
 # == Generators, Iterators, and Custom Comprehensions ==
 
-def enumerate_reverse(L): # <<< resenv
+def enumerate_reverse( L ):
     """ A generator that works like 'enumerate' but in reverse order """
     # URL, Generator that is the reverse of 'enumerate': http://stackoverflow.com/a/529466/893511
-    for index in reversed(xrange(len(L))):
-        yield index, L[index]
+    for index in reversed( xrange( len( L ) ) ):
+        yield index, L[ index ]
 
 # == End Generators ==
 
 
 # == Printing Helpers ==
 
-def lists_as_columns_with_titles(titles, lists): # <<< resenv
+def lists_as_columns_with_titles( titles , lists ):
     """ Print each of the 'lists' as columns with the appropriate 'titles' """
     longestList = 0
     longestItem = 0
@@ -691,7 +708,8 @@ def lists_as_columns_with_titles(titles, lists): # <<< resenv
         print "Titles" , len(titles) , "and lists" , len(lists) , "of unequal length"
 
 def print_list( pList ):
-    """ Print a list that is composed of the '__str__' of each of the elements in the format "[ elem_0 , ... , elem_n ]" , separated by commas & spaces """
+    """ Print a list that is composed of the '__str__' of each of the elements in the format "[ elem_0 , ... , elem_n ]" , 
+    separated by commas & spaces """
     prnStr = "[ "
     for index , elem in enumerate( pList ):
         if index < len( pList ) - 1:
@@ -777,7 +795,7 @@ def string_from_file( fPath ): # <<< resenv
     
 def txt_file_for_w( fPath ): return file( fPath , 'w' )  # <<< resenv
     
-class accum: # <<< resenv
+class accum:
     """ Singleton text buffer object to hold script output, with facilities to write contents """
     
     totalStr = ""
@@ -819,7 +837,7 @@ class accum: # <<< resenv
 
 # == Batch Operations ==
 
-def validate_dirs_writable(*dirList):
+def validate_dirs_writable( *dirList ):
     """ Return true if every directory argument both exists and is writable, otherwise return false """
     # NOTE: This function exits on the first failed check and does not provide info for any subsequent element of 'dirList'
     # NOTE: Assume that a writable directory is readable
@@ -833,6 +851,7 @@ def validate_dirs_writable(*dirList):
     return True # All checks finished OK, return true
 
 # == End Batch ==
+
 
 # == String Processing ==
 
@@ -864,12 +883,13 @@ def format_dec_list( numList , places = 2 ): # <<< resenv
     
 # == End Strings ==
 
+# FIXME: CONTINUE STYLE CORRECTION FROM HERE
 
 # == Statistics ==
 
 def itself( item ): return item # dummy function, return the argument itself # Added to ResearchEnv 2016-09-13
     
-def accumulate(pLst , func=itself): # >>> resenv
+def accumulate( pLst , func = itself ):
     """ Return the sum of func(item) for all items in 'pLst'. Return the total number of non-list/tuple items in 'pLst'. Recursive """
     total = 0 # Accumulated total for results of 'func(item)'
     N = 0 # Number of items encountered
@@ -883,9 +903,9 @@ def accumulate(pLst , func=itself): # >>> resenv
             N += 1 # count the item
     return total, N # Return the accumulation total and the number of items
 
-def avg(*args): # >>> resenv
+def avg( *args ): 
     """ Average of args, where args can be numbers, a list, or nested lists """
-    total, N = accumulate(args) # Accumulate a straight sum
+    total , N = accumulate(args) # Accumulate a straight sum
     if N == 0:
         print "avg: Undefined for 0 items!"
         return None
@@ -968,3 +988,10 @@ def nCr( n , r ):
     return int( factorial( n ) / ( factorial( r ) * factorial( n - r ) ) )
 
 # == End Stats ==
+
+
+# === Spare Parts ===
+
+
+
+# === End Parts ===
