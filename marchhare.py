@@ -5,7 +5,7 @@
 from __future__ import division # Future imports must be called before everything else, including triple-quote docs!
 
 """
-MARCHHARE.py , Built on Wing IDE 101 for Python 2.7
+marchhare.py , Built on Wing IDE 101 for Python 2.7
 James Watson, 2016 October
 Module ARCHive for a Hobby and Research Environment
 Helper functions
@@ -38,18 +38,35 @@ __builtin__.piHalf = pi/2
 
 # == PATH Manipulation ==
 
-def localize( scriptHandle ): 
-    """ Add the current directory to Python path if it is not already there """
-    containerDir = os.path.dirname( scriptHandle )
-    if containerDir not in sys.path:
-        sys.path.append( containerDir )
-
-def find_in_path( term ):
-    """ Search for a term in 'sys.path' and print all the matching entries """
+def find_in_path( term , strOut = False ):
+    """ Search for a term in loaded 'sys.path' and print all the matching entries """
     term = str( term ).lower()
+    rtnStr = ""
+    for entry in sys.path:
+        if term in entry:
+            rtnStr += entry + endl
+    if strOut:
+        return rtnStr
+    else:
+        print rtnStr
+
+def find_in_loaded( term , strOut = False ):
+    """ Search for a term in loaded modules and print all the matching entries """
+    term = str( term ).lower()
+    rtnStr = ""
     for key,val in sys.modules.iteritems():
         if term in str( key ).lower() or term in str( val ).lower():
-            print( "{: >60} {: >60} ".format( key , val ) )
+            rtnStr += "{: >60} {: >60} ".format( key , val ) + endl
+    if strOut:
+        return rtnStr
+    else:
+        print rtnStr
+
+def add_container_to_path( fName ): 
+    """ Add the directory that contains 'fName' to Python path if it is not already there """
+    containerDir = os.path.dirname( fName )
+    if containerDir not in sys.path:
+        sys.path.append( containerDir )
 
 # == End PATH ==
 
@@ -66,6 +83,7 @@ def sep( title = "" , width = 6 , char = '=' , strOut = False ): # <<< resenv
     
 # == End Helper ==
         
+# === Mathematics ===
 
 # == General Math Helpers ==
 
@@ -75,6 +93,8 @@ def eq( op1 , op2 ):
     """ Return true if op1 and op2 are close enough """
     return abs(op1 - op2) <= EPSILON
     
+# FIXME: RESUME TESTING HERE
+
 def eq_margin( op1 , op2 , margin = EPSILON ): 
     """ Return true if op1 and op2 are within 'margin' of each other, where 'margin' is a positive real number """
     return abs( op1 - op2 ) <= margin
@@ -143,6 +163,148 @@ def roundint( num ):
 # == End Math Helpers ==
 
 
+# == Trigonometry ==
+
+# = Trig in Degrees =
+
+def cosd( angleDeg ):
+    """ Return the cosine of the angle specified in degrees """
+    return cos( radians( angleDeg ) )
+
+def sind( angleDeg ):
+    """ Return the sine of the angle specified in degrees """
+    return sin( radians( angleDeg ) )
+
+def tand( angleDeg ): 
+    """ Return the tangent of the angle specified in degrees """
+    return tan( radians( angleDeg ) )
+    
+def atan2d( y , x ):
+    """ Return the angle, in degrees, of a vector/phasor specified by 'y' and 'x' """
+    return degrees( atan2( y , x) )
+    
+def asind( ratio ):
+    """ Return the arcsine of a ratio, degrees """
+    return degrees( asin( ratio ) ) 
+    
+def acosd( ratio ):
+    """ Return the arccosine of a ratio, degrees """
+    return degrees( acos( ratio ) )
+    
+def atand( ratio ):
+    """ Return the arctangent of a ratio, degrees """
+    return degrees( atan( ratio ) )
+
+# = End Deg Trig =
+
+# == End Trig ==
+
+# == Statistics ==
+
+def itself( item ): return item # dummy function, return the argument itself # Added to ResearchEnv 2016-09-13
+    
+def accumulate( pLst , func = itself ):
+    """ Return the sum of func(item) for all items in 'pLst'. Return the total number of non-list/tuple items in 'pLst'. Recursive """
+    total = 0 # Accumulated total for results of 'func(item)'
+    N = 0 # Number of items encountered
+    for item in pLst: # for each item in the list
+        if isinstance( item , ( list , tuple ) ): # if the list item is itself an iterable
+            partTot, partN = accumulate( item , func ) # recur on item
+            total += partTot # Accumulate results from greater depth
+            N += partN
+        else: # else assume item is a number
+            total += func( item ) # invoke 'func' on item and accumulate
+            N += 1 # count the item
+    return total, N # Return the accumulation total and the number of items
+
+def avg( *args ): 
+    """ Average of args, where args can be numbers, a list, or nested lists """
+    total , N = accumulate( args ) # Accumulate a straight sum
+    if N == 0:
+        print "avg: Undefined for 0 items!"
+        return None
+    return float( total ) / N # return mean
+    
+def variance(*args): # >>> resenv
+    """ Variance of args, where args can be numbers, a list of numbers, or nested lists of numbere """
+    total , N = accumulate( args ) # calc mean
+    if N == 0:
+        print "variance: Undefined for 0 items!"
+        return None
+    print total , 
+    mu = float(total) / N
+    totSqDiffs , N = accumulate( args , lambda x: ( x - mu )**2 ) # calc the per-item variance
+    print totSqDiffs
+    return ( 1.0 / N ) * totSqDiffs # return variance
+
+def std_dev( *args ):
+    """ Standard deviation of args, where args can be numbers, a list of numbers, or nested lists of numbere """
+    var = variance( *args )
+    if var == None:
+        print "std_dev: Undefined for 0 items!"
+        return None
+    return sqrt( var )
+    
+def percent_change( oldVal , newVal ):
+    """ Return the precent change from 'oldVal' to 'newVal' , This version avoids div/0 errors """
+    if eq( oldVal , 0 ): # If the old value is zero
+        if eq( newVal , 0 ):
+            return 0.0 # If both values are zero, no change
+        else:
+            return infty # else div/0 , undefined , return infinity
+    return ( newVal - oldVal ) / oldVal * 100.0
+
+# = Dice Rolls =
+
+def normalize_die( distribution ): 
+    """ Given relative odds, return partitions of a distribution on a number line from 0 to 1 """
+    # This function assumes that all numbers in the distribution are positive
+    total = sum( distribution ) # get the sum of all items
+    normed = [ prob / total for prob in distribution ] # normalize the distribution
+    accum = 0 # current partition boundary
+    die = [] # monotonically increasing partitions for a dice roll
+    for prob in normed: # Accumulate the total probability of sampling lesser than or equal to the partition
+        accum += prob
+        die.append( accum )
+    return die # return partitions in [0,1]
+    
+def roll_die( distribution ): 
+    """ Roll a die with a distribution of increasing values ending in 1 , as created by normalize_die """
+    sample = random() # sample from a uniform distribution [0,1)
+    i = 0 # index of the partition
+    while distribution[i] < sample and i < len( distribution ): # while sample is greater than or equal to partition
+        i += 1 # advance partition
+    return i # This is the index of the least partition greater than the sample
+    
+def named_odds_to_distribution( oddsDict ):
+    """ Unspool the 'oddsDict' into a pairing of ordered names and odds , then normalize the odds into a probability distribution """
+    nameList = []
+    distList = []
+    for name , odds in oddsDict.iteritems():
+        nameList.append( name )
+        distList.append( odds )
+    distList = normalize_die( distList )
+    return ( tuple( nameList ) , tuple( distList ) )
+    
+def roll_for_outcome( namedDist ):
+    """ Roll the die on an ordered ( ( NAMES ... ) , ( PROBS ... ) ) tuple with named outcomes and probabilities associated by index """
+    return namedDist[0][ roll_die( namedDist[1] ) ] # Return the name corresponding with the index chosen by die roll
+
+def sample_unfrm_real( rMin , rMax ):
+    """ Sample from a uniform distribution [ rMin , rMax ) """
+    span = abs( rMax - rMin )
+    return random() * span + rMin
+
+# = End Rolls =
+
+def nCr( n , r ): 
+    """ Number of combinations for 'n' Choose 'r' """
+    return int( factorial( n ) / ( factorial( r ) * factorial( n - r ) ) )
+
+# == End Stats ==
+
+# === End Math ===
+
 # == Time Reporting and Formatting ==
 
 def elapsed_w_msg( msg = "Elapsed:" ): # >>> resenv
@@ -203,44 +365,6 @@ tick_progress.sequence = [ "'" , "-" , "," , "_" , "," , "-" , "'" , "`" , "`" ]
 tick_progress.ticks = 0
 
 # == End Time ==
-
-
-# == Trigonometry ==
-
-# = Trig in Degrees =
-
-def cosd( angleDeg ):
-    """ Return the cosine of the angle specified in degrees """
-    return cos( radians( angleDeg ) )
-
-def sind( angleDeg ):
-    """ Return the sine of the angle specified in degrees """
-    return sin( radians( angleDeg ) )
-
-def tand( angleDeg ): 
-    """ Return the tangent of the angle specified in degrees """
-    return tan( radians( angleDeg ) )
-    
-def atan2d( y , x ):
-    """ Return the angle, in degrees, of a vector/phasor specified by 'y' and 'x' """
-    return degrees( atan2( y , x) )
-    
-def asind( ratio ):
-    """ Return the arcsine of a ratio, degrees """
-    return degrees( asin( ratio ) ) 
-    
-def acosd( ratio ):
-    """ Return the arccosine of a ratio, degrees """
-    return degrees( acos( ratio ) )
-    
-def atand( ratio ):
-    """ Return the arctangent of a ratio, degrees """
-    return degrees( atan( ratio ) )
-
-# = End Deg Trig =
-
-# == End Trig ==
-
 
 # == Data Structures , Special Lists , and Iterable Operations ==
 
@@ -875,119 +999,16 @@ def format_dec_list( numList , places = 2 ): # <<< resenv
         else:
             scalar = num 
         if nDex < len(numList) - 1:
-            rtnStr += ('{0:.' + str(places) + 'g}').format(scalar) + ' , '
+            rtnStr += ('{0:.' + str( places ) + 'g}').format( scalar ) + ' , '
         else:
-            rtnStr += ('{0:.' + str(places) + 'g}').format(scalar)
+            rtnStr += ('{0:.' + str( places ) + 'g}').format( scalar )
     rtnStr += " ]"
     return rtnStr
     
 # == End Strings ==
 
-# FIXME: CONTINUE STYLE CORRECTION FROM HERE
 
-# == Statistics ==
 
-def itself( item ): return item # dummy function, return the argument itself # Added to ResearchEnv 2016-09-13
-    
-def accumulate( pLst , func = itself ):
-    """ Return the sum of func(item) for all items in 'pLst'. Return the total number of non-list/tuple items in 'pLst'. Recursive """
-    total = 0 # Accumulated total for results of 'func(item)'
-    N = 0 # Number of items encountered
-    for item in pLst: # for each item in the list
-        if isinstance(item, (list,tuple)): # if the list item is itself an iterable
-            partTot, partN = accumulate( item , func ) # recur on item
-            total += partTot # Accumulate results from greater depth
-            N += partN
-        else: # else assume item is a number
-            total += func( item ) # invoke 'func' on item and accumulate
-            N += 1 # count the item
-    return total, N # Return the accumulation total and the number of items
-
-def avg( *args ): 
-    """ Average of args, where args can be numbers, a list, or nested lists """
-    total , N = accumulate(args) # Accumulate a straight sum
-    if N == 0:
-        print "avg: Undefined for 0 items!"
-        return None
-    return float(total) / N # return mean
-    
-def variance(*args): # >>> resenv
-    """ Variance of args, where args can be numbers, a list of numbers, or nested lists of numbere """
-    total, N = accumulate(args) # calc mean
-    if N == 0:
-        print "variance: Undefined for 0 items!"
-        return None
-    print total , 
-    mu = float(total) / N
-    totSqDiffs , N = accumulate( args , lambda x: ( x - mu )**2 ) # calc the per-item variance
-    print totSqDiffs
-    return (1.0 / N) * totSqDiffs # return variance
-
-def std_dev( *args ): # >>> resenv
-    """ Standard deviation of args, where args can be numbers, a list of numbers, or nested lists of numbere """
-    var = variance(*args)
-    if var == None:
-        print "std_dev: Undefined for 0 items!"
-        return None
-    return sqrt( var )
-    
-def percent_change( oldVal , newVal ):
-    """ Return the precent change from 'oldVal' to 'newVal' , This version avoids div/0 errors """
-    if eq( oldVal , 0 ): # If the old value is zero
-        if eq( newVal , 0 ):
-            return 0.0 # If both values are zero, no change
-        else:
-            return infty # else div/0 , undefined , return infinity
-    return ( newVal - oldVal ) / oldVal * 100.0
-
-# = Dice Rolls =
-
-def normalize_die( distribution ): 
-    """ Given relative odds, return partitions of a distribution on a number line from 0 to 1 """
-    # This function assumes that all numbers in the distribution are positive
-    total = sum( distribution ) # get the sum of all items
-    normed = [ prob / total for prob in distribution ] # normalize the distribution
-    accum = 0 # current partition boundary
-    die = [] # monotonically increasing partitions for a dice roll
-    for prob in normed: # Accumulate the total probability of sampling lesser than or equal to the partition
-        accum += prob
-        die.append( accum )
-    return die # return partitions in [0,1]
-    
-def roll_die( distribution ): 
-    """ Roll a die with a distribution of increasing values ending in 1 , as created by normalize_die """
-    sample = random() # sample from a uniform distribution [0,1)
-    i = 0 # index of the partition
-    while distribution[i] < sample and i < len( distribution ): # while sample is greater than or equal to partition
-        i += 1 # advance partition
-    return i # This is the index of the least partition greater than the sample
-    
-def named_odds_to_distribution( oddsDict ):
-    """ Unspool the 'oddsDict' into a pairing of ordered names and odds , then normalize the odds into a probability distribution """
-    nameList = []
-    distList = []
-    for name , odds in oddsDict.iteritems():
-        nameList.append( name )
-        distList.append( odds )
-    distList = normalize_die( distList )
-    return ( tuple( nameList ) , tuple( distList ) )
-    
-def roll_for_outcome( namedDist ):
-    """ Roll the die on an ordered ( ( NAMES ... ) , ( PROBS ... ) ) tuple with named outcomes and probabilities associated by index """
-    return namedDist[0][ roll_die( namedDist[1] ) ] # Return the name corresponding with the index chosen by die roll
-
-def sample_unfrm_real( rMin , rMax ):
-    """ Sample from a uniform distribution [ rMin , rMax ) """
-    span = abs( rMax - rMin )
-    return random() * span + rMin
-
-# = End Rolls =
-
-def nCr( n , r ): 
-    """ Number of combinations for 'n' Choose 'r' """
-    return int( factorial( n ) / ( factorial( r ) * factorial( n - r ) ) )
-
-# == End Stats ==
 
 
 # === Spare Parts ===
