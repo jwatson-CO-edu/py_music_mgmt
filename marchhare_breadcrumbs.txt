@@ -1,0 +1,56 @@
+~~ Picking A Name ~~
+
+Python module/package names should generally follow the following constraints:
+* All lowercase
+* Unique on pypi, even if you don’t want to make your package publicly available (you might want to specify it privately as a dependency later)
+* Underscore-separated or no word separators at all (don’t use hyphens)
+
+~~ Structure ~~
+
+The initial directory structure for funniest should look like this:
+
+marchhare/
+    marchhare/
+        __init__.py
+    setup.py
+
+The top level directory is the root of our SCM repo, e.g. "marchhare.git". The subdir, also called "marchhare", is the actual Python module.
+
+~~ setup.py ~~
+
+The main setup config file, "setup.py", should contain a single call to 'setuptools.setup()', like so:
+
+setup(name='marchhare',
+      version='2017.06.25',
+      description='The funniest joke in the world',
+      url='http://github.com/storborg/funniest',
+      author='Flying Circus',
+      author_email='flyingcircus@example.com',
+      license='MIT',
+      packages=['funniest'],
+      zip_safe=False)
+
+~~ Local Installation ~~
+
+Now we can install the package locally (for use on our system), with:
+ pip install .
+
+~~ Registration ~~
+
+The setup.py script is also our main entrypoint to register the package name on PyPI and upload source distributions.
+
+To “register” the package (this will reserve the name, upload package metadata, and create the pypi.python.org webpage):
+
+term$> python setup.py register
+
+If you haven’t published things on PyPI before, you’ll need to create an account following the steps provided at this point.
+
+~~~ Packaging Resources ~~~
+
+The contents of this file have been adapted from:
+
+1. http://python-packaging.readthedocs.io/en/latest/minimal.html
+
+http://marthall.github.io/blog/how-to-package-a-python-app/
+http://peterdowns.com/posts/first-time-with-pypi.html
+http://marthall.github.io/blog/how-to-package-a-python-app/
