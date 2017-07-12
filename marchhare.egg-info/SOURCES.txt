@@ -11,5 +11,5 @@ marchhare/marchhare.py
 marchhare.egg-info/PKG-INFO
 marchhare.egg-info/SOURCES.txt
 marchhare.egg-info/dependency_links.txt
-marchhare.egg-info/not-zip-safe
 marchhare.egg-info/top_level.txt
+marchhare.egg-info/zip-safe
