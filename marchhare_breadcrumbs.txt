@@ -37,7 +37,10 @@ Now we can install the package locally (for use on our system), with:
 
 ~~ .pypirc ~~
 
+# TODO : Set up TWINE to read from a custom ".pypirc" for each project.
+
 This is located at ~/.pypirc
+The repo address must be correct and must not require a login / authentication
 
 [distutils]
 index-servers =
@@ -48,6 +51,18 @@ repository: http://www.eng.utah.edu/~jwatson/marchhare-2017.6.25.tar.gz
 username: jwatson_edu
 password: ********
 
+~~ Encryption Key ~~
+
+An encryption key is needed to upload to PYPI. Generate one with
+
+gpg --gen-key
+
+Move the mouse around so that there is enough entropy.
+
+Set a password , you will need to remember this for uploading.
+
+There is no need to set up GIT to sign commits
+
 ~~ Registration ~~
 
 1. Install twine
@@ -57,7 +72,11 @@ The setup.py script is also our main entrypoint to register the package name on 
 
 To “register” the package (this will reserve the name, upload package metadata, and create the pypi.python.org webpage):
 
-term$> twine upload dist/marchhare-2017.6.25.tar.gz
+term$> twine upload -s dist/marchhare-VERSION*
+
+You will be prompted to enter your GPG password for each of the distribution files.
+
+~~  ~~
 
 If you haven’t published things on PyPI before, you’ll need to create an account following the steps provided at this point.
 
@@ -66,7 +85,13 @@ If you haven’t published things on PyPI before, you’ll need to create an acc
 The contents of this file have been adapted from:
 
 1. http://python-packaging.readthedocs.io/en/latest/minimal.html
+2. http://zestreleaser.readthedocs.io/en/latest/uploading.html
+3. https://help.github.com/articles/generating-a-new-gpg-key/
+
+~~~ Other Resources ~~~
 
 http://marthall.github.io/blog/how-to-package-a-python-app/
 http://peterdowns.com/posts/first-time-with-pypi.html
 http://marthall.github.io/blog/how-to-package-a-python-app/
+
+
