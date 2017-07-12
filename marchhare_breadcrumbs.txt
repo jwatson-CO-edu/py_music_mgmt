@@ -35,6 +35,19 @@ setup(name='marchhare',
 Now we can install the package locally (for use on our system), with:
  pip install .
 
+~~ .pypirc ~~
+
+This is located at ~/.pypirc
+
+[distutils]
+index-servers =
+    pypi
+
+[pypi]
+repository: http://www.eng.utah.edu/~jwatson/marchhare-2017.6.25.tar.gz
+username: jwatson_edu
+password: ********
+
 ~~ Registration ~~
 
 1. Install twine
