@@ -102,6 +102,13 @@ def np_add(*args): # <<< resenv
     else: # base case, there are 2 args*, use vanilla 'np.add'
         return np.add( args[0] , args[1] ) # *NOTE: This function assumes there are at least two args, if only 1 an error will occur
 
+def np_dot( *args ): # <<< toybox
+    """ Perform 'np.dot' on more than two args """
+    if len( args ) > 2: # If there are more than 2 args, add the first arg to recur on remainder of args
+        return np.dot( args[0] , np_dot( *args[1:] ) ) # Note the star operator is needed for recursive call, unpack to positional args
+    else: # base case, there are 2 args*, use vanilla 'np.add'
+        return np.dot( args[0] , args[1] ) # *NOTE: This function assumes there are at least two args, if only 1 an error will occur
+
 def np_subtract(*args): # <<< resenv
     """ Perform 'np.subtract' on more than two args """
     if len(args) > 2: # If there are more than 2 args, subtract the last arg from the preceeding remainder of args
