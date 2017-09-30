@@ -90,6 +90,7 @@ The contents of this file have been adapted from:
 
 ~~~ Other Resources ~~~
 
+http://mikegrouchy.com/blog/2012/05/be-pythonic-__init__py.html <<-- LOOK HERE FOR DEFAULT IMPORTS
 http://marthall.github.io/blog/how-to-package-a-python-app/
 http://peterdowns.com/posts/first-time-with-pypi.html
 http://marthall.github.io/blog/how-to-package-a-python-app/

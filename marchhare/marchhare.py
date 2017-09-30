@@ -18,9 +18,6 @@ Helper functions
 import sys , os , datetime , cPickle , heapq , time , operator
 from math import sqrt , trunc , sin , cos , tan , atan2 , asin , acos , atan , pi , degrees , radians , factorial
 from random import random 
-#from timeit import default_timer as timer # URL, Benchmarking: http://stackoverflow.com/a/25823885
-# ~ Special Libraries ~
-#import matplotlib.pyplot as plt # 2016-07-14: Spends forever building fonts at the beginning of every run!
 import numpy as np
 ## ~ Cleanup ~
 #plt.close('all') # clear any figures we may have created before 
@@ -302,6 +299,14 @@ def nCr( n , r ):
     return int( factorial( n ) / ( factorial( r ) * factorial( n - r ) ) )
 
 # == End Stats ==
+
+def clamp_val( val , lims ): # <<< VSM
+    """ Return a version of val that is clamped to the range [ lims[0] , lims[1] ] , inclusive """
+    if val < lims[0]:
+        return lims[0]
+    if val > lims[1]:
+        return lims[1]
+    return val
 
 # === End Math ===
 
@@ -779,6 +784,31 @@ class Counter(dict):
         sortedItems = self.items()
         sortedItems.sort( cmp = lambda keyVal1 , keyVal2 :  sign( keyVal2[1] - keyVal1[1] ) )
         return sortedItems
+    
+class RollingList( list ): 
+    """ A rolling window based on 'list' """ 
+    
+    def __init__( self , winLen , *args ):
+        """ Normal 'list' init """
+        list.__init__( self , [ 0 ] * winLen , *args )
+        
+    def append( self , item ):
+        """ Append an item to the back of the list """
+        list.append( self , item )
+        del self[0]
+        
+    def prepend( self , item ):
+        """ Prepend an item to the front of the list """
+        self.insert( 0 , item )
+        del self[-1]
+        
+    def get_average( self ):
+        """ Get the rolling average , NOTE: Calling this function after inserting non-numeric data will result in an error """
+        return sum( self ) * 1.0 / len( self )
+        
+    def item_list( self ):
+        """ Return a copy of the RollingList as a list """
+        return self[:]
 
 # = End Algo Containers =
 
@@ -1007,9 +1037,22 @@ def format_dec_list( numList , places = 2 ): # <<< resenv
     
 # == End Strings ==
 
+# == Timing / Benchmarking ==
 
+class HeartRate: # NOTE: This fulfills a purpose similar to the rospy rate
+    """ Sleeps for a time such that the period between calls to sleep results in a frequency not greater than the specified 'Hz' """
+    def __init__( self , Hz ):
+        """ Create a rate object with a Do-Not-Exceed frequency in 'Hz' """
+        self.period = 1.0 / Hz; # Set the period as the inverse of the frequency , hearbeat will not exceed 'Hz' , but can be lower
+        self.last = time.time()
+    def sleep( self ):
+        """ Sleep for a time so that the frequency is not exceeded """
+        elapsed = time.time() - self.last
+        if elapsed < self.period:
+            time.sleep( self.period - elapsed )
+        self.last = time.time()
 
-
+# == End Timing ==
 
 # === Spare Parts ===
 

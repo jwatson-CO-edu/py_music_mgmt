@@ -23,7 +23,7 @@ from random import random
 # ~ Special Libraries ~
 import numpy as np
 # ~ Local Libraries ~
-from AsmEnv import PriorityQueue , elemw , format_dec_list , eq_margin , round_small 
+from marchhare import PriorityQueue , elemw , format_dec_list , eq_margin , round_small 
 
 # set_dbg_lvl(1) # Transformation of objects contained in Frames
 
@@ -80,11 +80,11 @@ def vec_proj_onto( a , b ): # <<< resenv
 def vec_angle_between( v1 , v2 ): # <<< resenv
     """ Returns the angle in radians between vectors 'v1' and 'v2' """
 	# URL, angle between two vectors: http://stackoverflow.com/a/13849249/893511
-    v1_u = vec_unit(v1)
-    v2_u = vec_unit(v2)
-    angle = np.arccos(np.dot(v1_u, v2_u))
-    if np.isnan(angle):
-        if (v1_u == v2_u).all():
+    v1_u = vec_unit( v1 )
+    v2_u = vec_unit( v2 )
+    angle = np.arccos( np.dot( v1_u , v2_u) )
+    if np.isnan( angle ):
+        if ( v1_u == v2_u ).all():
             return 0.0
         else:
             return np.pi
