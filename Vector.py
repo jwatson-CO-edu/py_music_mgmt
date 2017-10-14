@@ -58,6 +58,18 @@ def vec_zeros( dim ):
     """ Return a vector of 'dim' zeros """
     return [ 0 for d in xrange( dim ) ]
 
+def matx_zeros( *dims ):
+    """ For those times when you do not want the Zeros from numpy """
+    if len( dims ) == 1:
+        return vec_zeros( dims[0] )
+    elif len( dims ) > 1:
+        rtnMatx = []
+        for i in xrange( dims[0] ):
+            rtnMatx.append( matx_zeros( *dims[1:] ) )
+        return rtnMatx
+    else:
+        raise IndexError( "matx_zeros: Something went wrong with args " + str( dims ) )        
+
 def vec_round_small( vec ): 
     """ Round components that are have an absolute value less than 'EPSILON' to 0 """
     rtnVec = []
