@@ -109,7 +109,7 @@ def transform_by_bases( vec_A , xBasis_B , yBasis_B , zBasis_B ):
                    np.multiply( yBasis_B , vec_A[1] ) , # y component
                    np.multiply( zBasis_B , vec_A[2] ) ) # z component
                    
-def point_basis_change(point, origin, xBasis, yBasis, zBasis):
+def point_basis_change( point , origin , xBasis , yBasis , zBasis ):
     """ Express a 'point' in a new basis, according to 'origin', 'xBasis', 'yBasis', 'zBasis' (all param coordinates in old basis) """
     offset = np.subtract( point , origin )
     # NOTE: This is probably faster as a matrix operation

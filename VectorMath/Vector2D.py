@@ -120,12 +120,7 @@ def point_in_poly_w(point , polygon): # <<< resenv
     # print "Winding Number:" , winding_num(point , polygon)
     return not eq( winding_num(point , polygon) , 0 ) # The winding number gives the number of times a polygon encircles a point 
     
-def d_point_to_segment_2D(point, segPt1, segPt2): # <<< resenv # TODO: Keep this around so as not to break old code
-    """ Return the shortest (perpendicular) distance between 'point' and a line segment defined by 'segPt1' and 'segPt2' """
-    # URL: http://mathworld.wolfram.com/Point-LineDistance2-Dimensional.html
-    return abs( (segPt2[0]-segPt1[0])*(segPt1[1]-point[1]) - (segPt1[0]-point[0])*(segPt2[1]-segPt1[1]) ) / sqrt( (segPt2[0]-segPt1[0])**2 + (segPt2[1]-segPt1[1])**2 )
-    
-def d_point_to_2Dsegment( point , segment ): # Changed the signature to fit the more recent representation of segments [ [ x0 , y0 ] , [ x1 , y1 ] ]
+def d_point_to_segment_2D( point , segment ): # Changed the signature to fit the more recent representation of segments [ [ x0 , y0 ] , [ x1 , y1 ] ]
     """ Return the shortest (perpendicular) distance between 'point' and a line segment defined by 'segPt1' and 'segPt2' """
     # URL: http://mathworld.wolfram.com/Point-LineDistance2-Dimensional.html
     segPt1 = segment[0] ; segPt2 = segment[1]
@@ -274,7 +269,7 @@ def centroid_discrete_masses( massCenters , totalMass ): # <<< resenv
             centroid[i] += massPoint[0] / totalMass * coord # Add the coordinate scaled by it's mass distribution
     return centroid 
 
-def poly2D_convex_area_centroid(polyPoints): # <<< resenv
+def poly2D_convex_area_centroid( polyPoints ): 
     """ Return the area and centroid of a convex polygon composed of at least three 'polyPoints' """
     # http://www.mathopenref.com/coordtrianglearea.html
     # Assume that we are dealing with convex polygons (hulls), otherwise use shoelace algorithm
@@ -282,22 +277,23 @@ def poly2D_convex_area_centroid(polyPoints): # <<< resenv
     A = 0 # triangle area
     triCentroids = list() # Triangle centers
     totArea = 0 # total area of the polygon
-    for pntDex in range( 2 , len(polyPoints) ): # for each point in the polygon, starting with the third
-        Ax = polyPoints[pntDex][0] # The point at index 0 will always be one vertex of each triangle
-        Bx = polyPoints[pntDex-1][0]
-        Cx = polyPoints[0][0]
-        Ay = polyPoints[pntDex][1]
-        By = polyPoints[pntDex-1][1]
-        Cy = polyPoints[0][1]
+    for pntDex in range( 2 , len( polyPoints ) ): # for each point in the polygon, starting with the third
+        Ax = polyPoints[ pntDex   ][ 0 ] # The point at index 0 will always be one vertex of each triangle
+        Bx = polyPoints[ pntDex-1 ][ 0 ]
+        Cx = polyPoints[ 0        ][ 0 ]
+        Ay = polyPoints[ pntDex   ][ 1 ]
+        By = polyPoints[ pntDex-1 ][ 1 ]
+        Cy = polyPoints[ 0        ][ 1 ]
         A = 0.5 * abs( Ax*(By-Cy) + Bx*(Cy-Ay) + Cx*(Ay-By) )
         totArea += A
         triCentroids.append( ( A , vec_avg( polyPoints[pntDex] , polyPoints[pntDex-1] , polyPoints[0] ) ) )
     return totArea , centroid_discrete_masses( triCentroids , totArea )
 
 def get_area_and_centroid( vertices ):
-    """ Return the area and the area centroid of a simple, closed polygon defined as a list of ordered 'vertices' """ # TODO: CITE SOURCE!
+    """ Return the area and the area centroid of a simple, closed polygon defined as a list of ordered 'vertices' """ 
     # NOTE: Vertices must be ordered
     # NOTE: Polygon need not be convex
+    # Bourke, Paul. "Calculating the area and centroid of a polygon." Swinburne Univ. of Technology (1988).
     x = []
     y = []
     for vertex in vertices:           # Organize verticies in x and y lists.

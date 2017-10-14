@@ -1051,6 +1051,23 @@ class HeartRate: # NOTE: This fulfills a purpose similar to the rospy rate
         if elapsed < self.period:
             time.sleep( self.period - elapsed )
         self.last = time.time()
+        
+class Stopwatch( object ):
+    """ Singleton object for benchmarking """
+    strtTime = 0
+    stopTime = 0
+    
+    @staticmethod
+    def start():
+        Stopwatch.strtTime = time.time()
+        
+    @staticmethod
+    def stop():
+        Stopwatch.stopTime = time.time()
+        
+    @staticmethod
+    def elapsed():
+        return Stopwatch.stopTime - Stopwatch.strtTime
 
 # == End Timing ==
 
