@@ -328,7 +328,41 @@ def split_to_components( vecList ):
         for i , elem in enumerate( vec ):
             components[i].append( elem )
 
-# == End Helpers ==
+# __ End Helpers __
+            
+            
+# == Printing Helpers ==
+            
+def matx_2D_pretty_print( matx ):
+    """ Pretty print a 2D 'matx' """
+    maxWidth = 0
+    # 1. Find the column width
+    for row in matx:
+        for col in row:
+            maxWidth = max( maxWidth , len( str( col ) ) )
+    # 2. Print the matrix row by row with uniform columns
+    dsplyStr = "[ "
+    frontPad = len( dsplyStr ) * ' '
+    N = len( matx ) ; M = len( matx[0] )
+    for i , row in enumerate( matx ):
+        if i > 0:
+            dsplyStr += frontPad + "[ "
+        else:
+            dsplyStr += "[ "
+        for j , col in enumerate( row ):
+            if j < M - 1:
+                dsplyStr += str( col ).rjust( maxWidth , ' ' ) + " , "
+            else:
+                dsplyStr += str( col ).rjust( maxWidth , ' ' )
+        if i < N - 1:
+            dsplyStr += " ]" + endl
+        else:
+            dsplyStr += " ]"
+    dsplyStr += " ]"
+    print dsplyStr
+        
+    
+# __ End Printing __
 
 # = Drawing Init =    # ARE THESE USED? SEE IF REMOVING THEM BREAKS SOMETHING
 def attach_geometry(rootFrame, pCanvas): # <<< resenv
