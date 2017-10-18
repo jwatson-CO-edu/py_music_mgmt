@@ -334,7 +334,7 @@ def split_to_components( vecList ):
 # == Printing Helpers ==
             
 def matx_2D_pretty_print( matx ):
-    """ Pretty print a 2D 'matx' """
+    """ Pretty print a 2D 'matx' , NOTE: This will also print lists of lists with variable row length """
     maxWidth = 0
     # 1. Find the column width
     for row in matx:
