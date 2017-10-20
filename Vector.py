@@ -77,9 +77,9 @@ def vec_round_small( vec ):
         rtnVec.append( round_small( vec[i] ) )
     return rtnVec
         
-def vec_unit(vec): # <<< resenv
+def vec_unit( vec ): 
     """ Return a unit vector in the direction of 'vec', using numpy """
-    return np.divide( vec , np.linalg.norm(vec) )
+    return np.divide( vec , np.linalg.norm( vec ) )
 
 def vec_proj( a , b ): # <<< resenv
     """ a projected onto b, a scalar length, using numpy """
@@ -89,7 +89,7 @@ def vec_proj_onto( a , b ): # <<< resenv
     """ a projected onto b,  vector in the direction of b """
     return np.multiply( vec_unit( b ) , vec_proj( a , b ) )
     
-def vec_angle_between( v1 , v2 ): # <<< resenv
+def vec_angle_between( v1 , v2 ): 
     """ Returns the angle in radians between vectors 'v1' and 'v2' """
 	# URL, angle between two vectors: http://stackoverflow.com/a/13849249/893511
     v1_u = vec_unit( v1 )
@@ -343,8 +343,9 @@ def matx_2D_pretty_print( matx ):
     # 2. Print the matrix row by row with uniform columns
     dsplyStr = "[ "
     frontPad = len( dsplyStr ) * ' '
-    N = len( matx ) ; M = len( matx[0] )
+    N = len( matx ) 
     for i , row in enumerate( matx ):
+        M = len( row )
         if i > 0:
             dsplyStr += frontPad + "[ "
         else:
