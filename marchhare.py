@@ -23,12 +23,11 @@ import numpy as np
 #plt.close('all') # clear any figures we may have created before 
 
 # ~~ Constants , Shortcuts , Aliases ~~
-import __builtin__ # URL, add global vars across modules: http://stackoverflow.com/a/15959638/893511
-__builtin__.EPSILON = 1e-7 # Assume floating point errors below this level
-__builtin__.infty = 1e309 # URL: http://stackoverflow.com/questions/1628026/python-infinity-any-caveats#comment31860436_1628026
-__builtin__.endl = os.linesep # Line separator
-__builtin__.pyEq = operator.eq # Default python equality
-__builtin__.piHalf = pi/2
+EPSILON = 1e-7 # Assume floating point errors below this level
+infty = 1e309 # URL: http://stackoverflow.com/questions/1628026/python-infinity-any-caveats#comment31860436_1628026
+endl = os.linesep # Line separator
+pyEq = operator.eq # Default python equality
+piHalf = pi/2
 
 # == End Init ==============================================================================================================================
 
@@ -492,6 +491,13 @@ def linspace_space( dim , sMin , sMax , num  ):
 def find_pop( iterable , item ):
     """ Pop 'item' from 'iterable' , ValueError if not in 'iterable' """
     return iterable.pop( iterable.index( item ) )
+
+def find_pop_safe( iterable , item ):
+    """ Pop 'item' from 'iterable' , Return 'None' if not in 'iterable' """
+    try:
+        return find_pop( iterable , item )
+    except:
+        return None
     
 def insert_sublist( bigList , index , subList ): 
     """ Insert 'subList' into 'bigList' at 'index' and return resulting list """
@@ -782,7 +788,7 @@ class Counter(dict):
     def sorted_keyVals( self ):
         """ Return a list of sorted key-value tuples """
         sortedItems = self.items()
-        sortedItems.sort( cmp = lambda keyVal1 , keyVal2 :  sign( keyVal2[1] - keyVal1[1] ) )
+        sortedItems.sort( cmp = lambda keyVal1 , keyVal2 :  np.sign( keyVal2[1] - keyVal1[1] ) )
         return sortedItems
     
 class RollingList( list ): 
