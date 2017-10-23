@@ -401,6 +401,11 @@ def eq_list( lst1 , lst2 , eps = EPSILON ):
             if not abs( lst1[ index ] - lst2[ index ] ) <= eps: # test equality, if not equal, then return False
                 return False
         return True # Made it through the list without failed tests, return True
+    
+def same_contents_list( lst1 , lst2 ):
+    """ Determine if every element in 'lst1' can be found in 'lst2' , and vice-versa , NOTE: This function assumes all elements are hashable """
+    s1 = set( lst1 ) ; s2 = set( lst2 )
+    return s1 == s2
 
 def lst( *args ):
     """ Return a list composed of the arbitrary 'args' """

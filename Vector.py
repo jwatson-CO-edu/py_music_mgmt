@@ -15,7 +15,7 @@ Vectors, Turns, Frames, and common operations in 2D geometry
 """
 
 # ~ Standard Libraries ~
-import Tkinter
+import Tkinter , os , operator
 from math import sqrt, cos, sin, radians, acos, pi, atan2, asin, e
 from numbers import Number # for checking if a thing is a NumberR3triple
 from copy import deepcopy
@@ -30,6 +30,9 @@ from marchhare import PriorityQueue , elemw , format_dec_list , eq_margin , roun
 # ~~ Constants , Shortcuts , Aliases ~~
 EPSILON = 1e-7
 infty = 1e309 # URL: http://stackoverflow.com/questions/1628026/python-infinity-any-caveats#comment31860436_1628026
+endl = os.linesep # Line separator
+pyEq = operator.eq # Default python equality
+piHalf = pi/2
 
 # === Vector Mathematics ===
 
