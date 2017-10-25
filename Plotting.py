@@ -132,20 +132,21 @@ def plot_points_only_list(ptsList):
     plt.gca().set_aspect('equal')
     plt.show()
     
-def plot_chain(ptsList):
+def plot_chain( ptsList , makeCycle = False , color = 'blue' , axes = False ):
     """ Plot the uniqueified points already stored in a list """ # NOTE: This function assumes a points-only file exists!
     fig = plt.figure()
     #ax = Axes3D(fig) 
-    ax = fig.add_subplot(111, projection='3d')
+    ax = fig.add_subplot( 111 , projection = '3d' )
     #pointsOnly = load_pkl_struct(PKLpath) # You must be aware of the structure in order to use it
     
-    xs,ys,zs = split_to_components( ptsList )
-    ax.plot(xs, ys, zs, c='blue')
-    plot_axes_3D_mpl(ax, scale = 0.05)
-    # Show the attachment point that will be used to attach to grasp points
+    xs , ys , zs = split_to_components( ptsList )
+    if makeCycle:
+        for coordList in [ xs , ys , zs ]:
+            coordList.append( coordList[0] )
+    ax.plot( xs , ys , zs , c = color )
     
-    #xs,ys,zs = split_to_components( [indexFingTip] )
-    #ax.scatter(xs, ys, zs, c='red', marker='+' , s=140)
+    if axes:
+        plot_axes_3D_mpl( ax , scale = 0.05 )
     
-    plt.gca().set_aspect('equal')
+    plt.gca().set_aspect( 'equal' )
     plt.show() 
