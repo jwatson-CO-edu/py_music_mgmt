@@ -12,13 +12,19 @@ Vector operations and geometry in 3 dimensions
 
 # ~~ Imports ~~
 # ~ Standard ~
-from math import atan2 , acos , cos , sin
+from math import atan2 , acos , cos , sin , sqrt , asin , radians , pi
 # ~ Special ~
+import numpy as np
 # ~ Local ~
-from AsmEnv import format_dec_list 
-from Vector import *
+from marchhare.marchhare import format_dec_list , eq , incr_max_step , round_small
+from marchhare.Vector import vec_mag , vec_unit , vec_proj , np_add , vec_round_small , vec_angle_between , vec_eq , vec_copy , vec_linspace
 
-# ~~ Constants ~~
+# ~~ Constants , Shortcuts , Aliases ~~
+EPSILON = 1e-7
+infty = 1e309 # URL: http://stackoverflow.com/questions/1628026/python-infinity-any-caveats#comment31860436_1628026
+# endl = os.linesep # Line separator
+# pyEq = operator.eq # Default python equality
+piHalf = pi/2
 DISPLAYPLACES = 3
 
 # === 3D Geometry ===
@@ -113,7 +119,8 @@ def point_basis_change( point , origin , xBasis , yBasis , zBasis ):
     """ Express a 'point' in a new basis, according to 'origin', 'xBasis', 'yBasis', 'zBasis' (all param coordinates in old basis) """
     offset = np.subtract( point , origin )
     # NOTE: This is probably faster as a matrix operation
-    return ( np_vec_proj( offset , xBasis ) , np_vec_proj( offset , yBasis ) , np_vec_proj( offset , zBasis ) )
+    # return ( np_vec_proj( offset , xBasis ) , np_vec_proj( offset , yBasis ) , np_vec_proj( offset , zBasis ) )
+    return ( vec_proj( offset , xBasis ) , vec_proj( offset , yBasis ) , vec_proj( offset , zBasis ) )
  
 def check_orthonormal(basis1,basis2,basis3):
     """ Return True if bases are mutually orthogonal, False otherwise , does not indicate which criterion fails """
@@ -276,11 +283,7 @@ class Quaternion(object):
         e3 = 0.5 * sin( Phi ) * ( C[0][1] - C[1][0] )
         return Quaternion.k_rot_to_Quat( [ e1 , e2 , e3 ] , Phi )
      
-    def norm(self):
-        """ Return the norm of the Quaternion """
-        return sqrt( self.sclr ** 2 + self._vctr[0] ** 2 + self._vctr[1] ** 2 + self._vctr[2] ** 2 )
-    
-    def norm(self):
+    def norm( self ):
         """ Return the norm of the Quaternion """
         return sqrt( self.sclr ** 2 + self._vctr[0] ** 2 + self._vctr[1] ** 2 + self._vctr[2] ** 2 )
 
@@ -526,8 +529,8 @@ class Pose(object):
         poseDiff = Pose.diff_from_to( aPose , bPose ) # Obtain the difference between the two poses
         positions = vec_linspace( aPose.position , bPose.position , numPts  ) # Create evenly spaced points between the two positions
         k , rot = poseDiff.orientation.get_k_rot() # Get the axis-angle of the orientation difference
-        if get_dbg_lvl() == 1:
-            print "blend_poses: axis-angle of shortest rotation" , k , rot
+#        if get_dbg_lvl() == 1:
+#            print "blend_poses: axis-angle of shortest rotation" , k , rot
         rotations = []
         for blendRot in np.linspace( 0 , rot , numPts ): # For each angle increment: Apply a rotation increment
             rotations.append( Quaternion.compose_rots( aPose.orientation , Quaternion.k_rot_to_Quat( k , blendRot ) ) )
@@ -694,223 +697,3 @@ class LinkFrame(Frame3D):
         
 # = End LinkFrame =
 
-# = Drawing Init =        
-def attach_geometry(rootFrame, pCanvas):
-    """ Traverse geometry from the root frame to the all subframes, recursively, attaching all drawable geometry to canvas """
-    for obj in rootFrame.objs:
-        obj.attach_to_canvas( pCanvas )
-    for frame in rootFrame.subFrames:
-        attach_geometry( frame , pCanvas )
-        
-def attach_transform( rootFrame, pTransform ):
-    """ Traverse geometry from the root frame to the all subframes, recursively, attaching a coordinate transformation to each drawable """
-    for obj in rootFrame.objs:
-        obj.transform = pTransform
-    for frame in rootFrame.subFrames:
-        attach_transform( frame , pTransform )
-        
-def color_all(rootFrame, pColor):
-    """ Traverse geometry from the root frame to the all subframes, recursively, setting all graphics to 'pColor' """
-    if 'colorize' in rootFrame.__dict__:
-        rootFrame.colorize(pColor)
-    else:
-        for obj in rootFrame.objs:
-            obj.set_color( pColor )   
-    for frame in rootFrame.subFrames:
-        color_all( frame , pColor )
-# = End Drawing =        
-# == End Frames ==
-        
-# TODO : Consider whether having a parent class geometric object would overcomplicate things
-
-""" NOTES: In a previous implementation, every geometrical object was essentially a Frame that could contain other objects
-           that could be nested indefinitely. That probably overcomplicated things a great deal. For now will only consider
-           a line segment to be just that, and not represent anything greater than a straight connection between two points. 
-           
-           For now, not considering a point to be its own class. A point can be just a simple triple represented with np.ndarray 
-           
-           For now, leaving all the Tkinter stuff inside the geometry classes, even though I would like geometry and its calculations
-           to remain separate from drawing. These have to be linked in some way to be useful, at any rate. """
-
-# == class Segment ==
-
-class Segment(object):
-    """ A line segment to be displayed on a Tkinter canvas """ # TODO: * Generalize for any display?
-#                                                                      * Consider extending this class for particular displays?
-    
-    def __init__(self , pCoords = None , TKcanvas=None , color=None): # candidate super signature
-        """ Assign vars and conditionally create the canvas object 'self.drawHandle' """
-        # dbgLog(-1, "Segment:",len(locals()),"args passed" )
-        # dbgLog(-1, "Segment locals are:",locals() )
-	
-        self.transform = self.dummy_transform # Optionally change this for a different rendering engine
-        self.displayScale = 1 # /4.0
-        #                    v--- Need to make a copy here, otherwise relative coords will be transformed
-        self.coords = vec_copy_deep( pCoords ) if pCoords else [ [0.0 , 0.0 , 0.0] , [0.0 , 0.0 , 0.0] ] # Coordinates expressed in the parent reference Frame
-        self.labCoords = pCoords # Coordinates expressed in the lab frame, used for drawing and lab frame calcs
-        # dbgLog(-1, "coords[0]" , self.coords[0] , "coords[1]" , self.coords[1] )
-        self.canvas = None
-        if TKcanvas: # If canvas is available at instantiation, go ahead and create the widget
-            # dbgLog(-1, "Segment: init with canvas")
-            self.canvas = TKcanvas
-            self.drawHandle = TKcanvas.create_line( self.coords[0][0] , self.coords[0][1] , self.coords[1][0] , self.coords[1][1]) 
-            # dbgLog(-1, "Item",self.drawHandle,"created on canvas")
-            if color:
-                self.canvas.itemconfig(self.drawHandle,fill=color)
-                # dbgLog(-1, "Item",self.drawHandle,"has color", color)
-
-    def __str__(self):
-        """ Return the endpoints of the Segment as a String """
-        return str( self.coords )
-        
-
-    # = Drawing Methods =
-    
-    def dummy_transform(self, pntList, scale): # candidate super fuction
-        """ Dummy coordinate transformation, to be replaced with whatever the application calls for """
-    	rtnList = []
-    	for pnt in pntList:
-    	    rtnList.extend( pnt )
-        return rtnList # no actual transformation done to coords
-    
-    def set_color(self, color): # candidate super functions
-        """ Set the 'color' of the line """
-        self.canvas.itemconfig(self.drawHandle,fill=color)
-        
-    def attach_to_canvas(self, TKcanvas): # candidate super function
-        """ Given a 'TKcanvas', create the graphics widget and attach it to the that canvas """
-        self.drawHandle = TKcanvas.create_line( -10 , -10 , -5 , -5 ) # Init to dummy coords x1, y1 , x2 , y2
-        self.canvas = TKcanvas
-        
-    def labCoords_to_list(self):
-        pass
-        
-    def update(self): # candidate super function
-        """ Update the position of the segment on the canvas """
-        temp = self.transform( self.labCoords, self.displayScale ) # Project 3D to 2D
-        # print self.labCoords , temp , self.transform.__name__
-        self.canvas.coords( self.drawHandle , *temp ) 
-
-    # = End Drawing =
-
-# == End Segment ==
-
-
-# == class Ray ==
-
-class Ray(Segment):
-    """ Represents a ray, extending from the first point, through a second point, and to the end of the canvas """
-    
-    def __init__( self , pCoords=None , TKcanvas=None , color=None ):
-        """ Assign vars and conditionally create the canvas object 'self.drawHandle' """
-        super( Ray , self ).__init__( pCoords , TKcanvas , color )
-        
-        
-def dummy_transform( self , pntList , scale ):
-    """ Dummy coordinate transformation, to be replaced with whatever the application calls for """
-    # TODO: EXTEND THE LINE ALL THE WAY TO THE EDGE    
-    winWdt = self.canvas.winfo_reqwidth()    
-    winHgt = self.canvas.winfo_reqheight()
-    
-    return [ pntList , COLLISION_WITH_EDGE ]
-        
-
-# == End Ray ==
-
-# == class Axes ==
-
-class Axes(Frame3D):
-    """ A set of Cartesian coordinate axes (R3) composed of Segments """
-    count = 0    
-    
-    def __init__(self, pPose, pScale):
-        super(Axes, self).__init__(pPose.position, pPose.orientation)
-        self.scale = pScale
-        for vecDex , vec in enumerate( ( [1,0,0] , [0,1,0] , [0,0,1] ) ):
-            self.objs.append( Segment( [ [0,0,0] , np.multiply( vec , self.scale ) ] ) )
-        Axes.count += 1 # DEBUG
-            
-    def colorize(self, pColor):
-        """ After a canvas has been assigned, give axes the proper color """
-        axClrs = ( 'red' , 'green' , 'blue' )
-        for vecDex , vec in enumerate( self.objs ):
-            self.objs[vecDex].set_color( axClrs[vecDex] )
-         
-# == End Axes ==
-
-
-# == class Facet ==
-
-# TODO: Start here if Motion Planning project will be 3D
-
-class Facet(Frame3D):
-    """ Represents a closed polygon in R3, with [0,0,1] (local frame) as the normal """
-    def __init__(self, pPosn , pOrnt, *pointsCCW):
-        """ Constructor: set up the Facet with an initial pose, with [0,0,1] as the normal, points with respect to local origin """
-        super(Facet, self).__init__(pPos, pOrnt)
-        self.points = [ [ pnt[0] , pnt[1] , 0.0 ] for pnt in pointsCCW ] # Enforce: Points must be on the local X-Y plane
-        for pntDex in len( self.points ): # For each point, create a segment from this point to the next, closed figure
-            self.objs.append( Segment( [ elemw( pntDex , self.points) , elemw( pntDex , self.points + 1 ) ] ) )
-            # TODO: Look at the graphics book to see how polygons and polyhedra are represented
-
-# == End Facet == 
-     
-# === End 3D ===
-
-
-# === Spare Parts ===
-
-## === Projections ===
-## == Cheap Iso ==
-
-#"""
-#== Cheap Isometric Projection ==
-#Three dimensions are represented in a simple isomertic projection. The silhouette of a cube takes on the shape of a regular
-#hexagon. This is so that no scaling or complex transformations have to take place. All axes have an equal scale in this
-#representation. Transforming coordinates from R3 to Cheap Iso is just a matter of multiplying each of the components by
-#a 2D non-orthogonal "basis vector" and adding the resultants. Perspective is not implemented.
-#"""
-#def cheap_iso_transform(R3triple):
-    #""" Transform R3 coordinates into a cheap isometric projection in 2D, as described above """
-    ## NOTE: You will need to scale thye resulting coords according to the need of the application
-    #return np.multiply( cheap_iso_transform.xBasis , R3triple[0] ) + \
-           #np.multiply( cheap_iso_transform.yBasis , R3triple[1] ) + \
-           #np.multiply( cheap_iso_transform.zBasis , R3triple[2] ) # use 'np_add' if this concatenates coords
-
-#cheap_iso_transform.zBasis = [ 0.0 , 1.0 ] 
-#cheap_iso_transform.xBasis = polr_2_cart_0Y( [1.0 , 2.0/3 * pi] )
-#cheap_iso_transform.yBasis = polr_2_cart_0Y( [1.0 , 1.0/3 * pi] )
-
-## = Rendering Helpers =
-
-## TODO: Consider keeping this global inside the app and adding an offset coord param to the functions below
-#FLATORIGIN = [0,0] # Set this a handy location for your application
-
-#def coord_iso_scrn(isoPair, scale):
-    #""" Transform natural coordinates in the lab frame to coordinates on the screen display """
-    ## NOTE: For now assume to handle one pair of coords, not handling the recursive case!
-    #return  np.add( FLATORIGIN , np.multiply( [ isoPair[0] , -isoPair[1] ] , scale) ) 
-    
-#def chain_iso_scrn(coordList, scale):
-    #""" Convert a list of coordinates in the lab frame to the screen frame """
-    #rtnCoords = []
-    #for coord in coordList:
-        #rtnCoords.append( coord_iso_scrn(coord, scale) )
-    #return rtnCoords
-    
-#def coord_R3_scrn(R3triple, scale):
-    #""" Flatten an R3 triple to the isometric view and transform to screen coords """
-    #return coord_iso_scrn( cheap_iso_transform(R3triple), scale )
-    
-#def chain_R3_scrn(R3chain, scale):
-    #""" Flatten a list of R3 triples to the isometric view and transform to screen coords """
-    #rtnCoords = []
-    #for triple in R3chain:
-        #rtnCoords.extend( coord_R3_scrn(triple, scale) )
-    #return rtnCoords # TODO: Tkinter expects coords as X1 , Y1 , X2 , Y2
-    
-## = End Rendering =
-## == End Iso ==
-## === End Projections ===
-
-# === Spare Parts ===
