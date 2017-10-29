@@ -895,6 +895,16 @@ def str_args( *args , **kwargs ):
         print prnStr
     else:
         return prnStr
+    
+def pretty_print_dict( pDict ):
+    """ print a dictionary """
+    longestRep = 0
+    for key in pDict:
+        longestRep = max( longestRep , len( str( key ) ) )
+    print "{"
+    for key in sorted( pDict ):
+        print "\t" , str( key ).ljust( longestRep , ' ' ) , ":" , pDict[ key ]
+    print "}"
 
 # == End Printing ==
 

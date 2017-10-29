@@ -4,8 +4,8 @@ from __future__ import division
 
 """
 Vector.py , Built on Spyder for Python 2.7
-Erik Lindstrom , Adam Sperry , James Watson, 2016 October
-Vectors, Turns, Frames, and common operations in 2D geometry
+Erik Lindstrom , Adam Sperry , James Watson , 2016 October
+Vectors , Turns , Frames , and common operations in 2D geometry
 
 == LOG ==
 
@@ -15,15 +15,14 @@ Vectors, Turns, Frames, and common operations in 2D geometry
 """
 
 # ~ Standard Libraries ~
-import Tkinter , os , operator
-from math import sqrt, cos, sin, radians, acos, pi, atan2, asin, e
-from numbers import Number # for checking if a thing is a NumberR3triple
+import os , operator
+from math import pi
 from copy import deepcopy
 from random import random
 # ~ Special Libraries ~
 import numpy as np
 # ~ Local Libraries ~
-from marchhare import PriorityQueue , elemw , format_dec_list , eq_margin , round_small 
+from marchhare import eq_margin , round_small , eq
 
 # set_dbg_lvl(1) # Transformation of objects contained in Frames
 
@@ -151,7 +150,7 @@ def vec_eq( vec1 , vec2 , margin = EPSILON ): # <<< resenv
 def vec_eq_test_w_margin( margin = EPSILON ):
     """ Return a function that performs an 'vec_eq' comparison with the specified margin """
     def eq_test( op1 , op2 ):
-        return vec_eq( vec1 , vec2 , margin )
+        return vec_eq( op1 , op2 , margin )
     return eq_test
     
 def vec_linspace( vec1 , vec2, numPts ): # <<< resenv
