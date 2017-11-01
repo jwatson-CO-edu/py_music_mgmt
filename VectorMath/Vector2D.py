@@ -15,22 +15,17 @@ Vectors, Turns, Frames, and common operations in 2D geometry
 """
 
 # ~ Standard Libraries ~
-import Tkinter
-from math import sqrt, cos, sin, radians, acos, pi, atan2, asin, e
-from numbers import Number # for checking if a thing is a NumberR3triple
-from copy import deepcopy
-from random import random
+from math import sqrt , cos , sin , acos , pi , atan2 , e
 # ~ Special Libraries ~
+import Tkinter
 import numpy as np
 from scipy.spatial import ConvexHull
 # ~ Local Libraries ~
 if __name__ == "__main__":
     import sys , os
     sys.path.append( os.path.dirname( os.path.dirname( os.path.abspath( __file__ ) ) ) )
-from AsmEnv import PriorityQueue , elemw , format_dec_list , wrap_bounds_fraction , print_list , roundint , eq , round_small , tandem_sort
-from Vector import *
-
-# set_dbg_lvl(1) # Transformation of objects contained in Frames
+from marchhare.marchhare import PriorityQueue , elemw , format_dec_list , wrap_bounds_fraction , print_list , roundint , eq , round_small , tandem_sorted
+from marchhare.Vector import vec_mag , vec_unit , vec_proj , vec_round_small , vec_copy , vec_from_seg , vec_avg , vec_dif_mag , is_vector , bbox_from_points , vec_copy_deep
 
 # ~~ Constants , Shortcuts , Aliases ~~
 EPSILON = 1e-7
@@ -86,13 +81,13 @@ def winding_num( point , polygon , excludeCollinear = True): # <<< resenv
     #tracking how many times the positive x-axis is crossed
     w = 0
     v_i = []
-    x = lambda index: elemw( index , v_i )[0] # We need wrapping indices here because the polygon is a cycle
-    y = lambda index: elemw( index , v_i )[1]
+    x = lambda index: elemw( v_i , index )[0] # We need wrapping indices here because the polygon is a cycle
+    y = lambda index: elemw( v_i , index )[1]
     for vertex in polygon: # Shift the point to the origin, preserving its relative position to polygon points
         v_i.append( np.subtract( vertex , point ) )
     for i in range(len(v_i)): # for each of the transformed polygon points, consider segment v_i[i]-->v_i[i+1]
         
-        if excludeCollinear and eq( 0 , d_point_to_segment_2D( [ 0 , 0 ] , [ x(i) , y(i) ] , [ x(i+1) , y(i+1) ] ) ):
+        if excludeCollinear and eq( 0 , d_point_to_segment_2D( [ 0 , 0 ] , [ [ x(i) , y(i) ] , [ x(i+1) , y(i+1) ] ] ) ):
             return 0
     
         if y(i) * y(i + 1) < 0: # if the segment crosses the x-axis
@@ -115,10 +110,10 @@ def winding_num( point , polygon , excludeCollinear = True): # <<< resenv
                 w -= 0.5 # possible  CW encirclement pending
     return w
 
-def point_in_poly_w(point , polygon): # <<< resenv
+def point_in_poly_w( point , polygon ): 
     """ Return True if the 'polygon' contains the 'point', otherwise return False, based on the winding number """
     # print "Winding Number:" , winding_num(point , polygon)
-    return not eq( winding_num(point , polygon) , 0 ) # The winding number gives the number of times a polygon encircles a point 
+    return not eq( winding_num( point , polygon ) , 0 ) # The winding number gives the number of times a polygon encircles a point 
     
 def d_point_to_segment_2D( point , segment ): # Changed the signature to fit the more recent representation of segments [ [ x0 , y0 ] , [ x1 , y1 ] ]
     """ Return the shortest (perpendicular) distance between 'point' and a line segment defined by 'segPt1' and 'segPt2' """
@@ -303,8 +298,8 @@ def get_area_and_centroid( vertices ):
     cx = 0
     cy = 0
     for i in range( len( x ) ):
-        cx += ( x[i] + elemw( i+1 , x ) ) * ( x[i] * elemw( i+1 , y ) - elemw( i+1 , x ) * y[i] )
-        cy += ( y[i] + elemw( i+1 , y ) ) * ( x[i] * elemw( i+1 , y ) - elemw( i+1 , x ) * y[i] )
+        cx += ( x[i] + elemw( x , i+1 ) ) * ( x[i] * elemw( y , i+1 ) - elemw( x , i+1 ) * y[i] )
+        cy += ( y[i] + elemw( y , i+1 ) ) * ( x[i] * elemw( y , i+1 ) - elemw( x , i+1 ) * y[i] )
     return area , np.array( [ cx / ( 6 * area ) , cy / ( 6 * area ) ] )
 
 def point_in_bbox( point , bbox ): # <<< resenv
@@ -937,7 +932,7 @@ class Frame2D(Pose2D): # <<< resenv
             else:
                 area , cntrd = self.get_area_centroid_ntn()
                 centroids.append( cntrd ) ; areas.append( area )
-        except Exception as ex: # else this is not a Poly2D, ex: Design, do nothing and recur
+        except Exception: # else this is not a Poly2D, ex: Design, do nothing and recur
             # print "Could not obtain centroid for this" , self.__class__.__name__
             # print "Encountered" , type( ex ).__name__  ,  "with args:" , ex.args , "and with full text:" , endl , str( ex )
             pass # If this is not a Poly2D , ignore and continue
@@ -978,8 +973,8 @@ class Frame2D(Pose2D): # <<< resenv
     def sort_putdowns( self ):
         """ Sort the putdown poses by angle , in place , supports and stability measures are sorted accordingly , return the angles I guess """
         putdownAngles = [ pd.orientation._theta for pd in self.hullPutdowns ] # Create a list of putdown angles to sort by
-        [ sortAngles , self.supports , self.stabilities , self.hullPutdowns ] = tandem_sort( putdownAngles , self.supports , 
-                                                                                             self.stabilities , self.hullPutdowns )
+        [ sortAngles , self.supports , self.stabilities , self.hullPutdowns ] = tandem_sorted( putdownAngles , self.supports , 
+                                                                                               self.stabilities , self.hullPutdowns )
         return sortAngles # In case you really just wanted to see it
     
     def copy_hull_putdowns( self ):
@@ -1123,10 +1118,86 @@ def sides_from_vertices( vertList ):
     """ Return a list of line segments from the ordered 'vertList' , consisting of each consecutive pair in a cycle with CW/CCW preserved """
     segments = [] # List of segments to be returned 
     for pDex in xrange( len( vertList ) ):
-        segments.append( [ elemw( pDex , vertList ) , elemw( pDex + 1 , vertList ) ] )
+        segments.append( [ elemw( vertList , pDex ) , elemw( vertList , pDex + 1 ) ] )
     return segments
 
 # * End Helpers *
+    
+# == class Segment ==
+
+class Segment(object): # <<< resenv
+    """ A line segment to be displayed on a Tkinter canvas """ # TODO: * Generalize for any display?
+#                                                                      * Consider extending this class for particular displays?
+
+    def __init__(self , pCoords = None , TKcanvas=None , color=None): # candidate super signature
+        """ Assign vars and conditionally create the canvas object 'self.drawHandle' """
+        self.transform = self.dummy_transform # Optionally change this for a different rendering engine
+        self.display_xform = self.scaled_coords_to_list
+        self.displayScale = 1 # /4.0
+        #                    v--- Need to make a copy here, otherwise relative coords will be transformed
+        self.coords = vec_copy_deep( pCoords ) if pCoords else [ [0.0 , 0.0] , [0.0 , 0.0] ] # Coordinates expressed in the parent reference Frame
+        # Coordinates expressed in the lab frame, used for drawing and lab frame calcs
+        self.labCoords = vec_copy_deep( pCoords ) if pCoords else [ [0.0 , 0.0] , [0.0 , 0.0] ] 
+        self.canvas = None
+        if TKcanvas: # If canvas is available at instantiation, go ahead and create the widget
+            self.canvas = TKcanvas
+            self.drawHandle = TKcanvas.create_line( self.coords[0][0] , self.coords[0][1] , self.coords[1][0] , self.coords[1][1])
+            if color:
+                self.canvas.itemconfig(self.drawHandle,fill=color)
+        self.hidden = False
+
+    def __str__(self):
+        """ Return the endpoints of the Segment as a String """
+        return str( self.coords )
+
+    # = Drawing Methods =
+    
+    def old_dummy_transform(self, pntList, scale): # candidate super fuction
+        """ Dummy coordinate transformation, to be replaced with whatever the application calls for """
+        print "OLD DUMMY CALLED , FIND OUT WHY!"
+        rtnList = []
+        for pnt in pntList:
+            rtnList.extend( pnt )
+        return rtnList # no actual transformation done to coords
+        
+    def scaled_coords_to_list( self , coords , scale = 1 ):
+        """ Unravel lab coord pairs as [ x_1 , y_1 , ... , x_n , y_n ] """
+        rtnList = []
+        for pair in coords:
+            rtnList.extend( np.multiply( pair , scale ) ) # FIXME: Scaling this twice seems redundant
+        return rtnList 
+        
+    def dummy_transform(self, pntList, scale): # candidate super fuction
+        """ Dummy coordinate transformation, to be replaced with whatever the application calls for """
+        return pntList 
+    
+    def set_color(self, color): # candidate super functions
+        """ Set the 'color' of the line """
+        self.canvas.itemconfig(self.drawHandle,fill=color)
+        self.canvas.itemconfig(self.drawHandle, width=3)
+        
+    def attach_to_canvas(self, TKcanvas): # candidate super function
+        """ Given a 'TKcanvas', create the graphics widget and attach it to the that canvas """
+        self.drawHandle = TKcanvas.create_line( -10 , -10 , -5 , -5 ) # Init to dummy coords x1, y1 , x2 , y2
+        self.canvas = TKcanvas
+            
+    def update(self): # candidate super function
+        """ Update the position of the segment on the canvas """
+        temp1 = self.transform( self.labCoords, self.displayScale ) # Project 3D to 2D
+        temp2 = self.display_xform( temp1 , 1 )
+        self.canvas.coords( self.drawHandle , *temp2 ) 
+        
+    def set_hidden( self , hidden ):
+        """ Set this line Segment hidden (True) or visible (False) """
+        self.hidden = hidden
+        if hidden:
+            self.canvas.itemconfig( self.drawHandle , state=Tkinter.HIDDEN )
+        else:
+            self.canvas.itemconfig( self.drawHandle , state=Tkinter.NORMAL )
+
+    # = End Drawing =
+
+# == End Segment ==
                     
 class Poly2D(Frame2D): # <<< resenv
     """ Represents a closed polygon in 2 dimensions, not necessarily convex or simple """
@@ -1139,7 +1210,7 @@ class Poly2D(Frame2D): # <<< resenv
         self.ntnPts = [ vec_copy( pnt ) for pnt in pointsCCW ]
         self.bbox = [ [ infty , infty ] , [ -infty , -infty ] ]
         for pntDex in range( len( self.points ) ): # For each point, create a segment from this point to the next, closed figure
-            self.objs.append( Segment( [ elemw( pntDex , self.points) , elemw( pntDex + 1 , self.points ) ] ) )
+            self.objs.append( Segment( [ elemw( self.points , pntDex ) , elemw( self.points , pntDex + 1 ) ] ) )
             # TODO: Look at the graphics book to see how polygons and polyhedra are represented
         self.collActive = True # Flag for whether this polygon should be considered for collisions
         self.hidden = False
@@ -1233,7 +1304,7 @@ class Poly2D(Frame2D): # <<< resenv
         """ Get the midpoints of all the segments in the lab frame """
         midPoints = []
         for pntDex in range( len( self.labPts ) ): # For each point, create a segment from this point to the next, closed figure
-            midPoints.append( vec_avg( elemw( pntDex , self.labPts ) , elemw( pntDex + 1 , self.labPts ) ) )
+            midPoints.append( vec_avg( elemw( self.labPts , pntDex ) , elemw( self.labPts , pntDex + 1 ) ) )
         return midPoints
         
     def set_hidden( self , hidden ):
@@ -1294,7 +1365,7 @@ class Poly2D(Frame2D): # <<< resenv
         """ Return the torque about 'labFulcrum' given the direction of gracity 'graVec', in the lab frame """
         # Calculate the lever arm that the gravity vector acts through, gravity acts at the centroid of the poly
         labCentroid = self.local_to_lab( self.relCentroid )
-        leverArm = d_point_to_segment_2D( labFulcrum , labCentroid , np.add( labCentroid , graVec ) )
+        leverArm = d_point_to_segment_2D( labFulcrum , [ labCentroid , np.add( labCentroid , graVec ) ] )
         return leverArm * self.area * vec_mag( graVec ) # Poly area is a substitute for mass , assume that mag of gravity vector represents g
         # Assume uniform area density = 1
     
@@ -1488,18 +1559,18 @@ class Poly2D(Frame2D): # <<< resenv
 
 def CCW_ray_from_vrtx_index( CCWlist , vertexIndex ):
     """ Construct a ray with origin at the vertex at 'vertexIndex' along the side CCW from the origin """
-    return [ elemw( vertexIndex , CCWlist ) , elemw( vertexIndex + 1, CCWlist ) ]
+    return [ elemw( CCWlist , vertexIndex ) , elemw( CCWlist , vertexIndex + 1 ) ]
     
 def CW_ray_from_vrtx_index( CCWlist , vertexIndex ):
     """ Construct a ray with origin at the vertex at 'vertexIndex' along the side CW from the origin """
     # print "Points:     " , CCWlist
     # print "Ray point 0:" , elemw( vertexIndex , CCWlist )
     # print "Ray point 1:" , elemw( vertexIndex - 1 , CCWlist )
-    return [ elemw( vertexIndex , CCWlist ) , elemw( vertexIndex - 1 , CCWlist ) ]
+    return [ elemw( CCWlist , vertexIndex ) , elemw( CCWlist , vertexIndex - 1 ) ]
 
 def CCW_CW_rays_from_vrtx_index( CCWlist , vertexIndex ):
     """ Construct rays with origin at the vertex at 'vertexIndex' along the sides CCW from and CW from the origin , in that order """
-    return [ elemw( vertexIndex , CCWlist ) , elemw( vertexIndex + 1 , CCWlist ) ] , [ elemw( vertexIndex , CCWlist ) , elemw( vertexIndex - 1 , CCWlist ) ]
+    return [ elemw( CCWlist , vertexIndex ) , elemw( CCWlist , vertexIndex + 1 ) ] , [ elemw( CCWlist , vertexIndex ) , elemw( CCWlist , vertexIndex - 1 ) ]
         
 def floor_ref_posed_for_segment( ntnSupportSeg , margin = None ):
     """ Return a reference to a Poly2D object representing the floor supporting a sub on a 'ntnSupportSeg' """
@@ -1718,7 +1789,7 @@ def planar_poly_stability( vertices , centroid ):
     # NOTE: Stability listed according to the order of 'vertices' , a side is '[ vertices[i] , vertices[i+1] ]'
     sideStability = []
     for vDex in xrange( len( vertices ) ):
-        sideStability.append( proj_pnt_within_seg( centroid , [ elemw( vDex , vertices ) , elemw( vDex + 1 , vertices ) ] ) )
+        sideStability.append( proj_pnt_within_seg( centroid , [ elemw( vertices , vDex ) , elemw( vertices , vDex + 1 ) ] ) )
     return sideStability
     
 class Table(Poly2D):
@@ -1759,74 +1830,3 @@ def perp_bisector_2D( segment ):
 perp_bisector_2D.turn = Turn( pi / 2 )
 
 # == End Geo Geo ==
-
-
-# == Debris and Cuttings ==
-
-## == class Assembly ==
-#
-#class Assembly(Design):
-#    """ Represents an assembly-in-progress (AIP) , being built according to a Design """
-#    
-#    def __init__( self , pPos , pTheta , supervisorDesign ):
-#        """ Set up an Assembly with a Design to direct construction """
-#        Design.__init__( self , pPos , pTheta )
-#        self.design = supervisorDesign # This keeps track of where the parts should be placed
-#        self.displayDesign = supervisorDesign.get_copy() # This keeps track of where the parts should be placed
-#        self.posTolerance = 0.5 # - 0.5 px
-#        self.angTolerance = 0.018 # 1.0 deg
-#        self.name = "Asm_" + str( supervisorDesign.name )
-#        
-#    def set_Pose( self , pPose , frame = "rel" ):
-#        """ Set the pose of the assembly and also the ghost design """
-#        Frame2D.set_Pose( self               , pPose , frame ) # Set the pose for the assembly
-#        Frame2D.set_Pose( self.displayDesign , pPose , frame ) # Keep the pose of the imaginary completed design updated with the in-progress assembly
-#        
-#    def assemble_part( self , part ):
-#        """ Add 'part' to the Assembly and flag it as assembled , reject the part if it does not belong in the assembly """
-#        if self.design.get_part_index_w_name( part.name ) != None:
-#            designTarget = self.design.get_part_by_name( part.name )
-#            print "DEBUG , what is the parent of the asm" , self.parent
-#            self.parent.transform_contents() # Just in case , transform both this Asm and the part we need to capture
-#            relPartPose = self.lab_to_local_Pose( part.labPose )
-#            part.set_Pose( relPartPose )
-#            self.attach_sub( part )
-#            if self.parent.remove_sub( part ):
-#                print "Took" , part.name , "from the parent frame for assembly"
-#            else:
-#                print "Part" , part.name , "not found in the parent frame! Cannot be added to assembly."
-#            posDelta , angDelta = Pose2D.diff_mag( designTarget.get_Pose( frame = 'rel' ) , relPartPose ) # Return a pose representing the delta between expected and actual position
-#            if abs( posDelta ) <= self.posTolerance and abs( angDelta ) <= self.angTolerance:
-#                part.set_Pose( designTarget.get_Pose( frame = 'rel' ) ) # If we were close enough , nudge the part into place
-#            else:
-#                print "Warning:" , part.name , "was not assembled correctly! Error: Position" , posDelta , ", Angle" , angDelta # else we were way off! warn the user
-#            return ( posDelta , angDelta ) # Return the error, regardless of success
-#        else:
-#            raise ValueError( "Assembly.assemble_part: " + str( part.name ) + " does not belong in this design!" )
-#        
-## == End Assembly ==
-#
-## === End Assembly Frames ===
-
-"""
-nextPart.set_Pose( nextNtnPose , frame = 'ntn' ) # Assign the specified notional pose to the next part
-    # Project the supporting segment in eat
-    if len( nextPart.ray_collisions_ext_pnt( ntnSupportSeg                           , frame = 'ntn' , slideCoincident = True ) ) > 0 or \
-       len( nextPart.ray_collisions_ext_pnt( [ ntnSupportSeg[1] , ntnSupportSeg[0] ] , frame = 'ntn' , slideCoincident = True ) ) > 0:
-        return True # If the ray of the supporting side intersects with the next part, then the next part collides with the floor
-    else:
-        return False # Else the ray of the supporting side does not intersect the next part
-"""
-
-"""
-if frame == "rel": # Relative Frame
-    # Relative frame work here
-elif frame == "ntn": # Notional Frame
-    # Notional frame work here
-elif frame == "lab": # Probably should not use this one, it will just be overwritten for an update
-    # Lab frame work here
-else:
-    raise ValueError( "Frame2D.set_theta: " + str(frame) + " does not designate a known frame!")
-"""
-
-# == End Debris ==

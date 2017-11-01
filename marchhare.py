@@ -435,7 +435,7 @@ def incr_min_step( bgn , end , stepSize ):
 
 def incr_max_step( bgn , end , stepSize ):
     """ Return a list of numbers from 'bgn' to 'end' (inclusive), separated by at MOST 'stepSize'  """
-    numSteps = (end - bgn) / stepSize
+    numSteps = ( end - bgn ) / ( stepSize * 1.0 )
     rtnLst = [ bgn + i * stepSize for i in xrange( trunc(numSteps) + 1 ) ]
     if numSteps % 1 > 0: # If there is less than a full 'stepSize' between the last element and the end
         rtnLst.append( end )
