@@ -493,6 +493,14 @@ def linspace_space( dim , sMin , sMax , num  ):
                 rtnLst.append( [item] + sub )
     return rtnLst
 
+def linspace_centers( sMin , sMax , num ):
+    """ Return the centers of 'num' bins from 'sMin' to 'sMax' """
+    borders = np.linspace( sMin , sMax , num + 1 ) # Get evenly-spaced points
+    centers = []
+    for i in xrange( num ):
+        centers.append( ( borders[i] + borders[i+1] ) / 2.0 )
+    return centers
+
 def find_pop( iterable , item ):
     """ Pop 'item' from 'iterable' , ValueError if not in 'iterable' """
     return iterable.pop( iterable.index( item ) )
