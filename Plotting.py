@@ -14,9 +14,21 @@ Useful functions for plotting, mostly in matplotlib
 # ~ Special Libraries ~
 import numpy as np
 import matplotlib
-matplotlib.use('Qt4Agg')
+matplotlib.use('Qt4Agg') # Not even sure what this is for
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import axes3d, Axes3D 
+
+COMMONCOLORS = [
+    'b' , # blue.
+    'g' , # green.
+    'r' , # red.
+    'c' , # cyan.
+    'm' , # magenta.
+    'k'   # black.
+]
+
+def rolling_rainbow( index ):
+    return COMMONCOLORS[ index % len( COMMONCOLORS ) ]
 
 def split_to_components( vecList ):
     """ Separate a list of R3 vectors into three lists of components """ # because matplotlib likes it that way
@@ -113,39 +125,43 @@ def show_3d():
     """ Show all the 3D figures, should only be called once per program """
     plt.gca().set_aspect('equal')
     plt.show()
+    
+def plot_points_to_ax( ax , ptsList , size = 14 , color = 'blue' , mrkr = 'o' ):
+    xs , ys , zs = split_to_components( ptsList )
+    ax.scatter( xs , ys , zs , c = color , marker = mrkr , s = size )
    
-def plot_points_only_list(ptsList):
+def plot_points_only_list( ptsList , size = 14 , color = 'blue' , mrkr = 'o' , paintAxes = False ):
     """ Plot the uniqueified points already stored in a list """ # NOTE: This function assumes a points-only file exists!
+
     fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
+    ax  = fig.add_subplot( 111 , projection = '3d' )
     
-    #pointsOnly = load_pkl_struct(PKLpath) # You must be aware of the structure in order to use it
+    plot_points_to_ax( ax , ptsList , size , color , mrkr  )
     
-    xs,ys,zs = split_to_components( ptsList )
-    ax.scatter(xs, ys, zs, c='blue', marker='o', s=14)
-    plot_axes_3D_mpl(ax, scale = 0.05)
-    # Show the attachment point that will be used to attach to grasp points
-    
-    #xs,ys,zs = split_to_components( [indexFingTip] )
-    #ax.scatter(xs, ys, zs, c='red', marker='+' , s=140)
+    if paintAxes:
+        plot_axes_3D_mpl( ax , scale = 0.05 )
     
     plt.gca().set_aspect('equal')
     plt.show()
     
-def plot_chain( ptsList , makeCycle = False , color = 'blue' , axes = False ):
-    """ Plot the uniqueified points already stored in a list """ # NOTE: This function assumes a points-only file exists!
-    fig = plt.figure()
-    #ax = Axes3D(fig) 
-    ax = fig.add_subplot( 111 , projection = '3d' )
-    #pointsOnly = load_pkl_struct(PKLpath) # You must be aware of the structure in order to use it
-    
+
+def plot_chain_to_ax( ax , ptsList , makeCycle = False , color = 'blue' ):
     xs , ys , zs = split_to_components( ptsList )
     if makeCycle:
         for coordList in [ xs , ys , zs ]:
             coordList.append( coordList[0] )
     ax.plot( xs , ys , zs , c = color )
     
-    if axes:
+def plot_chain( ptsList , makeCycle = False , color = 'blue' , paintAxes = False ):
+    """ Plot the uniqueified points already stored in a list """ # NOTE: This function assumes a points-only file exists!
+    fig = plt.figure()
+    #ax = Axes3D(fig) 
+    ax = fig.add_subplot( 111 , projection = '3d' )
+    #pointsOnly = load_pkl_struct(PKLpath) # You must be aware of the structure in order to use it
+    
+    plot_chain_to_ax( ax , ptsList , makeCycle , color )
+    
+    if paintAxes:
         plot_axes_3D_mpl( ax , scale = 0.05 )
     
     plt.gca().set_aspect( 'equal' )

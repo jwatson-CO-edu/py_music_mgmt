@@ -115,6 +115,10 @@ def transform_by_bases( vec_A , xBasis_B , yBasis_B , zBasis_B ):
                    np.multiply( yBasis_B , vec_A[1] ) , # y component
                    np.multiply( zBasis_B , vec_A[2] ) ) # z component
                    
+def transform_to_frame( vec_A , origin , xBasis_B , yBasis_B , zBasis_B ):
+    """ Transform a 'vec' in basis A to basis B, with 'x/y/zBasis' expressed in B """
+    return np.add( origin , transform_by_bases( vec_A , xBasis_B , yBasis_B , zBasis_B ) )
+    
 def point_basis_change( point , origin , xBasis , yBasis , zBasis ):
     """ Express a 'point' in a new basis, according to 'origin', 'xBasis', 'yBasis', 'zBasis' (all param coordinates in old basis) """
     offset = np.subtract( point , origin )
