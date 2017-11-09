@@ -843,6 +843,16 @@ def enumerate_reverse( L ):
     # URL, Generator that is the reverse of 'enumerate': http://stackoverflow.com/a/529466/893511
     for index in reversed( xrange( len( L ) ) ):
         yield index, L[ index ]
+        
+def increment( reset = None ):
+    """ Count from 0 , or user-specified 'reset' : Increments , and returns increased number when called without argument , arg resets """
+    if reset == None:
+        increment.i += 1
+    else:
+        increment.i = reset
+    return increment.i
+increment.i = 0
+    
 
 # == End Generators ==
 
