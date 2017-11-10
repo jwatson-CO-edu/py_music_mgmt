@@ -526,6 +526,16 @@ def index_eq( pList , num , margin = EPSILON ):
         if eq_margin( num , elem , margin ):
             return index
     return None
+
+def iter_contains_None( listOrTuple ):
+    """ Return True if any of 'listOrTuple' is None or contains None , Otherwise return False """
+    if isinstance( listOrTuple , ( list , tuple ) ): # Recursive Case: Arg is an iterable , inspect each
+        for elem in listOrTuple:
+            if iter_contains_None( elem ):
+                return True
+        return False
+    else: # Base Case: Arg is single value
+        return True if listOrTuple == None else False
     
 # = Containers for Algorithms =
 

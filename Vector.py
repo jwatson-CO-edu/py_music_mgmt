@@ -35,15 +35,15 @@ piHalf = pi/2
 
 # === Vector Mathematics ===
 
-def vec_mag(vec): # <<< resenv
+def vec_mag( vec ): 
     """ Return the magnitude of a vector """
-    return np.linalg.norm(vec)
+    return np.linalg.norm( vec )
     
-def vec_sqr( vec ): # TODO: ADD TO RESENV
+def vec_sqr( vec ): 
     """ Return the squared magnitude of the vector (avoid sqrt for quick comparison) """
     return np.dot( vec , vec ) # The squared magnitude is just the vector dotted with itself
     
-def vec_dif_sqr( vec1 , vec2 ): # TODO: ADD TO RESENV
+def vec_dif_sqr( vec1 , vec2 ): 
     """ Return the squared magnitude of the vector difference between 'vec1' and 'vec2' """
     vecDiff = np.subtract( vec1 , vec2 )
     return np.dot( vecDiff , vecDiff ) # The squared magnitude is just the vector dotted with itself
@@ -165,7 +165,7 @@ def vec_linspace( vec1 , vec2, numPts ): # <<< resenv
                                              value ) ) )
     return ptsList
     
-def vec_avg( *vectors ): # <<< resenv
+def vec_avg( *vectors ): 
     """ Return a vector that is the average of all the 'vectors', equal weighting """
     vecSum = np_add( *vectors ) # NOTE: This function assumes that all vectors are the same dimensionality
     return np.divide( vecSum , len( vectors ) * 1.0 )
