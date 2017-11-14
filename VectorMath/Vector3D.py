@@ -93,13 +93,19 @@ def radPtcYaw_2_cart_YUP( radPtcYaw ):
 
 # == End Spherical ==
 
-def vec_proj_to_plane(vec, planeNorm):
+def vec_proj_to_plane( vec , planeNorm ):
     """ Return a vector that is the projection of 'vec' onto a plane with the normal vector 'planeNorm', using numpy """
     # URL, projection of a vector onto a plane: http://www.euclideanspace.com/maths/geometry/elements/plane/lineOnPlane/
     # NOTE: This function assumes 'vec' and 'planeNorm' are expressed in the same bases
     projDir = vec_unit( np.cross( np.cross( planeNorm , vec ) , planeNorm ) ) # direction of the projected vector, normalize
     projMag = vec_proj( vec , projDir ) # magnitude of the vector in the projected direction
     return np.multiply( projDir , projMag ) # scale the unit direction vector to the calculated magnitude and return
+
+def pnt_proj_to_plane( queryPnt , planePnt , normal ):
+    """ Return a point that is 'queryPnt' projected onto a plane with a given 'normal' and passing through 'planePnt' """
+    relPnt = np.subtract( queryPnt , planePnt ) # Compute the vector offset from the arbitrary plane point to the point under scrutiny
+    offset = vec_proj_to_plane( relPnt , normal )
+    return np.add( planePnt , offset )
 
 def vec_dist_to_plane( queryPnt , planePnt , normal ):
     """ Return the distance from 'queryPnt' to a plane with 'normal' and that contains 'planePnt' (any point on the plane) """
