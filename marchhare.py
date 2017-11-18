@@ -537,6 +537,22 @@ def iter_contains_None( listOrTuple ):
     else: # Base Case: Arg is single value
         return True if listOrTuple == None else False
     
+def num_range_to_bins( minNum , maxNum , divs  ):
+    """ Return a list of tuples that each represent the bounds of one of 'divs' bins from 'minNum' to 'maxNum' """
+    borders = np.linspace( minNum , maxNum , divs + 1 )
+    bins = []
+    for bDex , border in enumerate( borders[1:] ):
+        bins.append( ( borders[bDex-1] , borders[bDex] ) )
+    return bins
+
+def bindex( bins , val ):
+    """ Given a list of ( lower_i , upper_i ) 'bins' , Return the index that 'val' belongs in , Return None if there is no such bin """
+    # NOTE: This function assumes 'bins' takes the form of returned by 'num_range_to_bins'
+    for bDex , bin in enumerate( bins ):
+        if val > bin[0] and val <= bin[1]:
+            return bDex
+    return None
+    
 # = Containers for Algorithms =
 
 class Stack(list): 
