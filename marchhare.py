@@ -17,7 +17,7 @@ Helper functions
 # ~ Standard Libraries ~
 import sys , os , datetime , cPickle , heapq , time , operator
 from math import sqrt , trunc , sin , cos , tan , atan2 , asin , acos , atan , pi , degrees , radians , factorial
-from random import random 
+from random import random , choice
 import numpy as np
 ## ~ Cleanup ~
 #plt.close('all') # clear any figures we may have created before 
@@ -808,7 +808,7 @@ class LPQwR( PQwR ):
         if priority <= self.limit:
             PQwR.push( self , item , priority , hashable ) # The usual push
           
-class Counter(dict): 
+class Counter( dict ): 
     """ The counter object acts as a dict, but sets previously unused keys to 0 , in the style of 6300 """
     # TODO: Add Berkeley / 6300 functionality
     
@@ -829,6 +829,17 @@ class Counter(dict):
         sortedItems = self.items()
         sortedItems.sort( cmp = lambda keyVal1 , keyVal2 :  np.sign( keyVal2[1] - keyVal1[1] ) )
         return sortedItems
+    
+    def sample_until_unique( self , sampleFromSeq , sampleLim = int( 1e6 ) ):
+        """ Sample randomly from 'sampleFromSeq' with a uniform distribution until a new key is found or the trial limit is reached , return it """
+        # NOTE: If 'sampleLim' is set to 'infty' , the result may be an infinite loop if the Counter has a key for each 'sampleFromSeq'
+        trial = 1
+        while( trial <= sampleLim ):
+            testKey = choice( sampleFromSeq )
+            if self[ testKey ] == 0:
+                return testKey
+            trial += 1
+        return None
     
 class RollingList( list ): 
     """ A rolling window based on 'list' """ 
