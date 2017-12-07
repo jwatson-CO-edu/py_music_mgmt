@@ -129,7 +129,6 @@ def point_basis_change( point , origin , xBasis , yBasis , zBasis ):
     """ Express a 'point' in a new basis, according to 'origin', 'xBasis', 'yBasis', 'zBasis' (all param coordinates in old basis) """
     offset = np.subtract( point , origin )
     # NOTE: This is probably faster as a matrix operation
-    # return ( np_vec_proj( offset , xBasis ) , np_vec_proj( offset , yBasis ) , np_vec_proj( offset , zBasis ) )
     return ( vec_proj( offset , xBasis ) , vec_proj( offset , yBasis ) , vec_proj( offset , zBasis ) )
  
 def check_orthonormal(basis1,basis2,basis3):

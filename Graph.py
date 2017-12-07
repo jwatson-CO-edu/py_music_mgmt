@@ -124,7 +124,7 @@ class TaggedLookup( list ):
 
 # == Weighted List ==
 
-class WeightedList( list ): # TODO: Send this to AsmEnv when it is confirmed to work
+class WeightedList( list ): 
     """ A list in which every element is labelled with a dictionary , Use this when it is not convenient to add new attibutes to list elements """
     
     def __init__( self , *args ):
@@ -132,28 +132,28 @@ class WeightedList( list ): # TODO: Send this to AsmEnv when it is confirmed to 
         list.__init__( self , *args )
         self.weights = [ None for elem in xrange( len( self ) ) ]
         
-    def append( self , item , weight = None ):
+    def append( self , item , weight = {} ):
         """ Append an item and its label """
         list.append( self , item )
         self.weights.append( weight )
         
-    def extend( self , items , pLabels = None ):
-        if pLabels == None or len( items ) == len( pLabels ):
+    def extend( self , items , weights = None ):
+        if weights == None or len( items ) == len( weights ):
             list.extend( self , items )
-            self.weights.extend( pLabels if pLabels != None else [ None for elem in xrange( len( items ) ) ] )
-        elif pLabels != None:
-            raise IndexError( "LabeleWeightedListdList.extend: Items and labels did not have the same length! " + str( len( items ) ) + " , " + str( len( pLabels ) ) )
+            self.weights.extend( weights if weights != None else [ {} for elem in xrange( len( items ) ) ] )
+        elif weights != None:
+            raise IndexError( "LabeleWeightedListdList.extend: Items and labels did not have the same length! " + str( len( items ) ) + " , " + str( len( weights ) ) )
         
-    def get_weight( self , index , weight ):
+    def get_weight( self , index , weightName ):
         """ Get the 'label' value for the item at 'index' , if that label DNE at that index return None """
         try:
-            return self.weights[ index ]
+            return self.weights[ index ][ weightName ]
         except IndexError:
             return None
         
-    def set_label( self , index , weight ):
+    def set_weight( self , index , weightName , value ):
         """ Set the 'weight' value for the item at 'index' to 'value' """
-        self.weight[ index ] = value
+        self.weight[ index ][ weightName ] = value
         
     # Only add other 'list' functions as needed
     
@@ -169,18 +169,19 @@ class WeightedList( list ): # TODO: Send this to AsmEnv when it is confirmed to 
 class Node(TaggedObject):
     """ A graph node with edges """    
     
-    def __init__( self , pGraph = None , alias = None):
+    def __init__( self , pGraph = None , alias = None ):
         super( Node , self ).__init__()
         self.edges = WeightedList() # NOTE: These represent outgoing edges. Incoming edges are represented as references to this Node in other Nodes
         self.graph = pGraph # The graph that this node belongs to
         if alias != None:
             self.give_alias( alias )
         
-    def connect_to( self , pNode , pDir = False ):
+    def connect_to( self , pNode , pDir = False , weight = {} ):
         """ Connect an edge between this Node and 'pNode' """
-        self.edges.append( pNode ) # NOTE: This function assumes this Node is the tail
+        # NOTE: This function assumes that an undirected edge has the same weight in both directions
+        self.edges.append( pNode , weight ) # NOTE: This function assumes this Node is the tail
         if not pDir: # If the edge is not directed, add a reference from 'pNode' back to this Node
-            pNode.edges.append( self )
+            pNode.edges.append( self , weight )
         if self.alias != None and pNode.alias != None:
             return ( self.alias , pNode.alias , pDir ) # Return a representation of this edge for use with Graph
             #      ( Tail        , Head       , Directed? )  : Tail ---> Head
@@ -188,10 +189,10 @@ class Node(TaggedObject):
             return ( self.tag , pNode.tag , pDir ) # Return a representation of this edge for use with Graph
             #      ( Tail     , Head      , Directed? )  : Tail ---> Head
         
-    def connect_to_checked( self , pNode , pDir = False ):
+    def connect_to_checked( self , pNode , pDir = False , weight = {}  ):
         """ Connect an edge between this Node and 'pNode' , avoiding duplicates """
         if pNode not in self.edges and self not in pNode.edges:
-            return self.connect_to( pNode , pDir )
+            return self.connect_to( pNode , pDir , weight )
             #      ( Tail     , Head      , Directed? )  : Tail ---> Head
         else: # Else this edge exists, connection failed
             return None
@@ -208,26 +209,25 @@ class Graph(TaggedObject):
         self.edges = []
         self.root = rootNode
         
-    def add_node( self , pNode ):
+    def add_node_by_ref( self , nodeRef ):
         """ Add a Node , make note of tag and alias for easy lookup """ 
         # NOTE: A Node needn't be a member of the Graph in order to be reachable , this function is for establishing the relationship when it is important
-        pNode.graph = self # Establish node membership
-        self.nodes.append( pNode )
+        nodeRef.graph = self # Establish node membership
+        self.nodes.append( nodeRef )
+        
+    def create_node_with_als( self , alias ):
+        """ Create a Node with a given 'alias' and add it to the graph """
+        self.nodes.append( Node( self , alias ) )
         
     def get_node_by_als( self , nodeAls ):
         """ Search for a node by its alias and return the reference if the node exists in the problem """
         return self.nodes.get_by_als( nodeAls )
-    
-    def connect_by_als( self , tailAls , headAls , pDir = False ):
-        """ Connect two nodes by their aliases , add the connection to  """
-        tail = self.connect_by_als( tailAls )
-        head = self.connect_by_als( headAls )
-        assert ( tail != None ) and ( head != None ) , "One of " + str(tailAls) + " or " + str(headAls) + " DNE in the problem"
-        self.edges.append( tail.connect_to( head , pDir ) )
         
-    def connect_by_ref( self , tail , head , pDir = False ):
+    def connect_by_ref( self , tail , head , pDir = False , weight = {} ):
         """ Connect two nodes , assuming we already have references to them """
-        self.edges.append( tail.connect_to( head , pDir ) )
+        self.edges.append( tail.connect_to( head , pDir , weight ) )
+        
+    
         
 # == End Graph ==
         
