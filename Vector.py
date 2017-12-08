@@ -109,6 +109,10 @@ def vec_parallel( v1 , v2 ):
     angle = vec_angle_between( v1 , v2 )
     return eq( angle , 0.0 ) or eq( angle , pi )
 
+def vec_NaN( dim ):
+    """ Return a row vector of dimension 'dim' composes of NaN """
+    return [ float('NaN') for i in xrange( dim ) ]
+
 def np_add(*args): # <<< resenv
     """ Perform 'np.add' on more than two args """
     if len(args) > 2: # If there are more than 2 args, add the first arg to recur on remainder of args

@@ -17,7 +17,7 @@ from math import atan2 , acos , cos , sin , sqrt , asin , radians , pi
 import numpy as np
 # ~ Local ~
 from marchhare.marchhare import format_dec_list , eq , incr_max_step , round_small
-from marchhare.Vector import vec_mag , vec_unit , vec_proj , np_add , vec_round_small , vec_angle_between , vec_eq , vec_copy , vec_linspace
+from marchhare.Vector import vec_mag , vec_unit , vec_proj , np_add , vec_round_small , vec_angle_between , vec_eq , vec_copy , vec_linspace , vec_NaN
 
 # ~~ Constants , Shortcuts , Aliases ~~
 EPSILON = 1e-7
@@ -111,6 +111,77 @@ def vec_dist_to_plane( queryPnt , planePnt , normal ):
     """ Return the distance from 'queryPnt' to a plane with 'normal' and that contains 'planePnt' (any point on the plane) """
     relPnt = np.subtract( queryPnt , planePnt ) # Compute the vector offset from the arbitrary plane point to the point under scrutiny
     return vec_proj( relPnt , normal ) # Projection of the relative vector to the normal is the shortest distance to the plane
+
+
+# URL , Intersection of ray and triangle: https://en.wikipedia.org/wiki/M%C3%B6ller%E2%80%93Trumbore_intersection_algorithm
+def ray_intersects_triangle( rayOrigin , rayVector , CCWtriCoords ):
+    """ Möller–Trumbore intersection algorithm for whether a ray intersects a triangle in R3 , 'rayVector' can be any length 
+        return: [ bool: Ray intersects triangle , R3: Line intersection point , float: signed distance from ray origin to intersection ] """
+    # Note: If there is no line intersection , then the second and third elements will be populated with NaN
+    vertex0 = CCWtriCoords[0]
+    vertex1 = CCWtriCoords[1]
+    vertex2 = CCWtriCoords[2]
+        
+    edge1 = np.subtract( vertex1 , vertex0 )
+    edge2 = np.subtract( vertex2 , vertex0 )
+    h = np.cross( rayVector , edge2 ) # rayVector.crossProduct(edge2);
+    a = np.dot( edge1 , h ) # edge1.dotProduct(h);
+    if ( a > -EPSILON ) and ( a < EPSILON ):
+        return [ False , vec_NaN( 3 ) , float('NaN') ] # No intersection , Return False and in invalid vec
+    f = 1.0 / a;
+    s = np.subtract( rayOrigin , vertex0 )
+    u = f * np.dot( s , h ) # u = f * (s.dotProduct(h));
+    if ( u < 0.0 ) or ( u > 1.0 ):
+        return [ False , vec_NaN( 3 ) , float('NaN') ] # No intersection , Return False and in invalid vec
+    q = np.cross( s , edge1 ) # s.crossProduct(edge1);
+    v = f * np.dot( rayVector , q ) # f * rayVector.dotProduct(q);
+    if ( v < 0.0 ) or ( u + v > 1.0 ):
+        return [ False , vec_NaN( 3 ) , float('NaN') ] # No intersection , Return False and in invalid vec
+    # At this stage we can compute t to find out where the intersection point is on the line.
+    t = f * np.dot( edge2 , q ) # f * edge2.dotProduct(q);
+    outIntersectionPoint = np.add( rayOrigin , np.multiply( rayVector , t ) )
+    intersectionMag      = np.dot( np.subtract( outIntersectionPoint , rayOrigin ) , vec_unit( rayVector ) )
+    if t > EPSILON: # ray intersection
+        return [ True  , outIntersectionPoint , intersectionMag ]
+    else: # This means that there is a line intersection but not a ray intersection.
+        return [ False , outIntersectionPoint , intersectionMag ]
+
+def segment_intersects_triangle( segment , CCWtriCoords ):
+    """ Möller–Trumbore intersection algorithm for whether a line segment intersects a triangle in R3 
+        return: [ bool: Segment intersects triangle , R3: Line intersection point , float: signed distance from segment[0] to intersection ] """
+    # Note: If there is no line intersection , then the second and third elements will be populated with NaN
+    # This function just runs the Möller–Trumbore intersection algorithm and determines if the intersection is within the segment
+    rayOrigin = segment[0]
+    rayVector = np.subtract( segment[1] , segment[0] )
+    segLen    = vec_mag( rayVector )
+    [ intersectBool , intPnt , intMag ] = ray_intersects_triangle( rayOrigin , rayVector , CCWtriCoords )
+    if intersectBool:
+        if ( intMag >= 0.0 ) and ( intMag <= segLen ):
+            return [ True , intPnt , intMag ]
+        else:
+            return [ False , intPnt , intMag ]
+    else:
+        return [ False , intPnt , intMag ]
+    
+def segment_intersects_VFN( segment , V , F , N ):
+    """ Determine if 'segment' intersects any of the triangles defined by the graphics-style V-F-N matrices 
+        return: [ bool: Does the segment intersect any F? , float: Greatest penetration depth                          , 
+                  [ R3 ]: List of intersection points     , [ float ]: List of penetration depth for each intersection ] """
+    # This function just runs the Möller–Trumbore intersection algorithm for each mesh facet
+    intersectionPoints = [] # -- All of the intersections encountered
+    penDepths          = [] # -- All of the penetration depths recorded
+    segBool            = False # Flag for collision
+    greatestDepth      = 0.0 # - Greatest depth penetrated by any segment collision
+    # For each triangle in the mesh
+    for i , f_i in enumerate( F ):
+        [ intersectBool , intPnt , intMag ] = segment_intersects_triangle( segment , [ V[ f_i[0] ] , V[ f_i[1] ] , V[ f_i[2] ] ] ) # Collision check
+        if intersectBool: # If there is an intersection , log intersection data 
+            segBool = True # Flag intersection
+            intersectionPoints.append( intPnt ) # Log the intersection point
+            penDepths.append( abs( min( vec_dist_to_plane( segment[0] , V[ f_i[0] ] , N[ i ] ) ,     # Endpoints must represent penetration extremes
+                                        vec_dist_to_plane( segment[1] , V[ f_i[0] ] , N[ i ] ) ) ) ) # for a straight segment
+            greatestDepth = max( greatestDepth , penDepths[-1] ) # keep track of the deepest penetration
+    return [ segBool , greatestDepth , intersectionPoints , penDepths ] # Load and return the intersection info
 
 # == Vector Spaces , R3 ==
 
@@ -641,14 +712,15 @@ class Frame3D(Pose):
     
     def __init__( self , pPos , pQuat , relPointsList ):
         """ Constructor: set up the Frame with an initial pose """
-        Pose.__init__( self , pPos , pQuat ) # Inherits position and orientation from Pose
-        self.labPose = Pose.get_copy( self ) # Lab Pose
-        self.ntnPose = Pose.get_copy( self ) # Notional Pose
-        self.points = relPointsList[:] # ----- List of points contained by this frame
-        self.labPts = self.points[:] # ------- Lab frame points
-        self.ntnPts = self.points[:] # ------- Notional frame points
-        self.subFrames = [] # ---------------- Nested frames
-        self.parent = None # ----------------- Reference to the frame that contains this one
+        Pose.__init__( self , pPos , pQuat ) # - Inherits position and orientation from Pose
+        self.labPose   = Pose.get_copy( self ) # Lab Pose
+        self.ntnPose   = Pose.get_copy( self ) # Notional Pose
+        self.points    = relPointsList[:] # ---- List of points contained by this frame
+        self.labPts    = self.points[:] # ------ Lab frame points
+        self.ntnPts    = self.points[:] # ------ Notional frame points
+        self.subFrames = [] # ------------------ Nested frames
+        self.objs      = [] # ------------------ Contained geo and render objects
+        self.parent    = None # ---------------- Reference to the frame that contains this one
     
     def attach_sub(self, subFrm):
         """ Attach a subframe to this frame with appropriate connections """
@@ -671,6 +743,10 @@ class Frame3D(Pose):
             self.labPose.position = np.add( upPosition[:] , upOrientation.apply_to(self.position) ) # Calc the position in the labe frame, given the above
         else: # else there is no parent frame, objects are expressed in this frame only
             self.labPose.position = self.position[:] # Calc the position in the labe frame, given the above
+        
+        for pntDex , pnt in enumerate( self.points ):
+            """ Transform the contained points """
+            self.labPts[ pntDex ] = np.add( self.labPose.position , self.labPose.orientation.apply_to( pnt ) )
         
         for obj in self.objs: # For each of the contained objects
             # dbgLog(-1, "Frame.transform_contents, transforming:", obj )
