@@ -815,6 +815,14 @@ class Counter( dict ):
     def __init__( self , *args , **kw ):
         """ Standard dict init """
         dict.__init__( self , *args , **kw )
+        if "default" in kw:
+            self.defaultReturn = kw['default']
+        else:
+            self.defaultReturn = 0
+        
+    def set_default( self , val ):
+        """ Set a new default value to return when there is no """
+        self.defaultReturn = val
         
     def __getitem__( self , a ):
         """ Get the val with key , otherwise return 0 if key DNE """

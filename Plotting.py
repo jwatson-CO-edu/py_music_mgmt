@@ -145,12 +145,12 @@ def plot_points_only_list( ptsList , size = 14 , color = 'blue' , mrkr = 'o' , p
     plt.show()
     
 
-def plot_chain_to_ax( ax , ptsList , makeCycle = False , color = 'blue' ):
+def plot_chain_to_ax( ax , ptsList , makeCycle = False , color = 'blue' , width = 1 ):
     xs , ys , zs = split_to_components( ptsList )
     if makeCycle:
         for coordList in [ xs , ys , zs ]:
             coordList.append( coordList[0] )
-    ax.plot( xs , ys , zs , c = color )
+    ax.plot( xs , ys , zs , c = color , linewidth = width )
     
 def plot_chain( ptsList , makeCycle = False , color = 'blue' , paintAxes = False ):
     """ Plot the uniqueified points already stored in a list """ # NOTE: This function assumes a points-only file exists!
