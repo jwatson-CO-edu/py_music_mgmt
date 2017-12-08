@@ -614,8 +614,8 @@ class Pose(object):
         return self.position , self.orientation.serialize()
     
     def translate( self , moveVec ):
-	""" Move the center of the Pose by 'moveVec' without changing the orientation """
-	self.position = np.add( self.position , moveVec )
+        """ Move the center of the Pose by 'moveVec' without changing the orientation """
+        self.position = np.add( self.position , moveVec )
 
 # == End Pose ==     
      
