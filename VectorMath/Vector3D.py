@@ -112,6 +112,9 @@ def vec_dist_to_plane( queryPnt , planePnt , normal ):
     relPnt = np.subtract( queryPnt , planePnt ) # Compute the vector offset from the arbitrary plane point to the point under scrutiny
     return vec_proj( relPnt , normal ) # Projection of the relative vector to the normal is the shortest distance to the plane
 
+def vec_from_pnt_to_plane( queryPnt , planePnt , normal ):
+    """ Return the vector that points from 'queryPnt' to that point projected on a plane defined be 'planePnt' and 'normal' """
+    return np.subtract( pnt_proj_to_plane( queryPnt , planePnt , normal ) , queryPnt )
 
 # URL , Intersection of ray and triangle: https://en.wikipedia.org/wiki/M%C3%B6ller%E2%80%93Trumbore_intersection_algorithm
 def ray_intersects_triangle( rayOrigin , rayVector , CCWtriCoords ):
@@ -162,6 +165,15 @@ def segment_intersects_triangle( segment , CCWtriCoords ):
             return [ False , intPnt , intMag ]
     else:
         return [ False , intPnt , intMag ]
+
+# == Mesh VFN ==
+
+class MeshVFN:
+    """ Container class for graphics-style tri-mesh """
+    def __init__( self , V , F , N ):
+        self.V = V
+        self.F = F
+        self.N = N
     
 def segment_intersects_VFN( segment , V , F , N ):
     """ Determine if 'segment' intersects any of the triangles defined by the graphics-style V-F-N matrices 
@@ -182,6 +194,8 @@ def segment_intersects_VFN( segment , V , F , N ):
                                         vec_dist_to_plane( segment[1] , V[ f_i[0] ] , N[ i ] ) ) ) ) # for a straight segment
             greatestDepth = max( greatestDepth , penDepths[-1] ) # keep track of the deepest penetration
     return [ segBool , greatestDepth , intersectionPoints , penDepths ] # Load and return the intersection info
+
+# __ End VFN __
 
 # == Vector Spaces , R3 ==
 
@@ -687,6 +701,12 @@ class Pose(object):
     def translate( self , moveVec ):
         """ Move the center of the Pose by 'moveVec' without changing the orientation """
         self.position = np.add( self.position , moveVec )
+        
+    def set_same_as( self , otherPose ):
+        """ Set this pose to be the same as the 'otherPose' """
+        temp = otherPose.get_copy() # Make a copy so that Poses do not track each other
+        self.position    = temp.position
+        self.orientation = temp.orientation
 
 # == End Pose ==     
      
@@ -701,7 +721,7 @@ Frame-derived classes that have a specifific color scheme should define a 'CLASS
 
 # = class Frame =
      
-class Frame3D(Pose):
+class Frame3D( Pose ):
     """ A Frame is a container for geometric objects, it is defined by a Pose that is relative to the parent Frame 
     
     self.position: ---------- position in the parent frame , a position added to upstream frames
@@ -744,8 +764,7 @@ class Frame3D(Pose):
         else: # else there is no parent frame, objects are expressed in this frame only
             self.labPose.position = self.position[:] # Calc the position in the labe frame, given the above
         
-        for pntDex , pnt in enumerate( self.points ):
-            """ Transform the contained points """
+        for pntDex , pnt in enumerate( self.points ): # Transform the contained points 
             self.labPts[ pntDex ] = np.add( self.labPose.position , self.labPose.orientation.apply_to( pnt ) )
         
         for obj in self.objs: # For each of the contained objects
@@ -756,6 +775,20 @@ class Frame3D(Pose):
                     
         for frame in self.subFrames: # for each of the sub-frames, recursively transform
             frame.transform_contents( self.labPose.position , self.labPose.orientation )
+
+    def transform_points_to_lab( self , *ptsLst ):
+        """ Transform each of the elements of 'ptsLst' to the lab frame as though they were in this reference frame """
+        rtnList = []
+        for pnt in ptsLst: #                     vvv--- Note for spatial points there is an offset
+            rtnList.append( np.add( self.labPose.position , self.labPose.orientation.apply_to( pnt ) ) )
+        return rtnList
+            
+    def transform_vectors_to_lab( self , *vecLst ):
+        """ Transform each of the elements of 'vecLst' to the lab frame as though they were in this reference frame """
+        rtnList = []
+        for vec in vecLst: #             vvv--- No offset , Rotation only
+            rtnList.append( self.labPose.orientation.apply_to( vec ) )
+        return rtnList
 
 # = End Frame =
 
