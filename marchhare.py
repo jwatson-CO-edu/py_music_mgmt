@@ -475,7 +475,7 @@ def index_max( pList ):
     """ Return the first index of 'pList' with the maximum numeric value """
     return pList.index( max( pList ) )
     
-def index_min( pList ): # Added , 2017-02-16
+def index_min( pList ): 
     """ Return the first index of 'pList' with the maximum numeric value """
     return pList.index( min( pList ) )
     

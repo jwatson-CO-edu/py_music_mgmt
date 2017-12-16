@@ -97,9 +97,12 @@ def vec_proj_to_plane( vec , planeNorm ):
     """ Return a vector that is the projection of 'vec' onto a plane with the normal vector 'planeNorm', using numpy """
     # URL, projection of a vector onto a plane: http://www.euclideanspace.com/maths/geometry/elements/plane/lineOnPlane/
     # NOTE: This function assumes 'vec' and 'planeNorm' are expressed in the same bases
-    projDir = vec_unit( np.cross( np.cross( planeNorm , vec ) , planeNorm ) ) # direction of the projected vector, normalize
-    projMag = vec_proj( vec , projDir ) # magnitude of the vector in the projected direction
-    return np.multiply( projDir , projMag ) # scale the unit direction vector to the calculated magnitude and return
+    if vec_eq( vec , [ 0 , 0 , 0 ] ):
+        return [ 0 , 0 , 0 ]
+    else:
+        projDir = vec_unit( np.cross( np.cross( planeNorm , vec ) , planeNorm ) ) # direction of the projected vector, normalize
+        projMag = vec_proj( vec , projDir ) # magnitude of the vector in the projected direction
+        return np.multiply( projDir , projMag ) # scale the unit direction vector to the calculated magnitude and return
 
 def pnt_proj_to_plane( queryPnt , planePnt , normal ):
     """ Return a point that is 'queryPnt' projected onto a plane with a given 'normal' and passing through 'planePnt' """
@@ -114,6 +117,8 @@ def vec_dist_to_plane( queryPnt , planePnt , normal ):
 
 def vec_from_pnt_to_plane( queryPnt , planePnt , normal ):
     """ Return the vector that points from 'queryPnt' to that point projected on a plane defined be 'planePnt' and 'normal' """
+#    print "DEBUG , Query:" , queryPnt , ", Plane Point:" , planePnt , ", Normal:" , normal
+#    print "DEBUG , Projected query:" , pnt_proj_to_plane( queryPnt , planePnt , normal )
     return np.subtract( pnt_proj_to_plane( queryPnt , planePnt , normal ) , queryPnt )
 
 # URL , Intersection of ray and triangle: https://en.wikipedia.org/wiki/M%C3%B6ller%E2%80%93Trumbore_intersection_algorithm
@@ -440,8 +445,19 @@ class Quaternion(object):
     @staticmethod
     def shortest_btn_vecs( v1 , v2 ):
         """ Return the Quaternion representing the shortest rotation from vector 'v1' to vector 'v2' """
-        return Quaternion.k_rot_to_Quat( vec_unit( np.cross( v1 , v2 ) ) ,
-                                         vec_angle_between( v1 , v2 )    )
+#        print "DEBUG , Got vectors:     " , v1 , v2
+#        print "DEBUG , Crossed vectors: " , np.cross( v1 , v2 )
+#        print "DEBUG , Crossed unit vec:" , vec_unit( np.cross( v1 , v2 ) )
+#        print "DEBUG , Angle between:   " , vec_angle_between( v1 , v2 )
+        angle = vec_angle_between( v1 , v2 )
+        if eq( angle , 0.0 ):
+            return Quaternion.no_turn_quat()
+        elif eq( angle , pi ):
+            # If we are making a pi turn, then just pick any axis perpendicular to the opposing vectors and make the turn
+            # The axis that is picked will result in different poses
+            return Quaternion.k_rot_to_Quat( vec_unit( np.cross( v1 , [ 1 , 0 , 0 ] ) ) , angle )
+        else:
+            return Quaternion.k_rot_to_Quat( vec_unit( np.cross( v1 , v2 ) ) , angle )
         
     def get_bases(self):
         """ Return the basis vectors that represent the orientation in the parent frame """

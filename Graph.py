@@ -144,16 +144,19 @@ class WeightedList( list ):
         """ Normal 'list' init """
         list.__init__( self , *args )
         self.weights = [ None for elem in xrange( len( self ) ) ]
+        self.costs   = [ 0    for elem in xrange( len( self ) ) ]
         
-    def append( self , item , weight = {} ):
+    def append( self , item , weight = {} , cost = 0.0 ):
         """ Append an item and its label """
         list.append( self , item )
         self.weights.append( weight )
+        self.costs.append( cost )
         
-    def extend( self , items , weights = None ):
+    def extend( self , items , weights = None , costs = None ):
         if weights == None or len( items ) == len( weights ):
             list.extend( self , items )
-            self.weights.extend( weights if weights != None else [ {} for elem in xrange( len( items ) ) ] )
+            self.weights.extend( weights if weights != None else [ {}  for elem in xrange( len( items ) ) ] )
+            self.weights.extend( costs   if costs   != None else [ 0.0 for elem in xrange( len( items ) ) ] )
         elif weights != None:
             raise IndexError( "LabeleWeightedListdList.extend: Items and labels did not have the same length! " + str( len( items ) ) + " , " + str( len( weights ) ) )
         
@@ -167,6 +170,14 @@ class WeightedList( list ):
     def set_weight( self , index , weightName , value ):
         """ Set the 'weight' value for the item at 'index' to 'value' """
         self.weight[ index ][ weightName ] = value
+        
+    def get_cost( self , index ):
+        """ Get the cost for the item at 'index' """
+        return self.costs[ index ]
+    
+    def set_cost( self , index , val ):
+        """ Set the cost for the item at 'index' to 'val' """
+        self.costs[ index ] = val
         
     def index( self , val ):
         """ Return he index of the first occurrence of 'val' or 'None' """
@@ -189,13 +200,14 @@ class WeightedList( list ):
 class Node(TaggedObject):
     """ A graph node with edges """    
     
-    def __init__( self , pGraph = None , alias = None ):
+    def __init__( self , pGraph = None , alias = None , nCost = 0.0 ):
         super( Node , self ).__init__()
         self.edges = WeightedList() # NOTE: These represent outgoing edges. Incoming edges are represented as references to this Node in other Nodes
         self.graph = pGraph # The graph that this node belongs to
-        if alias != None:
-            self.give_alias( alias )
+        if alias != None: # If there was an alias specified , then store it
+            self.give_alias( alias ) 
         self.bag = Counter( default = None ) # This is a generic place to dump miscellaneous
+        self.cost = nCost # Numeric cost associated with this node
         
     def connect_to( self , pNode , pDir = False , weight = {} ):
         """ Connect an edge between this Node and 'pNode' """
