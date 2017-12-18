@@ -144,9 +144,9 @@ class WeightedList( list ):
         """ Normal 'list' init """
         list.__init__( self , *args )
         self.weights = [ None for elem in xrange( len( self ) ) ]
-        self.costs   = [ 0    for elem in xrange( len( self ) ) ]
+        self.costs   = [ 1    for elem in xrange( len( self ) ) ]
         
-    def append( self , item , weight = {} , cost = 0.0 ):
+    def append( self , item , weight = {} , cost = 1.0 ):
         """ Append an item and its label """
         list.append( self , item )
         self.weights.append( weight )
@@ -156,7 +156,7 @@ class WeightedList( list ):
         if weights == None or len( items ) == len( weights ):
             list.extend( self , items )
             self.weights.extend( weights if weights != None else [ {}  for elem in xrange( len( items ) ) ] )
-            self.weights.extend( costs   if costs   != None else [ 0.0 for elem in xrange( len( items ) ) ] )
+            self.weights.extend( costs   if costs   != None else [ 1.0 for elem in xrange( len( items ) ) ] )
         elif weights != None:
             raise IndexError( "LabeleWeightedListdList.extend: Items and labels did not have the same length! " + str( len( items ) ) + " , " + str( len( weights ) ) )
         
@@ -200,7 +200,7 @@ class WeightedList( list ):
 class Node(TaggedObject):
     """ A graph node with edges """    
     
-    def __init__( self , pGraph = None , alias = None , nCost = 0.0 ):
+    def __init__( self , pGraph = None , alias = None , nCost = 1.0 ):
         super( Node , self ).__init__()
         self.edges = WeightedList() # NOTE: These represent outgoing edges. Incoming edges are represented as references to this Node in other Nodes
         self.graph = pGraph # The graph that this node belongs to
@@ -229,6 +229,10 @@ class Node(TaggedObject):
             #      ( Tail     , Head      , Directed? )  : Tail ---> Head
         else: # Else this edge exists, connection failed
             return None
+        
+    def get_successors( self ):
+        """ Return a list of successors of the current node """
+        return self.edges[:]
         
 # == End Node ==
 
