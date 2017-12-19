@@ -116,6 +116,17 @@ class TaggedLookup( list ):
         """ Get all the elements in the lookup in a list """
         return self[:] # This object is already a list , just copy and return
     
+    def get_alias_list( self ):
+        """ Get the aliases of all the elements in the lookup in a 1-to-1 list , NOTE: This function does not filter empty aliases """
+        return [ elem.alias for elem in self ]
+    
+    def get_alias_index( self , pAlias ):
+        """ Get the index of the element with the given alias , otherwise return 'None' """
+        try:
+            return self.get_alias_list().index( pAlias )
+        except ValueError:
+            return None
+    
     def recalc_alias_lookup( self ):
         """ Make sure that any elements that have recently acquired an alias appear in the alias lookup """
         for elem in self:
