@@ -29,7 +29,7 @@ endl = os.linesep # Line separator
 pyEq = operator.eq # Default python equality
 piHalf = pi/2
 
-# == End Init ==============================================================================================================================
+# __ End Init ______________________________________________________________________________________________________________________________
 
 
 # == PATH Manipulation ==
@@ -552,6 +552,52 @@ def bindex( bins , val ):
         if val > bin[0] and val <= bin[1]:
             return bDex
     return None
+
+def concat_arr( *arrays ):
+    """ Concatenate all 'arrays' , any of which can be either a Python list or a Numpy array """
+    # URL , Test if any in an iterable belongs to a certain class : https://stackoverflow.com/a/16705879
+    if any( isinstance( arr , np.ndarray ) for arr in arrays ): # If any of the 'arrays' are Numpy , work for all cases , 
+        if len( arrays ) == 2: # Base case 1 , simple concat    # but always returns np.ndarray
+            return np.concatenate( ( arrays[0] , arrays[1] ) )
+        elif len( arrays ) > 2: # If there are more than 2 , concat the first two and recur
+            return concat_arr( 
+                np.concatenate( ( arrays[0] , arrays[1] ) ) , 
+                *arrays[2:] 
+            )
+        else: # Base case 2 , there is only one arg , return it
+            return arrays[0]
+    if len( arrays ) > 1: # else no 'arrays' are Numpy 
+        rtnArr = arrays[0]
+        for arr in arrays[1:]: # If there are more than one , just use addition operator in a line
+            rtnArr += arr
+        return rtnArr
+    else: # else there was only one , return it
+        return arrays[0] 
+    
+def build_sublists_by_cadence( flatList , cadence ): 
+    """ Return a list in which each element is a list of consecutive 'flatList' elements of length 'cadence' elements if elements remain """
+    rtnList = []
+    for flatDex , flatElem in enumerate( flatList ):
+        if flatDex % cadence == 0:
+            rtnList.append( [] )
+        rtnList[-1].append( flatElem )
+    return rtnList
+
+def flatten_nested_sequence( multiSeq ):
+    """ Flatten a sequence of sequences ( list or tuple ) into a single , flat sequence of the same type as 'multiSeq' """
+    masterList = []
+    def flatten_recur( multLst , masterList ):
+        """ Does the recursive work of 'flatten_nested_lists' """
+        for elem in multLst:
+            if isinstance( elem , list ):
+                flatten_recur( elem , masterList )
+            else:
+                masterList.append( elem )
+    flatten_recur( multiSeq , masterList )
+    if isinstance( multiSeq , tuple ):
+        return tuple( masterList )
+    else:
+        return masterList
     
 # = Containers for Algorithms =
 
