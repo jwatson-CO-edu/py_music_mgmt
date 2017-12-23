@@ -22,7 +22,7 @@ from random import random
 # ~ Special Libraries ~
 import numpy as np
 # ~ Local Libraries ~
-from marchhare import eq_margin , round_small , eq
+from MathKit import eq_margin , round_small , eq
 
 # set_dbg_lvl(1) # Transformation of objects contained in Frames
 

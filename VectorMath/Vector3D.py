@@ -19,8 +19,8 @@ import numpy as np
 # import marchhare.marchhare
 
 from marchhare.Vector import vec_mag , vec_unit , vec_proj , np_add , vec_round_small , vec_angle_between , vec_eq , vec_copy , vec_linspace , vec_NaN
-from marchhare.MathKit import ver
-from marchhare.marchhare import format_dec_list , eq , incr_max_step , round_small 
+from marchhare.MathKit import ver , eq , round_small 
+from marchhare.marchhare import format_dec_list , incr_max_step
 
 
 # ~~ Constants , Shortcuts , Aliases ~~
@@ -876,5 +876,39 @@ def rot_matx_ang_axs( theta , k  ):
     return [ [ k[0]*k[0]*ver(theta) + cos(theta)      , k[0]*k[1]*ver(theta) - k[2]*sin(theta) , k[0]*k[2]*ver(theta) + k[1]*sin(theta) ] , 
              [ k[1]*k[0]*ver(theta) + k[2]*sin(theta) , k[1]*k[1]*ver(theta) + cos(theta)      , k[1]*k[2]*ver(theta) - k[0]*sin(theta) ] , 
              [ k[2]*k[0]*ver(theta) - k[1]*sin(theta) , k[2]*k[1]*ver(theta) + k[0]*sin(theta) , k[2]*k[2]*ver(theta) + cos(theta)      ] ]
+    
+def ang_axs_from_rot_matx( R ):
+    """ Return the angle 'theta' and axis 'k' for the given 3x3 rotation matrix 'R' """
+    # NOTE : This function returns only one solution out of 2 possible , these solution are equivalen with opposite
+    theta = acos( ( np.trace( R ) - 1.0 ) / 2.0 )
+    k = np.multiply( [ R[2][1] - R[1][2] , 
+                       R[0][2] - R[2][0] , 
+                       R[1][0] - R[0][1] ] , 0.5 * sin( theta ) )
+    return theta , k
+    
+def homogeneous_Z( zTheta , pos ):
+    """ Return the Homogeneous Transformation for the given parameters """
+    return np.vstack( ( np.hstack( (  z_rot( zTheta )  , [ [ pos[0] ] , [ pos[1] ] , [ pos[2] ] ]  ) ) ,
+                        np.hstack( (  [ 0 , 0 , 0 ]    , [ 1 ]                                     ) ) ) )
+    
+def homog_ang_axs( theta , k , pos ):
+    """ Return the Homogeneous Transformation for the given angle , axis , and position """
+    return np.vstack( ( np.hstack( (  rot_matx_ang_axs( theta , k  ) , [ [ pos[0] ] , [ pos[1] ] , [ pos[2] ] ]  ) ) ,
+                        np.hstack( (  [ 0 , 0 , 0 ]                  , [ 1 ]                                     ) ) ) )
+    
+def apply_homog( homogMat , vec3 ):
+    """ Apply a homogeneous transformation to a 3D vector """
+    return ( np.dot( homogMat , [ vec3[0] , vec3[1] , vec3[2] , 1 ] ) )[:3]
+
+def homog_xform( E , r ): 
+    """ Return the combination of rotation matrix 'E' and displacement vector 'r' as a 4x4 homogeneous transformation matrix """
+    return np.vstack( ( np.hstack( (  E                              , [ [ r[0] ] , [ r[1] ] , [ r[2] ] ]  ) ) ,
+                        np.hstack( (  [ 0 , 0 , 0 ]                  , [ 1 ]                               ) ) ) )
+
+def skew_sym_cross( vecR ):
+    """ Return the skew symmetic matrix for the equivalent cross operation: [r_cross][v] = cross( r , v ) """
+    return [ [  0       , -vecR[2] ,  vecR[1] ] , 
+             [  vecR[2] ,  0       , -vecR[0] ] ,
+             [ -vecR[1] ,  vecR[0] ,  0       ] ]
         
 # __ End Homogeneous __

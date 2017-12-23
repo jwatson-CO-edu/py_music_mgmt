@@ -24,7 +24,8 @@ from scipy.spatial import ConvexHull
 if __name__ == "__main__":
     import sys , os
     sys.path.append( os.path.dirname( os.path.dirname( os.path.abspath( __file__ ) ) ) )
-from marchhare.marchhare import PriorityQueue , elemw , format_dec_list , wrap_bounds_fraction , print_list , roundint , eq , round_small , tandem_sorted
+from marchhare.marchhare import PriorityQueue , elemw , format_dec_list , print_list, tandem_sorted
+from marchhare.MathKit import wrap_bounds_fraction , roundint , eq , round_small 
 from marchhare.Vector import vec_mag , vec_unit , vec_proj , vec_round_small , vec_copy , vec_from_seg , vec_avg , vec_dif_mag , is_vector , bbox_from_points , vec_copy_deep
 
 # ~~ Constants , Shortcuts , Aliases ~~
