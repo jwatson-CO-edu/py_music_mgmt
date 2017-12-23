@@ -115,12 +115,33 @@ def point_in_poly_w( point , polygon ):
     # print "Winding Number:" , winding_num(point , polygon)
     return not eq( winding_num( point , polygon ) , 0 ) # The winding number gives the number of times a polygon encircles a point 
     
-def d_point_to_segment_2D( point , segment ): # Changed the signature to fit the more recent representation of segments [ [ x0 , y0 ] , [ x1 , y1 ] ]
-    """ Return the shortest (perpendicular) distance between 'point' and a line segment defined by 'segPt1' and 'segPt2' """
+def point_in_triangle( p , v0 , v1 , v2 ):
+    """ Return True if 'p' lies within a triangle defined by 'v0' , 'v1' , 'v2' """
+    # URL , Point in triangle: https://stackoverflow.com/a/34093754/893511
+    dX   = p[0] - v2[0];
+    dY   = p[1] - v2[1];
+    dX21 = v2[0] - v1[0];
+    dY12 = v1[1] - v2[1];
+    D    = dY12 * ( v0[0] - v2[0] ) + dX21 * ( v0[1] - v2[1] );
+    s    = dY12 * dX + dX21 * dY;
+    t    = ( v2[1] - v0[1] ) * dX + ( v0[0] - v2[0] ) * dY;
+    if D < 0:
+        return s <= 0 and t <= 0 and s + t >= D;
+    return s >= 0 and t >= 0 and s + t <= D;
+
+def d_point_to_segment_2D( point , segment ): 
+    """ Return the shortest (perpendicular) distance between 'point' and a line 'segment' """
     # URL: http://mathworld.wolfram.com/Point-LineDistance2-Dimensional.html
     segPt1 = segment[0] ; segPt2 = segment[1]
     return abs( ( segPt2[0] - segPt1[0] ) * ( segPt1[1] - point[1] ) - \
                 ( segPt1[0] - point[0] ) * ( segPt2[1] - segPt1[1] ) ) / sqrt( ( segPt2[0] - segPt1[0] )**2 + ( segPt2[1] - segPt1[1] )**2 )
+    
+def d_point_to_segment_2D_signed( point , segment ): 
+    """ Return the signed ( + RHS , - LHS ) perpendicular distance between 'point' and a line 'segment' defined from tail to head """
+    # URL: http://mathworld.wolfram.com/Point-LineDistance2-Dimensional.html
+    segPt1 = segment[0] ; segPt2 = segment[1]
+    num = ( segPt2[0] - segPt1[0] ) * ( segPt1[1] - point[1] ) - ( segPt1[0] - point[0] ) * ( segPt2[1] - segPt1[1] )
+    return abs( num ) / sqrt( ( segPt2[0] - segPt1[0] )**2 + ( segPt2[1] - segPt1[1] )**2 ) * np.sign( num )
 
 def intersect_seg_2D( seg1 , seg2 , slideCoincident = False , includeEndpoints = True ): # <<< resenv
     """ Return true if line segments 'seg1' and 'seg2' intersect, otherwise false """

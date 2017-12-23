@@ -14,6 +14,7 @@ General purpose graph classes and methods
 import collections , sys 
 # ~ Special ~
 # ~ Local ~
+from marchhare import Counter
 
 if "CV_Utils" not in sys.modules:
     print "Loading special vars ..." , 
@@ -75,7 +76,7 @@ class TaggedLookup( list ):
         """ Add an item to the lookup """
         list.append( self , item )
         self.lookupByTag[ item.tag ] = item
-        if item.alias:
+        if item.has_alias():
             self.lookupByAls[ item.alias ] = item
             
     def extend( self , extList ):
@@ -106,7 +107,7 @@ class TaggedLookup( list ):
         """ Print all contents by tag """
         rtnStr = ''
         for key, val in self.lookupByTag.iteritems():
-            rtnStr += str(key) + '\t\t' + str(val) + endl # depends on 'ResearchEnv'
+            rtnStr += str(key) + '\t\t' + str(val) + endl 
         return rtnStr
         
     # '__len__' inherited from 'list'
@@ -114,6 +115,29 @@ class TaggedLookup( list ):
     def get_list( self ):
         """ Get all the elements in the lookup in a list """
         return self[:] # This object is already a list , just copy and return
+    
+    def get_alias_list( self ):
+        """ Get the aliases of all the elements in the lookup in a 1-to-1 list , NOTE: This function does not filter empty aliases """
+        return [ elem.alias for elem in self ]
+    
+    def get_alias_index( self , pAlias ):
+        """ Get the index of the element with the given alias , otherwise return 'None' """
+        try:
+            return self.get_alias_list().index( pAlias )
+        except ValueError:
+            return None
+    
+    def recalc_alias_lookup( self ):
+        """ Make sure that any elements that have recently acquired an alias appear in the alias lookup """
+        for elem in self:
+            if elem.has_alias():
+                self.lookupByAls[ elem.alias ] = elem
+    
+    def assign_aliases_by_index( self ):
+        """ Set the alias of each of the contained objects to be its corresponding index in the list , NOTE: Rewrites all element aliases! """
+        for index , elem in enumerate( self ):
+            elem.give_alias( index )
+        self.recalc_alias_lookup() # Now that aliases have been assigned , add them to the lookup
         
     # TODO: .pop()
     # TODO: .remove() # This will work with object references
@@ -124,36 +148,54 @@ class TaggedLookup( list ):
 
 # == Weighted List ==
 
-class WeightedList( list ): # TODO: Send this to AsmEnv when it is confirmed to work
+class WeightedList( list ): 
     """ A list in which every element is labelled with a dictionary , Use this when it is not convenient to add new attibutes to list elements """
     
     def __init__( self , *args ):
         """ Normal 'list' init """
         list.__init__( self , *args )
         self.weights = [ None for elem in xrange( len( self ) ) ]
+        self.costs   = [ 1    for elem in xrange( len( self ) ) ]
         
-    def append( self , item , weight = None ):
+    def append( self , item , weight = {} , cost = 1.0 ):
         """ Append an item and its label """
         list.append( self , item )
         self.weights.append( weight )
+        self.costs.append( cost )
         
-    def extend( self , items , pLabels = None ):
-        if pLabels == None or len( items ) == len( pLabels ):
+    def extend( self , items , weights = None , costs = None ):
+        if weights == None or len( items ) == len( weights ):
             list.extend( self , items )
-            self.weights.extend( pLabels if pLabels != None else [ None for elem in xrange( len( items ) ) ] )
-        elif pLabels != None:
-            raise IndexError( "LabeleWeightedListdList.extend: Items and labels did not have the same length! " + str( len( items ) ) + " , " + str( len( pLabels ) ) )
+            self.weights.extend( weights if weights != None else [ {}  for elem in xrange( len( items ) ) ] )
+            self.weights.extend( costs   if costs   != None else [ 1.0 for elem in xrange( len( items ) ) ] )
+        elif weights != None:
+            raise IndexError( "LabeleWeightedListdList.extend: Items and labels did not have the same length! " + str( len( items ) ) + " , " + str( len( weights ) ) )
         
-    def get_weight( self , index , weight ):
+    def get_weight( self , index , weightName ):
         """ Get the 'label' value for the item at 'index' , if that label DNE at that index return None """
         try:
-            return self.weights[ index ]
+            return self.weights[ index ][ weightName ]
         except IndexError:
             return None
         
-    def set_label( self , index , weight ):
+    def set_weight( self , index , weightName , value ):
         """ Set the 'weight' value for the item at 'index' to 'value' """
-        self.weight[ index ] = value
+        self.weight[ index ][ weightName ] = value
+        
+    def get_cost( self , index ):
+        """ Get the cost for the item at 'index' """
+        return self.costs[ index ]
+    
+    def set_cost( self , index , val ):
+        """ Set the cost for the item at 'index' to 'val' """
+        self.costs[ index ] = val
+        
+    def index( self , val ):
+        """ Return he index of the first occurrence of 'val' or 'None' """
+        try:
+            return list.index( self , val )
+        except:
+            return None
         
     # Only add other 'list' functions as needed
     
@@ -169,18 +211,21 @@ class WeightedList( list ): # TODO: Send this to AsmEnv when it is confirmed to 
 class Node(TaggedObject):
     """ A graph node with edges """    
     
-    def __init__( self , pGraph = None , alias = None):
+    def __init__( self , pGraph = None , alias = None , nCost = 1.0 ):
         super( Node , self ).__init__()
         self.edges = WeightedList() # NOTE: These represent outgoing edges. Incoming edges are represented as references to this Node in other Nodes
         self.graph = pGraph # The graph that this node belongs to
-        if alias != None:
-            self.give_alias( alias )
+        if alias != None: # If there was an alias specified , then store it
+            self.give_alias( alias ) 
+        self.bag = Counter( default = None ) # This is a generic place to dump miscellaneous
+        self.cost = nCost # Numeric cost associated with this node
         
-    def connect_to( self , pNode , pDir = False ):
+    def connect_to( self , pNode , pDir = False , weight = {} ):
         """ Connect an edge between this Node and 'pNode' """
-        self.edges.append( pNode ) # NOTE: This function assumes this Node is the tail
+        # NOTE: This function assumes that an undirected edge has the same weight in both directions
+        self.edges.append( pNode , weight ) # NOTE: This function assumes this Node is the tail
         if not pDir: # If the edge is not directed, add a reference from 'pNode' back to this Node
-            pNode.edges.append( self )
+            pNode.edges.append( self , weight )
         if self.alias != None and pNode.alias != None:
             return ( self.alias , pNode.alias , pDir ) # Return a representation of this edge for use with Graph
             #      ( Tail        , Head       , Directed? )  : Tail ---> Head
@@ -188,13 +233,17 @@ class Node(TaggedObject):
             return ( self.tag , pNode.tag , pDir ) # Return a representation of this edge for use with Graph
             #      ( Tail     , Head      , Directed? )  : Tail ---> Head
         
-    def connect_to_checked( self , pNode , pDir = False ):
+    def connect_to_checked( self , pNode , pDir = False , weight = {}  ):
         """ Connect an edge between this Node and 'pNode' , avoiding duplicates """
         if pNode not in self.edges and self not in pNode.edges:
-            return self.connect_to( pNode , pDir )
+            return self.connect_to( pNode , pDir , weight )
             #      ( Tail     , Head      , Directed? )  : Tail ---> Head
         else: # Else this edge exists, connection failed
             return None
+        
+    def get_successors( self ):
+        """ Return a list of successors of the current node """
+        return self.edges[:]
         
 # == End Node ==
 
@@ -204,30 +253,45 @@ class Graph(TaggedObject):
     """ A simple graph structure with nodes and edges """
     
     def __init__( self , rootNode = None ):
+        super( Graph , self ).__init__()
         self.nodes = TaggedLookup()
-        self.edges = []
+        self.edges = [] # For now not providing any sort of fancy lookup structure for edges
         self.root = rootNode
         
-    def add_node( self , pNode ):
+    def add_node_by_ref( self , nodeRef ):
         """ Add a Node , make note of tag and alias for easy lookup """ 
         # NOTE: A Node needn't be a member of the Graph in order to be reachable , this function is for establishing the relationship when it is important
-        pNode.graph = self # Establish node membership
-        self.nodes.append( pNode )
+        nodeRef.graph = self # Establish node membership
+        self.nodes.append( nodeRef )
+        
+    def create_node_with_als( self , alias ):
+        """ Create a Node with a given 'alias' and add it to the graph """
+        temp = Node( self , alias )
+        temp.graph = self # Establish node membership
+        self.nodes.append( temp )
         
     def get_node_by_als( self , nodeAls ):
         """ Search for a node by its alias and return the reference if the node exists in the problem """
         return self.nodes.get_by_als( nodeAls )
-    
-    def connect_by_als( self , tailAls , headAls , pDir = False ):
-        """ Connect two nodes by their aliases , add the connection to  """
-        tail = self.connect_by_als( tailAls )
-        head = self.connect_by_als( headAls )
-        assert ( tail != None ) and ( head != None ) , "One of " + str(tailAls) + " or " + str(headAls) + " DNE in the problem"
-        self.edges.append( tail.connect_to( head , pDir ) )
         
-    def connect_by_ref( self , tail , head , pDir = False ):
+    def connect_by_ref( self , tail , head , pDir = False , weight = {} ):
         """ Connect two nodes , assuming we already have references to them """
-        self.edges.append( tail.connect_to( head , pDir ) )
+        self.edges.append( tail.connect_to( head , pDir , weight ) )
+        
+    def get_node_list( self ):
+        """ Return a list of nodes in this graph """
+        return self.nodes.get_list()
+    
+    def assign_indices_to_nodes( self ):
+        """ Load each of the nodes with information about their current index """
+        for noDex , currNode in enumerate( self.get_node_list() ):
+            currNode.bag['index'] = noDex
+            
+    def erase_indices_from_nodes( self ):
+        """ Safely erase index information from all of the node in this graph """
+        for noDex , currNode in enumerate( self.get_node_list() ):
+            # URL , Two ways to remove dict key: https://stackoverflow.com/questions/11277432/how-to-remove-a-key-from-a-python-dictionary
+            currNode.bag.pop( 'index' , None ) # Remove the 'index' key , if it exists
         
 # == End Graph ==
         

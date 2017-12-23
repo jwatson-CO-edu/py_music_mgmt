@@ -17,7 +17,7 @@ Helper functions
 # ~ Standard Libraries ~
 import sys , os , datetime , cPickle , heapq , time , operator
 from math import sqrt , trunc , sin , cos , tan , atan2 , asin , acos , atan , pi , degrees , radians , factorial
-from random import random 
+from random import random , choice
 import numpy as np
 ## ~ Cleanup ~
 #plt.close('all') # clear any figures we may have created before 
@@ -475,7 +475,7 @@ def index_max( pList ):
     """ Return the first index of 'pList' with the maximum numeric value """
     return pList.index( max( pList ) )
     
-def index_min( pList ): # Added , 2017-02-16
+def index_min( pList ): 
     """ Return the first index of 'pList' with the maximum numeric value """
     return pList.index( min( pList ) )
     
@@ -492,6 +492,14 @@ def linspace_space( dim , sMin , sMax , num  ):
             for sub in linspace_space( dim-1 , sMin , sMax , num  ):
                 rtnLst.append( [item] + sub )
     return rtnLst
+
+def linspace_centers( sMin , sMax , num ):
+    """ Return the centers of 'num' bins from 'sMin' to 'sMax' """
+    borders = np.linspace( sMin , sMax , num + 1 ) # Get evenly-spaced points
+    centers = []
+    for i in xrange( num ):
+        centers.append( ( borders[i] + borders[i+1] ) / 2.0 )
+    return centers
 
 def find_pop( iterable , item ):
     """ Pop 'item' from 'iterable' , ValueError if not in 'iterable' """
@@ -517,6 +525,32 @@ def index_eq( pList , num , margin = EPSILON ):
     for index , elem in enumerate( pList ):
         if eq_margin( num , elem , margin ):
             return index
+    return None
+
+def iter_contains_None( listOrTuple ):
+    """ Return True if any of 'listOrTuple' is None or contains None , Otherwise return False """
+    if isinstance( listOrTuple , ( list , tuple ) ): # Recursive Case: Arg is an iterable , inspect each
+        for elem in listOrTuple:
+            if iter_contains_None( elem ):
+                return True
+        return False
+    else: # Base Case: Arg is single value
+        return True if listOrTuple == None else False
+    
+def num_range_to_bins( minNum , maxNum , divs  ):
+    """ Return a list of tuples that each represent the bounds of one of 'divs' bins from 'minNum' to 'maxNum' """
+    borders = np.linspace( minNum , maxNum , divs + 1 )
+    bins = []
+    for bDex , border in enumerate( borders[1:] ):
+        bins.append( ( borders[bDex-1] , borders[bDex] ) )
+    return bins
+
+def bindex( bins , val ):
+    """ Given a list of ( lower_i , upper_i ) 'bins' , Return the index that 'val' belongs in , Return None if there is no such bin """
+    # NOTE: This function assumes 'bins' takes the form of returned by 'num_range_to_bins'
+    for bDex , bin in enumerate( bins ):
+        if val > bin[0] and val <= bin[1]:
+            return bDex
     return None
     
 # = Containers for Algorithms =
@@ -774,13 +808,21 @@ class LPQwR( PQwR ):
         if priority <= self.limit:
             PQwR.push( self , item , priority , hashable ) # The usual push
           
-class Counter(dict): 
+class Counter( dict ): 
     """ The counter object acts as a dict, but sets previously unused keys to 0 , in the style of 6300 """
     # TODO: Add Berkeley / 6300 functionality
     
     def __init__( self , *args , **kw ):
         """ Standard dict init """
         dict.__init__( self , *args , **kw )
+        if "default" in kw:
+            self.defaultReturn = kw['default']
+        else:
+            self.defaultReturn = 0
+        
+    def set_default( self , val ):
+        """ Set a new default value to return when there is no """
+        self.defaultReturn = val
         
     def __getitem__( self , a ):
         """ Get the val with key , otherwise return 0 if key DNE """
@@ -795,6 +837,17 @@ class Counter(dict):
         sortedItems = self.items()
         sortedItems.sort( cmp = lambda keyVal1 , keyVal2 :  np.sign( keyVal2[1] - keyVal1[1] ) )
         return sortedItems
+    
+    def sample_until_unique( self , sampleFromSeq , sampleLim = int( 1e6 ) ):
+        """ Sample randomly from 'sampleFromSeq' with a uniform distribution until a new key is found or the trial limit is reached , return it """
+        # NOTE: If 'sampleLim' is set to 'infty' , the result may be an infinite loop if the Counter has a key for each 'sampleFromSeq'
+        trial = 1
+        while( trial <= sampleLim ):
+            testKey = choice( sampleFromSeq )
+            if self[ testKey ] == 0:
+                return testKey
+            trial += 1
+        return None
     
 class RollingList( list ): 
     """ A rolling window based on 'list' """ 
@@ -835,6 +888,16 @@ def enumerate_reverse( L ):
     # URL, Generator that is the reverse of 'enumerate': http://stackoverflow.com/a/529466/893511
     for index in reversed( xrange( len( L ) ) ):
         yield index, L[ index ]
+        
+def increment( reset = None ):
+    """ Count from 0 , or user-specified 'reset' : Increments , and returns increased number when called without argument , arg resets """
+    if reset == None:
+        increment.i += 1
+    else:
+        increment.i = reset
+    return increment.i
+increment.i = 0
+    
 
 # == End Generators ==
 
