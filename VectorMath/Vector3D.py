@@ -16,8 +16,12 @@ from math import atan2 , acos , cos , sin , sqrt , asin , radians , pi
 # ~ Special ~
 import numpy as np
 # ~ Local ~
-from marchhare.marchhare import format_dec_list , eq , incr_max_step , round_small
+# import marchhare.marchhare
+
 from marchhare.Vector import vec_mag , vec_unit , vec_proj , np_add , vec_round_small , vec_angle_between , vec_eq , vec_copy , vec_linspace , vec_NaN
+from marchhare.MathKit import ver
+from marchhare.marchhare import format_dec_list , eq , incr_max_step , round_small 
+
 
 # ~~ Constants , Shortcuts , Aliases ~~
 EPSILON = 1e-7
@@ -831,3 +835,46 @@ class LinkFrame(Frame3D):
         
 # = End LinkFrame =
 
+# == Homogeneous Transformations ==
+        
+def x_rot( theta ):
+    """ Return the 3x3 matrix that performs a rotation of 'theta' about the X axis """
+    return [ [  1            ,  0            ,  0            ] , 
+             [  0            ,  cos( theta ) ,  sin( theta ) ] , 
+             [  0            , -sin( theta ) ,  cos( theta ) ] ]
+    
+def x_trn( theta ):
+    """ Return the 3x3 matrix that performs a rotation of 'theta' about the X axis """
+    return [ [  1            ,  0            ,  0            ] , 
+             [  0            ,  cos( theta ) , -sin( theta ) ] , 
+             [  0            ,  sin( theta ) ,  cos( theta ) ] ]
+
+    
+def y_rot( theta ):
+    """ Return the 3x3 matrix that performs a rotation of 'theta' about the Y axis """
+    return [ [  cos( theta ) ,  0            , -sin( theta ) ] , 
+             [  0            ,  1            ,  0            ] , 
+             [  sin( theta ) ,  0            ,  cos( theta ) ] ]
+    
+def z_rot( theta ):
+    """ Return the 3x3 matrix that performs a rotation of 'theta' about the Z axis """
+    return [ [  cos( theta ) ,  sin( theta ) ,  0            ] , 
+             [ -sin( theta ) ,  cos( theta ) ,  0            ] , 
+             [  0            ,  0            ,  1            ] ]
+    
+def z_trn( theta ):
+    """ Return the 3x3 matrix that performs a rotational transformation of 'theta' about the Z axis """
+    return [ [  cos( theta ) , -sin( theta ) ,  0            ] , 
+             [  sin( theta ) ,  cos( theta ) ,  0            ] , 
+             [  0            ,  0            ,  1            ] ]
+    
+def rot_matx_ang_axs( theta , k  ):
+    """ Return the 3x3 rotation matrix for the given angle 'theta' and axis 'k' """
+    
+    k = vec_unit( k )
+    # ver = marchhare.marchhare.ver
+    return [ [ k[0]*k[0]*ver(theta) + cos(theta)      , k[0]*k[1]*ver(theta) - k[2]*sin(theta) , k[0]*k[2]*ver(theta) + k[1]*sin(theta) ] , 
+             [ k[1]*k[0]*ver(theta) + k[2]*sin(theta) , k[1]*k[1]*ver(theta) + cos(theta)      , k[1]*k[2]*ver(theta) - k[0]*sin(theta) ] , 
+             [ k[2]*k[0]*ver(theta) - k[1]*sin(theta) , k[2]*k[1]*ver(theta) + k[0]*sin(theta) , k[2]*k[2]*ver(theta) + cos(theta)      ] ]
+        
+# __ End Homogeneous __

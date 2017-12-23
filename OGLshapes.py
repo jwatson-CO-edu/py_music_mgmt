@@ -46,9 +46,11 @@ from pyglet.gl import ( GL_LINES , glColor3ub , GL_TRIANGLES , glTranslated , GL
                         glMatrixMode , GL_PROJECTION , glLoadIdentity , gluPerspective , GL_MODELVIEW , gluLookAt , GL_POINTS , glPointSize )
 # from pyglet import clock # Animation timing ( Not sure why would prefer this over vanilla Python timing? )
 # ~ Local ~
+from marchhare import build_sublists_by_cadence , flatten_nested_sequence , concat_arr
+from Vector import vec_unit , vec_mag
 from VectorMath.Vector3D import apply_homog , homogeneous_Z , homog_ang_axs 
-from marchhare.Vector import vec_unit , vec_mag
-from marchhare.marchhare import build_sublists_by_cadence , flatten_nested_sequence , concat_arr
+
+
 
 
 
