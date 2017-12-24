@@ -64,7 +64,7 @@ def add_container_to_path( fName ):
     if containerDir not in sys.path:
         sys.path.append( containerDir )
 
-# == End PATH ==
+# __ End PATH __
 
 
 # == Helper Functions ==
@@ -77,7 +77,7 @@ def sep( title = "" , width = 6 , char = '=' , strOut = False ): # <<< resenv
     else:
         print LINE + ' ' + title + ' ' + LINE
     
-# == End Helper ==
+# __ End Helper __
         
 
 
@@ -140,7 +140,7 @@ tick_progress.totalCalls = 0
 tick_progress.sequence = [ "'" , "-" , "," , "_" , "," , "-" , "'" , "`" , "`" ] # This makes a quite pleasant wave
 tick_progress.ticks = 0
 
-# == End Time ==
+# __ End Time __
 
 # == Data Structures , Special Lists , and Iterable Operations ==
 
@@ -658,11 +658,11 @@ class RollingList( list ):
         """ Return a copy of the RollingList as a list """
         return self[:]
 
-# = End Algo Containers =
+# _ End Algo Containers _
 
 def is_nonempty_list( obj ): return isinstance( obj , list ) and len( obj ) > 0 # Return true if 'obj' is a 'list' with length greater than 0  # <<< resenv
 
-# == End Structures ==
+# __ End Structures __
 
 
 # == Generators, Iterators, and Custom Comprehensions ==
@@ -681,9 +681,8 @@ def increment( reset = None ):
         increment.i = reset
     return increment.i
 increment.i = 0
-    
 
-# == End Generators ==
+# __ End Generators __
 
 
 # == Printing Helpers ==
@@ -753,7 +752,7 @@ def pretty_print_dict( pDict ):
         print "\t" , str( key ).ljust( longestRep , ' ' ) , ":" , pDict[ key ]
     print "}"
 
-# == End Printing ==
+# __ End Printing __
 
 
 # == File Operations ==
@@ -855,7 +854,7 @@ class accum:
         outFile.close()
         accum.totalStr = ""
 
-# == End File ==
+# __ End File __
 
 # == Batch Operations ==
 
@@ -872,7 +871,7 @@ def validate_dirs_writable( *dirList ):
             return False
     return True # All checks finished OK, return true
 
-# == End Batch ==
+# __ End Batch __
 
 
 # == String Processing ==
@@ -903,7 +902,7 @@ def format_dec_list( numList , places = 2 ): # <<< resenv
     rtnStr += " ]"
     return rtnStr
     
-# == End Strings ==
+# __ End Strings __
 
 # == Timing / Benchmarking ==
 
@@ -937,10 +936,10 @@ class Stopwatch( object ):
     def elapsed():
         return Stopwatch.stopTime - Stopwatch.strtTime
 
-# == End Timing ==
+# __ End Timing __
 
 # === Spare Parts ===
 
 
 
-# === End Parts ===
+# ___ End Parts ___

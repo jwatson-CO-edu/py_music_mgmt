@@ -50,10 +50,6 @@ from marchhare import build_sublists_by_cadence , flatten_nested_sequence , conc
 from Vector import vec_unit , vec_mag
 from VectorMath.Vector3D import apply_homog , homogeneous_Z , homog_ang_axs 
 
-
-
-
-
 # ~~ Setup ~~
 
 # ___ End Init _____________________________________________________________________________________________________________________________

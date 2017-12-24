@@ -6,15 +6,17 @@
 from __future__ import division # Future imports must be called before everything else, including triple-quote docs!
 
 """
-FILENAME.py , Built on Spyder for Python 2.7
-James Watson, YYYY MONTHNAME
-A ONE LINE DESCRIPTION OF THE FILE
+MathKit.py , Built on Spyder for Python 2.7
+James Watson, 2017 December
+Math helper functions including: { trigonometry , statistics }
 """
 
+# ~~ Imports ~~
+# ~ Standard ~
 import os , operator
 from random import random
 from math import sqrt , sin , cos , tan , atan2 , asin , acos , atan , degrees , radians , factorial , pi
-
+# ~ Special ~
 import numpy as np
 
 # ~~ Constants , Shortcuts , Aliases ~~
@@ -78,7 +80,7 @@ def index_eq( pList , num , margin = EPSILON ):
             return index
     return None
 
-# = End Equality =
+# _ End Equality _
 
 def wrap_normalize( wrapBounds , number ):
     """ Normalize 'number' to be within 'wrapBounds' on a number line that wraps to 'wrapBounds[0]' when 'wrapBounds[1]' is surpassed 
@@ -133,7 +135,7 @@ def roundint( num ):
     """ Round 'num' to the nearest int """
     return int( round( num ) )
 
-# == End Math Helpers ==
+# __ End Math Helpers __
 
 
 # == Trigonometry ==
@@ -176,9 +178,9 @@ def verd( theta ):
     """ Versine , degrees """
     return degrees( 1 - cos( theta ) )
 
-# = End Deg Trig =
+# _ End Deg Trig _
 
-# == End Trig ==
+# __ End Trig __
 
 # == Statistics ==
 
@@ -276,13 +278,13 @@ def sample_unfrm_real( rMin , rMax ):
     span = abs( rMax - rMin )
     return random() * span + rMin
 
-# = End Rolls =
+# _ End Rolls _
 
 def nCr( n , r ): 
     """ Number of combinations for 'n' Choose 'r' """
     return int( factorial( n ) / ( factorial( r ) * factorial( n - r ) ) )
 
-# == End Stats ==
+# __ End Stats __
 
 def clamp_val( val , lims ): # <<< VSM
     """ Return a version of val that is clamped to the range [ lims[0] , lims[1] ] , inclusive """
@@ -292,5 +294,14 @@ def clamp_val( val , lims ): # <<< VSM
         return lims[1]
     return val
 
-# === End Math ===
+# == Linear Algrebra ==
+    
+def left_divide( A , b ):
+    """ Least-squares solution to an under to over-determined linear system  
+        x = left_divide( A , b ) is the solution to dot(A,x) = b , and equivalent to MATLAB A\b """
+    x , resid , rank , s = np.linalg.lstsq( A , b )
+    return x
 
+# __ End Linalg __
+
+# ___ End Math ___
