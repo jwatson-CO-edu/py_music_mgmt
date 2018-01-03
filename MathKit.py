@@ -15,7 +15,7 @@ Math helper functions including: { trigonometry , statistics }
 # ~ Standard ~
 import os , operator
 from random import random
-from math import sqrt , sin , cos , tan , atan2 , asin , acos , atan , degrees , radians , factorial , pi
+from math import sqrt , sin , cos , tan , atan2 , asin , acos , atan , degrees , radians , factorial , pi , modf
 # ~ Special ~
 import numpy as np
 
@@ -134,6 +134,10 @@ def sum_abs_diff_lists( op1 , op2 ):
 def roundint( num ):
     """ Round 'num' to the nearest int """
     return int( round( num ) )
+
+def decimal_part( num ):
+    """ Return the decimal part of a number """
+    return modf( num )[0]
 
 # __ End Math Helpers __
 
