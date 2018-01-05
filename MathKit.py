@@ -295,7 +295,7 @@ def nCr( n , r ):
 
 # __ End Stats __
 
-def clamp_val( val , lims ): # <<< VSM
+def clamp_val( val , lims ): 
     """ Return a version of val that is clamped to the range [ lims[0] , lims[1] ] , inclusive """
     if val < lims[0]:
         return lims[0]
