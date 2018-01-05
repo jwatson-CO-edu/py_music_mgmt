@@ -937,6 +937,23 @@ class Stopwatch( object ):
         return Stopwatch.stopTime - Stopwatch.strtTime
 
 # __ End Timing __
+        
+    
+# === Reporting ===
+
+# == class Response ==
+        
+class Response:
+    """ Container class to hold the result of a search or an error """
+    def __init__( self , result = False , errCode = {} , data = [] ): # NOTE: Error codes are dict entries to make lookup easier
+        self.result     = result
+        self.errorCodes = errCode
+        self.data       = data
+    
+# __ End Response __
+    
+# ___ End Reporting ___
+
 
 # === Spare Parts ===
 

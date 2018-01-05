@@ -139,6 +139,11 @@ def decimal_part( num ):
     """ Return the decimal part of a number """
     return modf( num )[0]
 
+def copysign( magPart , sgnPart ):
+    """ Construct a number that is the magnitude of 'magPart' and the sign of 'sgnPart' """
+    # URL , copysign: https://en.wikipedia.org/wiki/Rotation_matrix#Quaternion
+    return abs( magPart ) * np.sign( sgnPart )
+
 # __ End Math Helpers __
 
 
