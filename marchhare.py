@@ -145,8 +145,15 @@ tick_progress.ticks = 0
 # == Data Structures , Special Lists , and Iterable Operations ==
 
 def elemw( iterable , i ): 
-    """ Return the 'i'th index of 'iterable', wrapping to index 0 at all integer multiples of 'len(iterable)' """
-    return iterable[ i % ( len(iterable) ) ]
+    """ Return the 'i'th index of 'iterable', wrapping to index 0 at all integer multiples of 'len(iterable)' , Wraps forward and backwards """
+    seqLen = len( iterable )
+    if i >= 0:
+        return iterable[ i % ( seqLen ) ]
+    else:
+        revDex = abs( i ) % ( seqLen )
+        if revDex == 0:
+            return 0
+        return seqLen - revDex
                     
 def indexw( iterable , i ): 
     """ Return the 'i'th index of 'iterable', wrapping to index 0 at all integer multiples of 'len(iterable)' """
