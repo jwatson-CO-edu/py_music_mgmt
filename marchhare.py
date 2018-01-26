@@ -152,12 +152,19 @@ def elemw( iterable , i ):
     else:
         revDex = abs( i ) % ( seqLen )
         if revDex == 0:
-            return 0
-        return seqLen - revDex
+            return iterable[ 0 ]
+        return iterable[ seqLen - revDex ]
                     
 def indexw( iterable , i ): 
     """ Return the 'i'th index of 'iterable', wrapping to index 0 at all integer multiples of 'len(iterable)' """
-    return i % ( len(iterable) )
+    seqLen = len( iterable )
+    if i >= 0:
+        return i % ( seqLen )
+    else:
+        revDex = abs( i ) % ( seqLen )
+        if revDex == 0:
+            return 0
+        return seqLen - revDex
     
 def same_contents_list( lst1 , lst2 ):
     """ Determine if every element in 'lst1' can be found in 'lst2' , and vice-versa , NOTE: This function assumes all elements are hashable """
