@@ -72,7 +72,7 @@ def circ_spacing( dia , numPts , center = None ): # <<< resenv
             circPts.append( offset )
     return circPts
 
-def winding_num( point , polygon , excludeCollinear = True): # <<< resenv
+def winding_num( point , polygon , excludeCollinear = True):
     """ Find the winding number of a point with respect to a polygon , works for both CW and CCWpoints """
     # NOTE: Function assumes that the points of 'polygon' are ordered. Algorithm does not work if they are not 
     # This algorithm is translation invariant, and can handle convex, nonconvex, and polygons with crossing sides.
@@ -100,7 +100,7 @@ def winding_num( point , polygon , excludeCollinear = True): # <<< resenv
                     w -= 1 #  CW encirclement
         # If one of the polygon points lies on the x-axis, we must look at the segments before and after to determine encirclement
         elif ( eq( y(i) , 0 ) ) and ( x(i) > 0 ): # v_i[i] is on the positive x-axis, leaving possible crossing
-            if y(i) > 0:
+            if y(i + 1) > 0:
                 w += 0.5 # possible CCW encirclement or switchback from a failed CW crossing
             else:
                 w -= 0.5 # possible CW encirclement or switchback from a failed CCW crossing

@@ -127,7 +127,7 @@ class TaggedLookup( list ):
         except ValueError:
             return None
     
-    def recalc_alias_lookup( self ):
+    def recalc_alias_lookup( self , erase = False ):
         """ Make sure that any elements that have recently acquired an alias appear in the alias lookup """
         for elem in self:
             if elem.has_alias():
@@ -139,8 +139,30 @@ class TaggedLookup( list ):
             elem.give_alias( index )
         self.recalc_alias_lookup() # Now that aliases have been assigned , add them to the lookup
         
-    # TODO: .pop()
-    # TODO: .remove() # This will work with object references
+    def pop( self , index = None ):
+        """ Remove the entry at the end of the list , or at 'index' if it is provided and valid """
+        if index == None:
+            index = len( self ) - 1
+        elif index > len( self ) - 1:
+            raise IndexError( "Index " + str( index )  + " is not valid for a structure of length " + str( len( self ) ) )
+        if self[ index ].has_alias(): # 1. Remove from the alias lookup if it exists there
+            del self.lookupByAls[ self[ index ].alias ]
+        del self.lookupByTag[ self[ index ].tag ] # 2. Remove from the tag lookup
+        return list.pop( self , index ) # 3. Remove from the structure itself
+        
+    def remove( self , value ):
+        """ Remove the entry that matches 'value' """
+        try:
+            rmDex = self.index( value )
+            self.pop( rmDex ) 
+        except ValueError:
+            raise ValueError( "No object " + str( value ) + " exists in this lookup" )
+            
+    def remove_by_alias( self , rmAlias ):
+        """ If 'rmAlias' exists in the lookup , remove that object from the lookup , otherwise take no action """
+        rmDex = self.get_alias_index( rmAlias )
+        if rmDex != None:
+            self.pop( rmDex )
 
 # = End TaggedLookup =  
 
@@ -170,7 +192,23 @@ class WeightedList( list ):
             self.weights.extend( costs   if costs   != None else [ 1.0 for elem in xrange( len( items ) ) ] )
         elif weights != None:
             raise IndexError( "LabeleWeightedListdList.extend: Items and labels did not have the same length! " + str( len( items ) ) + " , " + str( len( weights ) ) )
-        
+    
+    def pop( self , index = None ):
+        """ Remove the item at 'index' and the associated 'weights' & 'costs' , Note: 'weights' & 'costs' are not returned """
+        if index == None:
+            index = len( self ) - 1
+        self.weights.pop( index )
+        self.costs.pop( index )
+        return list.pop( self , index )
+    
+    def remove( self , value ):
+        """ Remove the 'value' and the associated 'weights' & 'costs' """
+        try:
+            rmDex = self.index( value )
+            self.pop( rmDex )
+        except ValueError:
+            raise ValueError( str( value ) + " was not found in the structure" )
+    
     def get_weight( self , index , weightName ):
         """ Get the 'label' value for the item at 'index' , if that label DNE at that index return None """
         try:
@@ -263,6 +301,11 @@ class Graph(TaggedObject):
         # NOTE: A Node needn't be a member of the Graph in order to be reachable , this function is for establishing the relationship when it is important
         nodeRef.graph = self # Establish node membership
         self.nodes.append( nodeRef )
+        
+    def rem_node_by_ref( self , nodeRef ):
+        """ Remove a Node that matches the reference """
+        self.nodes.remove( nodeRef )
+        # NOTE: At this time , not checking if edges still exist in 'edges' that refer to this node
         
     def create_node_with_als( self , alias ):
         """ Create a Node with a given 'alias' and add it to the graph """

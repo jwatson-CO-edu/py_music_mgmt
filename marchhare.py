@@ -145,12 +145,26 @@ tick_progress.ticks = 0
 # == Data Structures , Special Lists , and Iterable Operations ==
 
 def elemw( iterable , i ): 
-    """ Return the 'i'th index of 'iterable', wrapping to index 0 at all integer multiples of 'len(iterable)' """
-    return iterable[ i % ( len(iterable) ) ]
+    """ Return the 'i'th index of 'iterable', wrapping to index 0 at all integer multiples of 'len(iterable)' , Wraps forward and backwards """
+    seqLen = len( iterable )
+    if i >= 0:
+        return iterable[ i % ( seqLen ) ]
+    else:
+        revDex = abs( i ) % ( seqLen )
+        if revDex == 0:
+            return iterable[ 0 ]
+        return iterable[ seqLen - revDex ]
                     
 def indexw( iterable , i ): 
     """ Return the 'i'th index of 'iterable', wrapping to index 0 at all integer multiples of 'len(iterable)' """
-    return i % ( len(iterable) )
+    seqLen = len( iterable )
+    if i >= 0:
+        return i % ( seqLen )
+    else:
+        revDex = abs( i ) % ( seqLen )
+        if revDex == 0:
+            return 0
+        return seqLen - revDex
     
 def same_contents_list( lst1 , lst2 ):
     """ Determine if every element in 'lst1' can be found in 'lst2' , and vice-versa , NOTE: This function assumes all elements are hashable """
@@ -937,6 +951,23 @@ class Stopwatch( object ):
         return Stopwatch.stopTime - Stopwatch.strtTime
 
 # __ End Timing __
+        
+    
+# === Reporting ===
+
+# == class Response ==
+        
+class Response:
+    """ Container class to hold the result of a search or an error """
+    def __init__( self , result = False , errCode = {} , data = [] ): # NOTE: Error codes are dict entries to make lookup easier
+        self.result     = result
+        self.errorCodes = errCode
+        self.data       = data
+    
+# __ End Response __
+    
+# ___ End Reporting ___
+
 
 # === Spare Parts ===
 

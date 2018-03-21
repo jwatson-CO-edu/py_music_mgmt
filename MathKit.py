@@ -15,7 +15,7 @@ Math helper functions including: { trigonometry , statistics }
 # ~ Standard ~
 import os , operator
 from random import random
-from math import sqrt , sin , cos , tan , atan2 , asin , acos , atan , degrees , radians , factorial , pi
+from math import sqrt , sin , cos , tan , atan2 , asin , acos , atan , degrees , radians , factorial , pi , modf
 # ~ Special ~
 import numpy as np
 
@@ -134,6 +134,15 @@ def sum_abs_diff_lists( op1 , op2 ):
 def roundint( num ):
     """ Round 'num' to the nearest int """
     return int( round( num ) )
+
+def decimal_part( num ):
+    """ Return the decimal part of a number """
+    return modf( num )[0]
+
+def copysign( magPart , sgnPart ):
+    """ Construct a number that is the magnitude of 'magPart' and the sign of 'sgnPart' """
+    # URL , copysign: https://en.wikipedia.org/wiki/Rotation_matrix#Quaternion
+    return abs( magPart ) * np.sign( sgnPart )
 
 # __ End Math Helpers __
 
@@ -286,7 +295,7 @@ def nCr( n , r ):
 
 # __ End Stats __
 
-def clamp_val( val , lims ): # <<< VSM
+def clamp_val( val , lims ): 
     """ Return a version of val that is clamped to the range [ lims[0] , lims[1] ] , inclusive """
     if val < lims[0]:
         return lims[0]
