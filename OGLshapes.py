@@ -73,9 +73,9 @@ def generate_segment_indices_for_OGmesh( pF , Fcadence = 3 ):
     # 1. For each facet in the mesh
     for f_i in F:
         # 2. Get all three segments as pairs of V indices
-        triPairs = [ [ f_i[ triPairs[i][j] ] for j in xrange( 2 ) ] for i in xrange( len( triPairs ) ) ]
+        fPairs = [ [ f_i[ triPairs[i][j] ] for j in xrange( 2 ) ] for i in xrange( len( triPairs ) ) ]
         # 3. For each index pair
-        for pair in triPairs:
+        for pair in fPairs:
             # 4. Check the used list to see if this pair has been used
             if not pair_in_list( pair , usedPairs ):
                 # 5. If the pair has not been used , append the pair to the list
@@ -370,7 +370,7 @@ class Vector_OGL( OGLDrawable ):
             ( 'v3f' , self.vertX ) #- Vertex list , OpenGL offers an optimized vertex list object , but this is not it
         )
         # Draw the fletchings
-        for i in xrange( len( self.fltchngs ) ): # FIXME: START HERE
+        for i in xrange( len( self.fltchngs ) ): 
             pyglet.graphics.draw_indexed( 
                 6 , # ------------------ Number of seqential triplet in vertex list
                 GL_TRIANGLES , # -------- Draw quadrilaterals
@@ -530,6 +530,10 @@ class Icosahedron_Reg( OGLDrawable ):
         self.colors = ( (  88 , 181 ,  74 ) , # Body color
                         (   0 ,   0 , 255 ) ) # Line color
         
+        self.linDices = generate_segment_indices_for_OGmesh( self.faceDices )
+#        self.numPairs = len( self.linDices ) / 2
+#        print "DEBUG , There are" , len( self.linDices ) , "linDices"
+        
     def draw( self ):
         """ Render the Icosahedron in OGL , This function assumes that a graphics context already exists """
         # [1]. If OGL transforms enabled , Translate and rotate the OGL state machine to desired rendering frame
@@ -548,7 +552,7 @@ class Icosahedron_Reg( OGLDrawable ):
         pyglet.gl.glLineWidth( 3 )
         # [3]. Render! 
         pyglet.graphics.draw_indexed( 
-            8 , # --------------------- Number of seqential triplet in vertex list
+            12 , # --------------------- Number of seqential triplet in vertex list
             GL_LINES , # -------------- Draw quadrilaterals
             self.linDices , # ---------- Indices where the coordinates are stored
             ( 'v3f' , self.vertX ) # vertex list , OpenGL offers an optimized vertex list object , but this is not it
