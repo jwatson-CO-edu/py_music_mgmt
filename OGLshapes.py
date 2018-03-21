@@ -23,7 +23,8 @@ Dependencies: numpy , pyglet
         !Y! Constant - COMPLETE
     |Y| Test endpoint change - COMPLETE
 [Y] Give all common class names OGL-specific names - COMPLETE
-[ ] Test Icosahedron
+[Y] Test Icosahedron - COMPLETE , 2018-03-21
+[ ] Folding sheet
 [ ] Meshes ( This likely requires "numpy-stl" or similar mesh-processing library )
 [Y] Flying camera - COMPLETE , This is fully user settable , so if the client code desires this can change over time
 [ ] Vector array optimization ( See Drawable )
@@ -531,8 +532,8 @@ class Icosahedron_Reg( OGLDrawable ):
                         (   0 ,   0 , 255 ) ) # Line color
         
         self.linDices = generate_segment_indices_for_OGmesh( self.faceDices )
-#        self.numPairs = len( self.linDices ) / 2
-#        print "DEBUG , There are" , len( self.linDices ) , "linDices"
+        self.numPairs = len( self.linDices ) / 2
+        print "DEBUG , There are" , len( self.linDices ) / 2 , "edges"
         
     def draw( self ):
         """ Render the Icosahedron in OGL , This function assumes that a graphics context already exists """

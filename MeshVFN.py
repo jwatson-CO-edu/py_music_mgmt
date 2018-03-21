@@ -5,7 +5,7 @@
 # ~~ Future First ~~
 from __future__ import division # Future imports must be called before everything else, including triple-quote docs!
 
-"""@module mesh_helpers.py
+"""@module MeshVFN.py
 @brief Mesh processing in Python
 
 James Watson, 2017 October
