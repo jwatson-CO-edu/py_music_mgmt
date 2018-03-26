@@ -617,9 +617,9 @@ class NullDraw( OGLDrawable ):
 class OGL_App( pyglet.window.Window ):
     """ Bookkeepping for Pyglet rendering """
     
-    def __init__( self , objList = [] , caption = 'Pyglet Rendering Window' ):
+    def __init__( self , objList = [] , caption = 'Pyglet Rendering Window' , dispWidth = 640 , dispHeight = 480 ):
         """ Instantiate the environment with a list of objhects to render """
-        super( OGL_App , self ).__init__( resizable = True, caption = caption )
+        super( OGL_App , self ).__init__( resizable = True , caption = caption ,  width = dispWidth , height = dispHeight )
         glClearColor( 0.7 , 0.7 , 0.8 , 1 ) # Set the BG color for the OGL window
         
         # URL: https://www.opengl.org/discussion_boards/showthread.php/165839-Use-gluLookAt-to-navigate-around-the-world

@@ -771,6 +771,11 @@ def pretty_print_dict( pDict ):
 
 # == File Operations ==
 
+def ensure_dir( dirName ):
+    """ Create the directory if it does not exist """
+    if not os.path.exists( dirName ):
+        os.makedirs( dirName )
+
 def struct_to_pkl( struct , pklPath ): # <<< resenv
     """ Serialize a 'struct' to 'pklPath' """
     f = open( pklPath , 'wb') # open a file for binary writing to receive pickled data
@@ -829,6 +834,9 @@ def string_from_file( fPath ): # <<< resenv
     return fStr
     
 def txt_file_for_w( fPath ): return file( fPath , 'w' )  # <<< resenv
+
+
+# = class accum =
     
 class accum:
     """ Singleton text buffer object to hold script output, with facilities to write contents """
@@ -868,7 +876,10 @@ class accum:
         outFile.close()
         accum.totalStr = ""
 
+# _ End accum _
+
 # __ End File __
+
 
 # == Batch Operations ==
 
