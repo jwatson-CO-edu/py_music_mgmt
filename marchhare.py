@@ -237,8 +237,6 @@ def index_max( pList ):
 def index_min( pList ): 
     """ Return the first index of 'pList' with the maximum numeric value """
     return pList.index( min( pList ) )
-    
-# [ ] TODO: ADD THE OTHER SPACES 
 
 def linspace_space( dim , sMin , sMax , num  ): 
     """ Return vector list covering a 'dim'-dimensional space with 'num' points in each dimension, from 'sMin' to 'sMax' in each dimension , O(n^2) """

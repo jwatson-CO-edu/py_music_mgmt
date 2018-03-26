@@ -15,18 +15,6 @@ Dependencies: numpy , pyglet
 """
 ~~~~~ Development Plan ~~~~~
 
-[Y] Test Vector - COMPLETE
-    |Y| Display test - COMPLETE
-    |Y| Rename - COMPLETE
-    |Y| Style Setters
-        !L! Dynamic - LATER , Not sure what I meant by this
-        !Y! Constant - COMPLETE
-    |Y| Test endpoint change - COMPLETE
-[Y] Give all common class names OGL-specific names - COMPLETE
-[Y] Test Icosahedron - COMPLETE , 2018-03-21
-[ ] Folding sheet
-[ ] Meshes ( This likely requires "numpy-stl" or similar mesh-processing library )
-[Y] Flying camera - COMPLETE , This is fully user settable , so if the client code desires this can change over time
 [ ] Vector array optimization ( See Drawable )
 
 """
