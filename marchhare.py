@@ -341,10 +341,12 @@ def flatten_nested_sequence( multiSeq ):
         for elem in multLst:
             if isinstance( elem , list ):
                 flatten_recur( elem , masterList )
+            elif isinstance( elem , np.ndarray ):
+                flatten_recur( elem.tolist() , masterList )
             else:
                 masterList.append( elem )
     flatten_recur( multiSeq , masterList )
-    if isinstance( multiSeq , tuple ):
+    if isinstance( multiSeq , tuple ): # If the original nested sequence was a tuple, then make sure to return a tuple
         return tuple( masterList )
     else:
         return masterList
