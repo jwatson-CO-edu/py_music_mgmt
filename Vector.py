@@ -169,6 +169,21 @@ def vec_linspace( vec1 , vec2 , numPts ):
                                              value ) ) )
     return ptsList
 
+def linspace_endpoints( bgnPnt , endPnt , numPnts ):
+    """ Create a list of 'numPnts' points between 'bgnPnt' and 'endPnt' , inclusive """
+    # NOTE: This function assumes that 'bgnPnt' and 'endPnt' have the same dimensionality
+    # NOTE: This is a re-implementation of 'Vector.vec_linspace' , but without np.ndarray
+    coordsList = []
+    rtnList = []
+    for i in xrange( len( bgnPnt ) ):
+        coordsList.append( np.linspace( bgnPnt[i] , endPnt[i] , numPnts ) )
+    for i in xrange( numPnts ):
+        temp = []
+        for j in xrange( len( bgnPnt ) ):
+            temp.append( coordsList[j][i] )
+        rtnList.append( temp )
+    return rtnList
+
 def vec_avg( *vectors ): 
     """ Return a vector that is the average of all the 'vectors', equal weighting """
     vecSum = np_add( *vectors ) # NOTE: This function assumes that all vectors are the same dimensionality

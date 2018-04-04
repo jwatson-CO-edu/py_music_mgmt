@@ -142,6 +142,7 @@ tick_progress.ticks = 0
 
 # __ End Time __
 
+
 # == Data Structures , Special Lists , and Iterable Operations ==
 
 def elemw( iterable , i ): 
@@ -350,6 +351,16 @@ def flatten_nested_sequence( multiSeq ):
         return tuple( masterList )
     else:
         return masterList
+    
+def double_all_elem_except( inList , exceptedIndices = [] ):
+    """ Double all elements of a list except those indicated by 'exceptedIndices' """
+    rtnList = []
+    for i , elem in enumerate( inList ):
+        if i in exceptedIndices:
+            rtnList.append( elem )
+        else:
+            rtnList.extend( [ elem , elem ] )
+    return rtnList    
     
 # = Containers for Algorithms =
 

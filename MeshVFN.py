@@ -11,7 +11,7 @@ from __future__ import division # Future imports must be called before everythin
 James Watson, 2017 October
 Built on Spyder for Python 2.7
 
-Dependencies: numpy , numpy-stl (stl) , python-pcl , marchhare
+Dependencies: numpy , numpy-stl (stl) , marchhare
 """
 
 # === Init =================================================================================================================================
@@ -26,7 +26,6 @@ from warnings import warn
 from stl import mesh # https://pypi.python.org/pypi/numpy-stl/ # pip install numpy-stl
 from scipy.spatial import ConvexHull
 import numpy as np
-from pcl import PointCloud # https://github.com/strawlab/python-pcl
 # ~ Local ~
 from marchhare.marchhare import tandem_sorted , incr_max_step , iter_contains_None 
 from marchhare.MathKit import round_small
@@ -44,6 +43,19 @@ piHalf  = pi/2
 
 # ___ End Init _____________________________________________________________________________________________________________________________
 
+
+# === Basic Mesh Geo =======================================================================================================================
+
+def tri_normal( p0 , p1 , p2 ):
+    """ Return the unit normal vector for a triangle with points specified in CCW order """
+    vec1 = np.subtract( p1 , p0 )
+    vec2 = np.subtract( p2 , p0 )
+    return vec_unit( np.cross( vec1 , vec2 ) )
+
+# ___ End Mesh Geo _________________________________________________________________________________________________________________________
+
+
+# === Regrasp Code =========================================================================================================================
 
 ## STL_to_mesh_obj
 # @brief Return a 'Mesh' object produced from the STL file at 'STLpath'
@@ -914,3 +926,5 @@ def process_mesh( pMesh                                   ,
     )
     # 5. Return structure
     return GraspMesh( V , F , N , adjacency , clusterBorders , hullFaces , volume , COM )
+
+# ___ End Regrasp __________________________________________________________________________________________________________________________
