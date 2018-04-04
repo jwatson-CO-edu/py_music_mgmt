@@ -56,7 +56,7 @@ def generate_segment_indices_for_OGmesh( pF , Fcadence = 3 ):
             if pairs_eq( testPair , pair ):
                 return True
         return False
-    F = build_sublists_by_cadence( pF , Fcadence )
+    F = build_sublists_by_cadence( pF , Fcadence ) # This function probably doesn't work for cadence other than 3 , see 'triPairs'
     usedPairs = []
     triPairs  = ( ( 0 , 1 ) , ( 1 , 2 ) , ( 2 , 0 ) )
     # 1. For each facet in the mesh
@@ -600,15 +600,17 @@ class NullDraw( OGLDrawable ):
         
 # ___ End Drawable ___
 
+
 # == class OGL_App ==
         
 class OGL_App( pyglet.window.Window ):
     """ Bookkeepping for Pyglet rendering """
     
-    def __init__( self , objList = [] , caption = 'Pyglet Rendering Window' , dispWidth = 640 , dispHeight = 480 ):
+    def __init__( self , objList = [] , caption = 'Pyglet Rendering Window' , dispWidth = 640 , dispHeight = 480 , 
+                  clearColor = [ 0.7 , 0.7 , 0.8 , 1 ] ):
         """ Instantiate the environment with a list of objhects to render """
         super( OGL_App , self ).__init__( resizable = True , caption = caption ,  width = dispWidth , height = dispHeight )
-        glClearColor( 0.7 , 0.7 , 0.8 , 1 ) # Set the BG color for the OGL window
+        glClearColor( *clearColor ) # Set the BG color for the OGL window
         
         # URL: https://www.opengl.org/discussion_boards/showthread.php/165839-Use-gluLookAt-to-navigate-around-the-world
         self.camera = [  2 ,  2 ,  2 , # eyex    , eyey    , eyez    : Camera location , point (world) , XYZ
