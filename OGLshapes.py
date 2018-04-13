@@ -637,7 +637,7 @@ class OGL_App( pyglet.window.Window ):
         # ~ View Frustum Setup ~
         glMatrixMode( GL_PROJECTION )
         glLoadIdentity()
-        gluPerspective( 70 , self.width / float( self.height ) , 0.1 , 200 )
+        gluPerspective( 70 , self.width / float( self.height ) , 0.1 , 200 ) # Camera properties
         # ~ View Direction Setup ~
         glMatrixMode( GL_MODELVIEW )
         glLoadIdentity()
