@@ -176,6 +176,11 @@ class Point_OGL( OGLDrawable ):
         self.size = size # ------------------- Width of point marker
         self.colors = ( [ tuple( color ) ] ) # Point marker color
         
+    def set_pos( self , pos ):
+        """ Set the position of the point """
+        self.vertices = tuple( pos )
+        self.vertX = list( self.vertices )
+        
     def draw( self ):
         """ Render the point """
         # [1]. If OGL transforms enabled , Translate and rotate the OGL state machine to desired rendering frame
