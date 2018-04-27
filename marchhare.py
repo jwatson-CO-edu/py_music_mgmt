@@ -337,12 +337,19 @@ def build_sublists_by_cadence( flatList , cadence ):
 def flatten_nested_sequence( multiSeq ):
     """ Flatten a sequence of sequences ( list or tuple ) into a single , flat sequence of the same type as 'multiSeq' """
     masterList = []
+    # print multiSeq
+    if isinstance( multiSeq , np.ndarray ):
+        # print "Converting to nested list"
+        multiSeq = multiSeq.tolist()
+        # return
     def flatten_recur( multLst , masterList ):
         """ Does the recursive work of 'flatten_nested_lists' """
         for elem in multLst:
             if isinstance( elem , list ):
                 flatten_recur( elem , masterList )
             elif isinstance( elem , np.ndarray ):
+                # print "Element:" , elem
+                # print "To list:" , elem.tolist()
                 flatten_recur( elem.tolist() , masterList )
             else:
                 masterList.append( elem )
@@ -350,6 +357,8 @@ def flatten_nested_sequence( multiSeq ):
     if isinstance( multiSeq , tuple ): # If the original nested sequence was a tuple, then make sure to return a tuple
         return tuple( masterList )
     else:
+        # print "Got a list containing" , len( multiSeq ) , "elemets"
+        # print "Returning a list of  " , len( masterList ) , "elements"
         return masterList
     
 def double_all_elem_except( inList , exceptedIndices = [] ):

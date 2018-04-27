@@ -27,12 +27,12 @@ from stl import mesh # https://pypi.python.org/pypi/numpy-stl/ # pip install num
 from scipy.spatial import ConvexHull
 import numpy as np
 # ~ Local ~
-from marchhare.marchhare import tandem_sorted , incr_max_step , iter_contains_None 
-from marchhare.MathKit import round_small
-from marchhare.Vector import vec_avg , matx_zeros , vec_angle_between , vec_unit # , matx_2D_pretty_print
-from marchhare.VectorMath.Vector2D import point_in_poly_w , d_point_to_segment_2D_signed
-from marchhare.VectorMath.Vector3D import point_basis_change , transform_to_frame , pnt_proj_to_plane
-from marchhare.Graph import TaggedLookup
+from marchhare import tandem_sorted , incr_max_step , iter_contains_None 
+from MathKit import round_small
+from Vector import vec_avg , matx_zeros , vec_angle_between , vec_unit # , matx_2D_pretty_print
+from VectorMath.Vector2D import point_in_poly_w , d_point_to_segment_2D_signed
+from VectorMath.Vector3D import point_basis_change , transform_to_frame , pnt_proj_to_plane
+from Graph import TaggedLookup
 
 # ~~ Constants , Shortcuts , Aliases ~~
 EPSILON = 1e-7 # ------ Assume floating point errors below this level

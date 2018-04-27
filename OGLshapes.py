@@ -176,6 +176,11 @@ class Point_OGL( OGLDrawable ):
         self.size = size # ------------------- Width of point marker
         self.colors = ( [ tuple( color ) ] ) # Point marker color
         
+    def set_pos( self , pos ):
+        """ Set the position of the point """
+        self.vertices = tuple( pos )
+        self.vertX = list( self.vertices )
+        
     def draw( self ):
         """ Render the point """
         # [1]. If OGL transforms enabled , Translate and rotate the OGL state machine to desired rendering frame
@@ -637,7 +642,7 @@ class OGL_App( pyglet.window.Window ):
         # ~ View Frustum Setup ~
         glMatrixMode( GL_PROJECTION )
         glLoadIdentity()
-        gluPerspective( 70 , self.width / float( self.height ) , 0.1 , 200 )
+        gluPerspective( 70 , self.width / float( self.height ) , 0.1 , 200 ) # Camera properties
         # ~ View Direction Setup ~
         glMatrixMode( GL_MODELVIEW )
         glLoadIdentity()
