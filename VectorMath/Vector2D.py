@@ -144,7 +144,7 @@ def d_point_to_segment_2D_signed( point , segment ):
     num = ( segPt2[0] - segPt1[0] ) * ( segPt1[1] - point[1] ) - ( segPt1[0] - point[0] ) * ( segPt2[1] - segPt1[1] )
     return abs( num ) / sqrt( ( segPt2[0] - segPt1[0] )**2 + ( segPt2[1] - segPt1[1] )**2 ) * np.sign( num )
 
-def intersect_seg_2D( seg1 , seg2 , slideCoincident = False , includeEndpoints = True ): # <<< resenv
+def intersect_seg_2D( seg1 , seg2 , slideCoincident = False , includeEndpoints = True ): 
     """ Return true if line segments 'seg1' and 'seg2' intersect, otherwise false """
     # URL: http://www-cs.ccny.cuny.edu/~wolberg/capstone/intersection/Intersection%20point%20of%20two%20lines.html
     # NOTE: 'uA' and 'uB' could be used to calc intersection point if desired, see above URL
