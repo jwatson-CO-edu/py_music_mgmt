@@ -137,7 +137,7 @@ def tick_progress( div = 1000 , reset = False ):
             tick_progress.ticks += 1
             print tick_progress.sequence[ tick_progress.ticks % ( len( tick_progress.sequence ) ) ] ,
 tick_progress.totalCalls = 0
-tick_progress.sequence = [ "'" , "-" , "," , "_" , "," , "-" , "'" , "`" , "`" ] # This makes a quite pleasant wave
+tick_progress.sequence = [ "'" , "-" , "," , "_" , "," , "-" , "'" , "`" , "`" ] # This makes quite a pleasant wave
 tick_progress.ticks = 0
 
 # __ End Time __
@@ -901,6 +901,23 @@ def tokenize_with_wspace( rawStr , evalFunc = str ):
     """ Return a list of tokens taken from 'rawStr' that is partitioned with whitespace, transforming each token with 'evalFunc' """
     return [ evalFunc( rawToken ) for rawToken in rawStr.split() ]
     
+def tokenize_with_separator( rawStr , separator , evalFunc = str ):
+    """ Return a list of tokens taken from 'rawStr' that is partitioned with 'separator', transforming each token with 'evalFunc' """
+    # TODO: Maybe this could be done with brevity using regex?
+    tokens = [] # list of tokens to return
+    currToken = '' # the current token, built a character at a time
+    for char in rawStr: # for each character of the input string
+        if not char.isspace(): # if the current char is not whitespace, process
+            if not char == separator: # if the character is not a separator, then
+                currToken += char # accumulate the char onto the current token
+            else: # else the character is a separator, process the previous token
+                tokens.append( evalFunc( currToken ) ) # transform token and append to the token list
+                currToken = '' # reset the current token
+        # else is whitespace, ignore
+    if currToken: # If there is data in 'currToken', process it
+        tokens.append( evalFunc( currToken ) ) # transform token and append to the token list
+    return tokens
+
 def format_dec_list( numList , places = 2 ): # <<< resenv
     """ Return a string representing a list of decimal numbers limited to 'places' """
     rtnStr = "[ "
