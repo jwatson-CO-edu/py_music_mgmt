@@ -36,6 +36,7 @@ def split_to_components( vecList ):
     plotYs = []
     plotZs = []
     for vec in vecList:
+#        print vec
         plotXs.append( vec[0] )
         plotYs.append( vec[1] )
         plotZs.append( vec[2] )
@@ -123,8 +124,13 @@ def fig_3d():
     
 def show_3d():
     """ Show all the 3D figures, should only be called once per program """
-    plt.gca().set_aspect('equal')
+#    plt.gca().set_aspect('equal')
+    plt.axis('equal')
     plt.show()
+    
+def ax_view( ax , azimuth , elevation ):
+    """ Set the camera view for the axes """
+    ax.view_init( azimuth , elevation )
     
 def plot_points_to_ax( ax , ptsList , size = 14 , color = 'blue' , mrkr = 'o' ):
     xs , ys , zs = split_to_components( ptsList )
