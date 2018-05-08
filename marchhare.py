@@ -921,7 +921,7 @@ def validate_dirs_writable( *dirList ):
 
 # == String Processing ==
 
-def strip_after_first( pStr , char ): # <<< resenv
+def strip_after_first( pStr , char ): 
     """ Return a version of 'pStr' in which the first instance of 'char' and everything that follows is removed, if 'char' exists in 'pStr', otherwise return 'pStr' """
     firstDex = pStr.find( char )
     if firstDex > -1:
@@ -963,8 +963,16 @@ def format_dec_list( numList , places = 2 ): # <<< resenv
             rtnStr += ('{0:.' + str( places ) + 'g}').format( scalar )
     rtnStr += " ]"
     return rtnStr
+
+def string_contains_any( bigStr , subsList ):
+    """ Return True if 'bigStr' contains any of the substrings in 'subsList' , Otherwise return False """
+    for sub in subsList:
+        if sub in bigStr:
+            return True
+    return False
     
 # __ End Strings __
+
 
 # == Timing / Benchmarking ==
 
