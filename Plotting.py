@@ -119,13 +119,23 @@ fig_num.num = 0
 def fig_3d():
     """ Create a new 3D figure and return handles to figure and axes """
     fig = plt.figure( fig_num() )
-    ax = fig.add_subplot(111, projection='3d')
+    ax = fig.add_subplot( 111 , projection = '3d' )
     return fig , ax
     
 def show_3d():
     """ Show all the 3D figures, should only be called once per program """
 #    plt.gca().set_aspect('equal')
     plt.axis('equal')
+    plt.show()
+
+def fig_2d():
+    """ Create a new 2D figure (default) and return handles to figure and axes """
+    fig = plt.figure( fig_num() )
+    ax = fig.add_subplot( 111 )
+    return fig , ax
+
+def show_2d():
+    """ Show all the 2D figures, should only be called once per program """
     plt.show()
     
 def ax_view( ax , azimuth , elevation ):
@@ -150,7 +160,6 @@ def plot_points_only_list( ptsList , size = 14 , color = 'blue' , mrkr = 'o' , p
     plt.gca().set_aspect('equal')
     plt.show()
     
-
 def plot_chain_to_ax( ax , ptsList , makeCycle = False , color = 'blue' , width = 1 ):
     xs , ys , zs = split_to_components( ptsList )
     if makeCycle:
@@ -172,3 +181,10 @@ def plot_chain( ptsList , makeCycle = False , color = 'blue' , paintAxes = False
     
     plt.gca().set_aspect( 'equal' )
     plt.show() 
+    
+def plot2D_chain_to_ax( ax , ptsList , makeCycle = False , color = 'blue' , width = 1 ):
+    xs , ys = split_to_2D( ptsList )
+    if makeCycle:
+        for coordList in [ xs , ys ]:
+            coordList.append( coordList[0] )
+    ax.plot( xs , ys , c = color , linewidth = width )
