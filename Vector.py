@@ -81,7 +81,8 @@ def vec_round_small( vec ):
 
 def vec_unit( vec ): 
     """ Return a unit vector in the direction of 'vec', using numpy """
-    return np.divide( vec , np.linalg.norm( vec ) )
+    mag = np.linalg.norm( vec )
+    return np.divide( vec , 1 if eq( mag , 0 ) else mag )
 
 def vec_proj( a , b ): # <<< resenv
     """ a projected onto b, a scalar length, using numpy """
@@ -96,6 +97,8 @@ def vec_angle_between( v1 , v2 ):
         # URL, angle between two vectors: http://stackoverflow.com/a/13849249/893511
     v1_u = vec_unit( v1 )
     v2_u = vec_unit( v2 )
+    if eq( vec_mag( v1_u ) , 0 ) or eq( vec_mag( v2_u ) , 0 ):
+        return float('nan')
     angle = np.arccos( np.dot( v1_u , v2_u) )
     if np.isnan( angle ):
         if ( v1_u == v2_u ).all():
