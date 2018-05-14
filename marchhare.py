@@ -69,7 +69,7 @@ def add_container_to_path( fName ):
 
 # == Helper Functions ==
 
-def sep( title = "" , width = 6 , char = '=' , strOut = False ): # <<< resenv
+def sep( title = "" , width = 6 , char = '=' , strOut = False ): 
     """ Print a separating title card for debug """
     LINE = width * char
     if strOut:
