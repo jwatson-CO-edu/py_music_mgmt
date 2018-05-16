@@ -63,6 +63,29 @@ def add_container_to_path( fName ):
     containerDir = os.path.dirname( fName )
     if containerDir not in sys.path:
         sys.path.append( containerDir )
+        
+def first_valid_dir( dirList ):
+    """ Return the first valid directory in 'dirList', otherwise return False if no valid directories exist in the list """
+    rtnDir = False
+    for drctry in dirList:
+        if os.path.exists( drctry ):
+			rtnDir = drctry 
+			break
+    return rtnDir
+        
+def add_first_valid_dir_to_path( dirList ):
+    """ Add the first valid directory in 'dirList' to the system path """
+    # In lieu of actually installing the library, just keep a list of all the places it could be in each environment
+    validDir = first_valid_dir(dirList)
+    print __file__ , "is attempting to load a path ...",
+    if validDir:
+        if validDir in sys.path:
+            print "Already in sys.path:", validDir
+        else:
+            sys.path.append( validDir )
+            print 'Loaded:', str( validDir )
+    else:
+        raise ImportError("None of the specified directories were loaded") # Assume that not having this loaded is a bad thing
 
 # __ End PATH __
 

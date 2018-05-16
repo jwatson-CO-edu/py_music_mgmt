@@ -221,7 +221,7 @@ def vec_random( dim ): # <<< resenv
         rtnVec.append( random() )
     return rtnVec
 
-def vec_random_range( dim , limLo , limHi ): # <<< resenv
+def vec_random_range( dim , limLo , limHi ): 
     """ Return a vector in which each element takes on a random value between 'limLo' and 'limHi' with a uniform distribution """
     rtnVec = []
     randVec = vec_random( dim )
@@ -237,7 +237,7 @@ def vec_rand_range_lst( dim , limLo , limHi , N ):
         rtnList.append( vec_random_range( dim , limLo , limHi ) )
     return rtnList
 
-def vec_random_limits( dim , limits ): # <<< resenv
+def vec_random_limits( dim , limits ): 
     """ Return a vector in which each element takes on a random value between 'limits[i][0]' and 'limits[i][1]' with a uniform distribution """
     rtnVec = []
     randVec = vec_random( dim )

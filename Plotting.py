@@ -118,6 +118,7 @@ fig_num.num = 0
  
 def fig_3d():
     """ Create a new 3D figure and return handles to figure and axes """
+    # USAGE: fig , ax = fig_3d()
     fig = plt.figure( fig_num() )
     ax = fig.add_subplot( 111 , projection = '3d' )
     return fig , ax
