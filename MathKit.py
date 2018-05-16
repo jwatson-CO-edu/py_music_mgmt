@@ -248,6 +248,10 @@ def percent_change( oldVal , newVal ):
 
 # = Dice Rolls =
 
+def flip_weighted( truProb ):
+    """ Return True with probability 'truProb' , Otherwise return False """
+    return random() <= truProb
+
 def normalize_die( distribution ): 
     """ Given relative odds, return partitions of a distribution on a number line from 0 to 1 """
     # This function assumes that all numbers in the distribution are positive
