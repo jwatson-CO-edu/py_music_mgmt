@@ -189,3 +189,47 @@ def plot2D_chain_to_ax( ax , ptsList , makeCycle = False , color = 'blue' , widt
         for coordList in [ xs , ys ]:
             coordList.append( coordList[0] )
     ax.plot( xs , ys , c = color , linewidth = width )
+    
+def plot_VF_to_ax( ax , V , F , color = 'blue' , width = 1 ):
+    """ Plot wireframe trimesh to axes """
+    for i , f_i in enumerate( F ):
+        triPts = []
+        for vDex in f_i:
+            triPts.append( V[vDex][:] )
+        plot_chain_to_ax( ax , triPts , True , color , width )
+      
+def axes_equal( ax ):
+    """ Use the pre-stretch axes limits to stretch the axes to equal scales """
+    xDataRange = ax.get_xlim();  xCen = ( xDataRange[1] + xDataRange[0] ) / 2.0;  lngth = abs( xDataRange[1] - xDataRange[0] )
+    yDataRange = ax.get_ylim();  yCen = ( yDataRange[1] + yDataRange[0] ) / 2.0;  width = abs( yDataRange[1] - yDataRange[0] )
+    zDataRange = ax.get_zlim();  zCen = ( zDataRange[1] + zDataRange[0] ) / 2.0;  depth = abs( zDataRange[1] - zDataRange[0] )
+    span = max( [ lngth , width , depth ] )
+    
+    xLims = [ xCen - span/2.0 , xCen + span/2.0 ]
+    yLims = [ yCen - span/2.0 , yCen + span/2.0 ]
+    zLims = [ zCen - span/2.0 , zCen + span/2.0 ]
+    
+    corners = []
+    
+    for x in xLims:
+        for y in yLims:
+            for z in zLims:
+                corners.append( [ x , y , z ] )
+                
+    plot_points_to_ax( ax , corners , size = 1 , color = 'white' , mrkr = '.' )
+        
+# === SPARE PARTS ==========================================================================================================================
+        
+
+            
+    
+#    ax.set_xlim(  );
+#    ax.set_ylim(  );
+#    ax.set_zlim(  );
+#    ax.set_xbound( xCen - span/2.0 , xCen + span/2.0 );
+#    ax.set_ybound( yCen - span/2.0 , yCen + span/2.0 );
+#    ax.set_zbound( zCen - span/2.0 , zCen + span/2.0 );
+    
+#    ax.set_aspect( 'equal' , adjustable = 'box' )
+        
+# ___ END SPARE ____________________________________________________________________________________________________________________________
