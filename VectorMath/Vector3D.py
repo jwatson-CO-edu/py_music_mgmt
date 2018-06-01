@@ -968,3 +968,24 @@ def skew_sym_cross( vecR ):
              [ -vecR[1] ,  vecR[0] ,  0       ] ]
         
 # __ End Homogeneous __
+    
+    
+# == Drawing Helpers and Misc ==
+    
+def circle_arc_3D( axis , center , radius , beginMeasureVec , theta , N ):
+    """ Return points on a circular arc about 'axis' at 'radius' , beginning at 'beginMeasureVec' and turning 'theta' through 'N' points """
+    thetaList = np.linspace( 0 , theta , N )
+    k         = vec_unit( axis )
+    rtnList   = []
+    # 1. Project the theta = 0 vector onto the circle plane
+    measrVec = vec_unit( vec_proj_to_plane( beginMeasureVec , axis ) )
+    # 2. For each theta
+    for theta_i in thetaList:
+        # 3. Create a rotation matrix for the rotation
+        R = rot_matx_ang_axs( theta_i , k  )
+        # 4. Apply rotation to the measure vector && 5. Scale the vector to the radius && 6. Add to the center && 7. Append to the list
+        rtnList.append( np.add( center , np.multiply( np.dot( R , measrVec ) , radius ) ) )
+    # 8. Return
+    return rtnList
+    
+# __ End Misc __
