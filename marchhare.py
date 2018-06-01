@@ -201,7 +201,11 @@ def lst( *args ):
 
 def tpl( *args ):
     """ Return a tuple composed of the arbitrary 'args' """
-    return tuple( args )     
+    return tuple( args ) 
+
+def prepend( pList , item ):
+    """ Prepend an item to the front of the list """
+    pList.insert( 0 , item )
 
 def sort_list_to_tuple( pList ):
     """ Return a tuple that contains the sorted elements of 'pList' """
