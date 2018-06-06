@@ -192,7 +192,7 @@ def vec_avg( *vectors ):
     vecSum = np_add( *vectors ) # NOTE: This function assumes that all vectors are the same dimensionality
     return np.divide( vecSum , len( vectors ) * 1.0 )
 
-def is_vector( vec ): # <<< resenv
+def is_vector( vec ): 
     """ Return true if 'vec' is any of { list , numpy array } and thus may particpate in vector operations """
     return isinstance( vec , ( list , np.ndarray ) )
 
@@ -342,6 +342,18 @@ def bbox_from_points( ptsList ):
             bbox[0][i] = min( bbox[0][i] , point[i] ) # Compare the component of the point to the min of the dimension
             bbox[1][i] = max( bbox[1][i] , point[i] ) # Compare the component of the point to the max of the dimension
     return bbox
+
+def AABB( ptsList ):
+    """ Axis-Aligned Bounding Box, Alias for 'bbox_from_points' """
+    return bbox_from_points( ptsList )
+
+def AABB_span( ptsList ):
+    """ Return the span of each dimension covered by the AABB of 'ptsList' """
+    bbox = bbox_from_points( ptsList )
+    span = [ 0 for i in xrange( len( bbox[0] ) ) ]
+    for i in xrange( len( bbox[0] ) ):
+        span[i] = abs( bbox[1][i] - bbox[0][i] )
+    return span
 
 # == Plotting Helpers ==
 

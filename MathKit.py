@@ -80,6 +80,14 @@ def index_eq( pList , num , margin = EPSILON ):
             return index
     return None
 
+def product( iterable ):
+    """ Return the product of all the elements in 'iterable' """
+    # NOTE: This function assumes that 'iterable' has at least one element
+    rtnVal = iterable[0]
+    for i in xrange( 1 , len( iterable ) ):
+        rtnVal *= iterable[i]
+    return rtnVal
+
 # _ End Equality _
 
 def wrap_normalize( wrapBounds , number ):
