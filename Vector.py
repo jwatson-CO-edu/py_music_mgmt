@@ -144,7 +144,7 @@ def vec_sum_chain(vecList): # <<< resenv
         ptsList.append( np.add( ptsList[-1] , vecList[i] ) )
     return ptsList
 
-def vec_eq( vec1 , vec2 , margin = EPSILON ): # <<< resenv
+def vec_eq( vec1 , vec2 , margin = EPSILON ):
     """ Return true if two vectors are equal enough, otherwise false """
     if len(vec1) == len(vec2):
         for i in range(len(vec1)):
