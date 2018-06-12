@@ -895,7 +895,7 @@ class accum:
         """ Print args and store them in a string """
         for arg in args:
             accum.totalStr += str(arg) + " "
-            print str(arg),
+            print str(arg) ,
         print
         accum.totalStr += endl
 
@@ -911,9 +911,10 @@ class accum:
     @staticmethod
     def write( *args ):
         """ Store 'args' in the accumulation string without printing """
-        for arg in args:
-            accum.totalStr += str(arg) + " "
-        accum.totalStr += endl
+        numArgs = len( args )
+        for i , arg in enumerate( args ):
+            accum.totalStr += str(arg) + ( " " if i < numArgs-1 else "" )
+#        accum.totalStr += endl
 
     @staticmethod
     def out_and_clear( outPath ):
