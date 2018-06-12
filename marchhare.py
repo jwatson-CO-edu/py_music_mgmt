@@ -438,7 +438,7 @@ class Queue(list):
         """ Return a copy of the Queue as a list """
         return self[:]
 
-class PriorityQueue(list): # Requires heapq 
+class PriorityQueue( list ): # Requires heapq 
     """ Implements a priority queue data structure. """ 
     # NOTE: PriorityQueue does not allow you to change the priority of an item. 
     #       You may insert the same item multiple times with different priorities. 
