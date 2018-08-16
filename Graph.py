@@ -244,6 +244,35 @@ class WeightedList( list ):
 
 # === Graph Classes ===
 
+# == class SimpleNode ==
+
+class SimpleNode:
+    """ Search tree node without a specific application in mind """    
+    
+    def __init__( self , data = None , parent = None ):
+        self.data          = data # - Configuration
+        self.children      = [] # --- Successors , possibly leading to the goal configuration
+        self.parent        = parent # Parent , for constructing path back to the start configuration
+
+    def add_child( self , child ):
+        """ Add a successor node """
+        # NOTE: No correctness checks are made before adding
+        self.children.append( child )
+        
+    def remove_child_by_ref( self , childRef ):
+        """ Remove the object referred to by 'childRef' from 'self.children' , if 'childRef' DNE then fail gracefully """
+        try:
+            self.children.remove( childRef )
+        except ValueError:
+            print "WARN , Node.remove_child_by_ref: Reference" , childRef , "DNE in list of successors!"
+        
+    def __str__( self ):
+        """ Return a string representation of the TreeNode """
+        return "Node@" + str( id( self ) )
+
+# __ End SimpleNode __
+        
+
 # == class Node ==
 
 class Node(TaggedObject):
@@ -283,7 +312,7 @@ class Node(TaggedObject):
         """ Return a list of successors of the current node """
         return self.edges[:]
         
-# == End Node ==
+# __ End Node __
 
 # == class Graph ==
 
