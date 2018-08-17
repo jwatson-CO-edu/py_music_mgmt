@@ -846,15 +846,17 @@ def load_pkl_struct( pklPath ): # <<< resenv
         f.close()
     return rtnStruct
     
-def process_txt_for_LaTeX( TXTpath ):  # <<< resenv
-    """ Add appropriate line breaks to a TXT file and return as TEX """
+def process_txt_for_LaTeX( TXTpath , ltxPath = None ):  
+    """ Add appropriate line breaks to a TXT file and return as TEX file handle """
+    # NOTE: This function writes a TEX file and returns the handle
     if os.path.isfile( TXTpath ):
         drctry , txtName = os.path.split( TXTpath )
         ltxName = txtName[:-4] + ".tex"
         txtFile = file( TXTpath , 'r' )
         txtLines = txtFile.readlines()
         txtFile.close()
-        ltxPath = os.path.join( drctry , ltxName )
+        if ltxPath == None:
+            ltxPath = os.path.join( drctry , ltxName )
         ltxFile = file( ltxPath , 'w' )
         for line in txtLines:
             # print "Line is:", line
@@ -863,6 +865,7 @@ def process_txt_for_LaTeX( TXTpath ):  # <<< resenv
             else:
                 ltxFile.write( " $\\ $ \\\\ " + endl ) 
         ltxFile.close()
+        return ltxFile
     else:
         raise IOError( "process_txt_for_LaTeX: " +str(TXTpath)+ " did not point to a file!" )
         
@@ -921,6 +924,11 @@ class accum:
         outFile = file( outPath , 'w' )
         outFile.write( accum.totalStr )
         outFile.close()
+        accum.totalStr = ""
+        
+    @staticmethod
+    def clear():
+        """ Clear the contents of 'accum.totalStr' """
         accum.totalStr = ""
 
 # _ End accum _
