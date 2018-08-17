@@ -29,7 +29,7 @@ if "CV_Utils" not in sys.modules:
 
 # == Tagged Object ==
 
-class TaggedObject(object):
+class TaggedObject( object ):
     """ An object with a unique tag and a string alias """
     
     def __init__( self ):
@@ -275,17 +275,25 @@ class SimpleNode:
 
 # == class Node ==
 
-class Node(TaggedObject):
+class Node( TaggedObject ):
     """ A graph node with edges """    
     
     def __init__( self , pGraph = None , alias = None , nCost = 1.0 ):
         super( Node , self ).__init__()
         self.edges = WeightedList() # NOTE: These represent outgoing edges. Incoming edges are represented as references to this Node in other Nodes
-        self.graph = pGraph # The graph that this node belongs to
+        # The graph that this node belongs to
+        self.graph = pGraph 
         if alias != None: # If there was an alias specified , then store it
             self.give_alias( alias ) 
         self.bag = Counter( default = None ) # This is a generic place to dump miscellaneous
         self.cost = nCost # Numeric cost associated with this node
+        self.parent = None
+        
+    def add_child( self , pNode , weight = {} ):
+        """ Connect an edge between this Node and 'pNode' """
+        # NOTE: This function assumes that an undirected edge has the same weight in both directions
+        self.edges.append( pNode , weight ) # NOTE: This function assumes this Node is the tail
+        pNode.parent = self
         
     def connect_to( self , pNode , pDir = False , weight = {} ):
         """ Connect an edge between this Node and 'pNode' """
@@ -293,18 +301,11 @@ class Node(TaggedObject):
         self.edges.append( pNode , weight ) # NOTE: This function assumes this Node is the tail
         if not pDir: # If the edge is not directed, add a reference from 'pNode' back to this Node
             pNode.edges.append( self , weight )
-        if self.alias != None and pNode.alias != None:
-            return ( self.alias , pNode.alias , pDir ) # Return a representation of this edge for use with Graph
-            #      ( Tail        , Head       , Directed? )  : Tail ---> Head
-        else:
-            return ( self.tag , pNode.tag , pDir ) # Return a representation of this edge for use with Graph
-            #      ( Tail     , Head      , Directed? )  : Tail ---> Head
         
     def connect_to_checked( self , pNode , pDir = False , weight = {}  ):
         """ Connect an edge between this Node and 'pNode' , avoiding duplicates """
         if pNode not in self.edges and self not in pNode.edges:
-            return self.connect_to( pNode , pDir , weight )
-            #      ( Tail     , Head      , Directed? )  : Tail ---> Head
+            self.connect_to( pNode , pDir , weight )
         else: # Else this edge exists, connection failed
             return None
         
@@ -316,7 +317,7 @@ class Node(TaggedObject):
 
 # == class Graph ==
 
-class Graph(TaggedObject):
+class Graph( TaggedObject ):
     """ A simple graph structure with nodes and edges """
     
     def __init__( self , rootNode = None ):
@@ -324,6 +325,10 @@ class Graph(TaggedObject):
         self.nodes = TaggedLookup()
         self.edges = [] # For now not providing any sort of fancy lookup structure for edges
         self.root = rootNode
+        
+    def __str__( self ):
+        """ Return a string representation of the Graph """
+        return "Graph@" + str( id( self ) ) + " with " + str( len( self.nodes ) ) + " nodes"
         
     def add_node_by_ref( self , nodeRef ):
         """ Add a Node , make note of tag and alias for easy lookup """ 
@@ -341,6 +346,7 @@ class Graph(TaggedObject):
         temp = Node( self , alias )
         temp.graph = self # Establish node membership
         self.nodes.append( temp )
+        return temp
         
     def get_node_by_als( self , nodeAls ):
         """ Search for a node by its alias and return the reference if the node exists in the problem """
@@ -349,6 +355,15 @@ class Graph(TaggedObject):
     def connect_by_ref( self , tail , head , pDir = False , weight = {} ):
         """ Connect two nodes , assuming we already have references to them """
         self.edges.append( tail.connect_to( head , pDir , weight ) )
+        
+    def connect_by_als( self , tailAls , headAls , pDir = False , weight = {} ):
+        """ Connect two nodes using their aliases """
+        tail = self.get_node_by_als( tailAls )
+        head = self.get_node_by_als( headAls )
+        if ( tail and head ):
+            self.edges.append( tail.connect_to( head , pDir , weight ) )
+        else:
+            print "WARN , Graph.connect_by_als: One of" , tailAls , "or" , headAls , "DNE in this Graph"
         
     def get_node_list( self ):
         """ Return a list of nodes in this graph """
