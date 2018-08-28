@@ -14,16 +14,16 @@ General purpose graph classes and methods
 import collections , sys 
 # ~ Special ~
 # ~ Local ~
-from marchhare import Counter
+from marchhare import Counter , Stack
 
-if "CV_Utils" not in sys.modules:
-    print "Loading special vars ..." , 
-    import os
-    EPSILON = 1e-7
-    infty = 1e309 # URL: http://stackoverflow.com/questions/1628026/python-infinity-any-caveats#comment31860436_1628026
-    endl = os.linesep
-    DISPLAYPLACES = 5 # Display 5 decimal places by default
-    print "Loaded!"
+
+print "Loading special vars ..." , 
+import os
+EPSILON = 1e-7
+infty = 1e309 # URL: http://stackoverflow.com/questions/1628026/python-infinity-any-caveats#comment31860436_1628026
+endl = os.linesep
+DISPLAYPLACES = 5 # Display 5 decimal places by default
+print "Loaded!"
 
 # === Data Structures ===
 
@@ -379,6 +379,38 @@ class Graph( TaggedObject ):
         for noDex , currNode in enumerate( self.get_node_list() ):
             # URL , Two ways to remove dict key: https://stackoverflow.com/questions/11277432/how-to-remove-a-key-from-a-python-dictionary
             currNode.bag.pop( 'index' , None ) # Remove the 'index' key , if it exists
+            
+    def dfs( self , initNode , is_goal ):
+        ''' Depth First Search 
+    
+        init_state - the intial state on the map
+        f -          transition function of the form s_prime = f(s,a)
+        is_goal -    function taking as input a state s and returning True if its a goal state
+        actions -    set of actions which can be taken by the agent
+    
+        returns -     ((path, action_path), visited) or None if no path can be found
+            goal_node -   The first node that meets the goal requirement
+            path -        a list of tuples. The first element is the initial state followed by all states traversed until the final goal state
+            action_path - the actions taken to transition from the initial state to goal state '''
+        
+        frontier = Stack() # Search stack, pop from the top
+        n0 = initNode
+        n0.path = [] # Attach a sequence to each node to record the path to it, this may consume a lot of space for large problems
+        frontier.push( n0 ) # Push the starting node on the frontier
+        visited = set([]) 
+        while len( frontier ) > 0: # While states remain on the frontier
+            n_i = frontier.pop() # Pop last element
+            if n_i.tag not in visited: # If the state has not been previously popped, then
+                visited.add( n_i.tag ) # Log the visit
+                currentPath = n_i.path # Path to the current state
+                if is_goal( n_i ): # If the goal has been reached, return path and visited information
+                    return ( n_i , n_i.path + [ n_i.tag ] , visited )
+                else: # else is not goal
+                    for edge in n_i.edges:
+                        s_prime = edge
+                        s_prime.path = currentPath[:] + [ n_i.tag ] # Assemble a plan that is the path so far plus the current action
+                        frontier.push( n_prime ) # Push onto top of the frontier                        
+        return visited # The frontier has been exhausted without finding the goal, return the sad story of the journey    
         
 # == End Graph ==
         
