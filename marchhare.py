@@ -903,7 +903,7 @@ class accum:
         accum.totalStr += endl
 
     @staticmethod
-    def accum_sep( title = "" , char = '=' , width = 6 , strOut = False ):
+    def accum_sep( title = "" , width = 6 , char = '=' , strOut = False ):
         """ Print a separating title card for debug """
         LINE = width * char
         if strOut:

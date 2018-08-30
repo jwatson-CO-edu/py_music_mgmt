@@ -94,6 +94,10 @@ class TaggedLookup( list ):
                 print "Object with tag",pTag,"DNE in this problem"
         return rtnObj
         
+    def tag_exists( self , tag ):
+        """ Return True if 'tag' exists in 'lookupByTag' as a key , Otherwise return False """
+        return tag in self.lookupByTag.keys()
+        
     def get_by_als(self, pAls):
         """ Return an object reference from the lookup with a matching alias if it exists, otherwise return None """
         try:
@@ -102,6 +106,10 @@ class TaggedLookup( list ):
             if self.verbose:
                 print "Object with alias",pAls,"DNE in this problem"
             return None
+        
+    def als_exists( self , als ):
+        """ Return True if 'als' exists in 'lookupByAls' as a key , Otherwise return False """
+        return als in self.lookupByAls.keys()    
                         
     def __str__(self):
         """ Print all contents by tag """
@@ -347,6 +355,11 @@ class Graph( TaggedObject ):
         # NOTE: A Node needn't be a member of the Graph in order to be reachable , this function is for establishing the relationship when it is important
         nodeRef.graph = self # Establish node membership
         self.nodes.append( nodeRef )
+        
+    def add_node_by_ref_safe( self , nodeRef ):
+        """ Add the node only if a Node with such a tag does not already exist in the Graph """
+        if ( not self.nodes.tag_exists( nodeRef.tag ) ) and ( not self.nodes.als_exists( nodeRef.alias ) ):
+            self.nodes.append( nodeRef )
         
     def rem_node_by_ref( self , nodeRef ):
         """ Remove a Node that matches the reference """
