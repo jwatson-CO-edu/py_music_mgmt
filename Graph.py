@@ -313,6 +313,10 @@ class Node( TaggedObject ):
         """ Return a list of successors of the current node """
         return self.edges[:]
         
+    def num_successors( self ):
+        """ Return the number of successors """
+        return len( self.edges )
+        
 # __ End Node __
 
 # == class Graph ==
@@ -329,6 +333,14 @@ class Graph( TaggedObject ):
     def __str__( self ):
         """ Return a string representation of the Graph """
         return "Graph@" + str( id( self ) ) + " with " + str( len( self.nodes ) ) + " nodes"
+    
+    def get_root( self ):
+        """ Return the root node """
+        return self.root
+    
+    def set_root( self , rootNode ):
+        """ Set the root node """
+        self.root = rootNode
         
     def add_node_by_ref( self , nodeRef ):
         """ Add a Node , make note of tag and alias for easy lookup """ 
@@ -409,8 +421,8 @@ class Graph( TaggedObject ):
                     for edge in n_i.edges:
                         s_prime = edge
                         s_prime.path = currentPath[:] + [ n_i.tag ] # Assemble a plan that is the path so far plus the current action
-                        frontier.push( n_prime ) # Push onto top of the frontier                        
-        return visited # The frontier has been exhausted without finding the goal, return the sad story of the journey    
+                        frontier.push( s_prime ) # Push onto top of the frontier                        
+        return ( None , None , visited ) # The frontier has been exhausted without finding the goal, return the sad story of the journey    
         
 # == End Graph ==
         
