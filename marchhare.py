@@ -125,10 +125,10 @@ elapsed_w_msg.lastTime = None
 elapsed_w_msg.s_in_hr = 60 * 60
 elapsed_w_msg.s_in_mn = 60
 
-nowTimeStamp = lambda: datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S') # http://stackoverflow.com/a/5215012/893511 # <<< resenv
+nowTimeStamp = lambda: datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S') # http://stackoverflow.com/a/5215012/893511
 """ Return a formatted timestamp string, useful for logging and debugging """
 
-nowTimeStampFine = lambda: datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S-%f') # http://stackoverflow.com/a/5215012/893511 # <<< resenv
+nowTimeStampFine = lambda: datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S-%f') # http://stackoverflow.com/a/5215012/893511
 """ Return a formatted timestamp string, useful for logging and debugging """
 
 def format_epoch_timestamp( sysTime ):
@@ -754,30 +754,35 @@ def lists_as_columns_with_titles( titles , lists ):
     longestItem = 0
     prntLists = []
     pad = 4 * ' '
-    if len(titles) == len(lists):
+    rtnStr = ""
+    if len(titles) == len( lists ):
         for lst in lists:
-            if len(lst) > longestItem:
-                longestList = len(lst)
+            if len( lst ) > longestItem:
+                longestList = len( lst )
             prntLists.append( [] )
             for item in lst:
-                strItem = str(item)
+                strItem = str( item )
                 prntLists[-1].append( strItem )
-                if len(strItem) > longestItem:
-                    longestItem = len(strItem)
+                if len( strItem ) > longestItem:
+                    longestItem = len( strItem )
         line = ''
         for title in titles:
-            line += title[ : len(pad) + longestItem -1 ].rjust( len(pad) + longestItem , ' ' )
+            line += title[ : len(pad) + longestItem -1 ].rjust( len( pad ) + longestItem , ' ' )
         print line
-        for index in range(longestList):
+	rtnStr += line + endl
+        for index in range( longestList ):
             line = ''
             for lst in prntLists:
-                if index < len(lst):
-                    line += pad + lst[index].ljust(longestItem, ' ')
+                if index < len( lst ):
+                    line += pad + lst[ index ].ljust( longestItem , ' ' )
                 else:
                     line += pad + longestItem * ' '
             print line
+	    rtnStr += line + endl
+	return rtnStr
     else:
-        print "Titles" , len(titles) , "and lists" , len(lists) , "of unequal length"
+        print "Titles" , len( titles ) , "and lists" , len( lists ) , "of unequal length"
+	return ''
 
 def print_list( pList ):
     """ Print a list that is composed of the '__str__' of each of the elements in the format "[ elem_0 , ... , elem_n ]" , 
@@ -903,7 +908,7 @@ class accum:
         accum.totalStr += endl
 
     @staticmethod
-    def accum_sep( title = "" , width = 6 , char = '=' , strOut = False ):
+    def sep( title = "" , width = 6 , char = '=' , strOut = False ):
         """ Print a separating title card for debug """
         LINE = width * char
         if strOut:
