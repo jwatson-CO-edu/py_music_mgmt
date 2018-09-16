@@ -181,7 +181,8 @@ def plot_points_only_list( ptsList , size = 14 , color = 'blue' , mrkr = 'o' , p
     if paintAxes:
         plot_axes_3D_mpl( ax , scale = 0.05 )
     
-    plt.gca().set_aspect('equal')
+    # plt.gca().set_aspect('equal')
+    axes_equal( ax )
     plt.show()
     
 def plot_chain_to_ax( ax , ptsList , makeCycle = False , color = 'blue' , width = 1 ):
@@ -239,7 +240,11 @@ def axes_equal( ax ):
             for z in zLims:
                 corners.append( [ x , y , z ] )
                 
-    plot_points_to_ax( ax , corners , size = 1 , color = 'white' , mrkr = '.' )
+    plot_points_to_ax( ax , corners , size = 0.01 , color = 'white' , mrkr = '.' )
+
+def close_all_figs():
+    """ Close all open figures """
+    plt.close('all')
         
 # === SPARE PARTS ==========================================================================================================================
         
