@@ -380,7 +380,27 @@ def FK( model , bodyIndex , q ): # ( Featherstone: bodypos ) # This is modified 
         X_tot = temp
         body = body.parent # This will become 'None' after the root link has been processed
     return np_dot( *X_tot ) # After the root has been processed , there are no more transformations to perform , return
+      
+# URL , Featherstone base jacobian  
+#function J = baseJacobian(M)
+def jacobn_base( model ):
+    """ compute the full model base Jacobian.
+        J = BASEJACOBIAN(M) computes the full model base jJcobian for M. Once
+        computed, the Jacobian J can be used to compute the Jacobian of any
+        tip towards any base using either BODYJACOBIAN (computing the Jacobian
+        for a given tip towards the original base), or REBASEJACOBIAN
+        (computing the Jacobian for a given tip to a given, new base). """
+    # model : the kinematic model description (see MODEL)
+    # for i = 1:length(M.joints) # joint = M.joints{i};
+    numJnts = len( model.joints )
+    for i , joint in enumerate( model.joints ):
         
+#
+#		c = joint.i + (1:joint.ND) - 1;
+#        J(1:6, c) = joint.X0 * joint.S;
+#    end
+#end
+
 def jacobn_manip( model , bodyIndex , q ): # ( Featherstone: bodyJac )
     """ Compute the manipulator jacobian up to the specified link in the tree """
     # NOTE: This function does not depend on the presently stored q state , returned jacobian depends only on given 'q'

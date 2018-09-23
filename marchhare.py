@@ -886,6 +886,10 @@ def strip_after_first( pStr , char ): # <<< resenv
 def tokenize_with_wspace( rawStr , evalFunc = str ): 
     """ Return a list of tokens taken from 'rawStr' that is partitioned with whitespace, transforming each token with 'evalFunc' """
     return [ evalFunc( rawToken ) for rawToken in rawStr.split() ]
+
+def tokenize_with_char( rawStr , separator = ',' ,  evalFunc = str ): 
+    """ Return a list of tokens taken from 'rawStr' that is partitioned with a separating character, transforming each token with 'evalFunc' """
+    return [ evalFunc( rawToken ) for rawToken in rawStr.split( separator ) ]
     
 def format_dec_list( numList , places = 2 ): # <<< resenv
     """ Return a string representing a list of decimal numbers limited to 'places' """
