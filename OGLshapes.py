@@ -15,17 +15,6 @@ Dependencies: numpy , pyglet
 """
 ~~~~~ Development Plan ~~~~~
 
-[Y] Test Vector - COMPLETE
-    |Y| Display test - COMPLETE
-    |Y| Rename - COMPLETE
-    |Y| Style Setters
-        !L! Dynamic - LATER , Not sure what I meant by this
-        !Y! Constant - COMPLETE
-    |Y| Test endpoint change - COMPLETE
-[Y] Give all common class names OGL-specific names - COMPLETE
-[ ] Test Icosahedron
-[ ] Meshes ( This likely requires "numpy-stl" or similar mesh-processing library )
-[Y] Flying camera - COMPLETE , This is fully user settable , so if the client code desires this can change over time
 [ ] Vector array optimization ( See Drawable )
 
 """
@@ -67,15 +56,15 @@ def generate_segment_indices_for_OGmesh( pF , Fcadence = 3 ):
             if pairs_eq( testPair , pair ):
                 return True
         return False
-    F = build_sublists_by_cadence( pF , Fcadence )
+    F = build_sublists_by_cadence( pF , Fcadence ) # This function probably doesn't work for cadence other than 3 , see 'triPairs'
     usedPairs = []
     triPairs  = ( ( 0 , 1 ) , ( 1 , 2 ) , ( 2 , 0 ) )
     # 1. For each facet in the mesh
     for f_i in F:
         # 2. Get all three segments as pairs of V indices
-        triPairs = [ [ f_i[ triPairs[i][j] ] for j in xrange( 2 ) ] for i in xrange( len( triPairs ) ) ]
+        fPairs = [ [ f_i[ triPairs[i][j] ] for j in xrange( 2 ) ] for i in xrange( len( triPairs ) ) ]
         # 3. For each index pair
-        for pair in triPairs:
+        for pair in fPairs:
             # 4. Check the used list to see if this pair has been used
             if not pair_in_list( pair , usedPairs ):
                 # 5. If the pair has not been used , append the pair to the list
@@ -186,6 +175,11 @@ class Point_OGL( OGLDrawable ):
         self.indices = tuple( [ 0 ] ) # ------ Tuple of indices of 'vertX' that determine the which are used to draw what parts of the geometry
         self.size = size # ------------------- Width of point marker
         self.colors = ( [ tuple( color ) ] ) # Point marker color
+        
+    def set_pos( self , pos ):
+        """ Set the position of the point """
+        self.vertices = tuple( pos )
+        self.vertX = list( self.vertices )
         
     def draw( self ):
         """ Render the point """
@@ -370,7 +364,7 @@ class Vector_OGL( OGLDrawable ):
             ( 'v3f' , self.vertX ) #- Vertex list , OpenGL offers an optimized vertex list object , but this is not it
         )
         # Draw the fletchings
-        for i in xrange( len( self.fltchngs ) ): # FIXME: START HERE
+        for i in xrange( len( self.fltchngs ) ): 
             pyglet.graphics.draw_indexed( 
                 6 , # ------------------ Number of seqential triplet in vertex list
                 GL_TRIANGLES , # -------- Draw quadrilaterals
@@ -530,6 +524,10 @@ class Icosahedron_Reg( OGLDrawable ):
         self.colors = ( (  88 , 181 ,  74 ) , # Body color
                         (   0 ,   0 , 255 ) ) # Line color
         
+        self.linDices = generate_segment_indices_for_OGmesh( self.faceDices )
+        self.numPairs = len( self.linDices ) / 2
+        print "DEBUG , There are" , len( self.linDices ) / 2 , "edges"
+        
     def draw( self ):
         """ Render the Icosahedron in OGL , This function assumes that a graphics context already exists """
         # [1]. If OGL transforms enabled , Translate and rotate the OGL state machine to desired rendering frame
@@ -548,7 +546,7 @@ class Icosahedron_Reg( OGLDrawable ):
         pyglet.gl.glLineWidth( 3 )
         # [3]. Render! 
         pyglet.graphics.draw_indexed( 
-            8 , # --------------------- Number of seqential triplet in vertex list
+            12 , # --------------------- Number of seqential triplet in vertex list
             GL_LINES , # -------------- Draw quadrilaterals
             self.linDices , # ---------- Indices where the coordinates are stored
             ( 'v3f' , self.vertX ) # vertex list , OpenGL offers an optimized vertex list object , but this is not it
@@ -607,15 +605,17 @@ class NullDraw( OGLDrawable ):
         
 # ___ End Drawable ___
 
+
 # == class OGL_App ==
         
 class OGL_App( pyglet.window.Window ):
     """ Bookkeepping for Pyglet rendering """
     
-    def __init__( self , objList = [] , caption = 'Pyglet Rendering Window' ):
+    def __init__( self , objList = [] , caption = 'Pyglet Rendering Window' , dispWidth = 640 , dispHeight = 480 , 
+                  clearColor = [ 0.7 , 0.7 , 0.8 , 1 ] ):
         """ Instantiate the environment with a list of objhects to render """
-        super( OGL_App , self ).__init__( resizable = True, caption = caption )
-        glClearColor( 0.7 , 0.7 , 0.8 , 1 ) # Set the BG color for the OGL window
+        super( OGL_App , self ).__init__( resizable = True , caption = caption ,  width = dispWidth , height = dispHeight )
+        glClearColor( *clearColor ) # Set the BG color for the OGL window
         
         # URL: https://www.opengl.org/discussion_boards/showthread.php/165839-Use-gluLookAt-to-navigate-around-the-world
         self.camera = [  2 ,  2 ,  2 , # eyex    , eyey    , eyez    : Camera location , point (world) , XYZ
@@ -642,7 +642,7 @@ class OGL_App( pyglet.window.Window ):
         # ~ View Frustum Setup ~
         glMatrixMode( GL_PROJECTION )
         glLoadIdentity()
-        gluPerspective( 70 , self.width / float( self.height ) , 0.1 , 200 )
+        gluPerspective( 70 , self.width / float( self.height ) , 0.1 , 200 ) # Camera properties
         # ~ View Direction Setup ~
         glMatrixMode( GL_MODELVIEW )
         glLoadIdentity()

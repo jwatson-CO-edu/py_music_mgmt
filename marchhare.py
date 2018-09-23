@@ -63,13 +63,36 @@ def add_container_to_path( fName ):
     containerDir = os.path.dirname( fName )
     if containerDir not in sys.path:
         sys.path.append( containerDir )
+        
+def first_valid_dir( dirList ):
+    """ Return the first valid directory in 'dirList', otherwise return False if no valid directories exist in the list """
+    rtnDir = False
+    for drctry in dirList:
+        if os.path.exists( drctry ):
+			rtnDir = drctry 
+			break
+    return rtnDir
+        
+def add_first_valid_dir_to_path( dirList ):
+    """ Add the first valid directory in 'dirList' to the system path """
+    # In lieu of actually installing the library, just keep a list of all the places it could be in each environment
+    validDir = first_valid_dir(dirList)
+    print __file__ , "is attempting to load a path ...",
+    if validDir:
+        if validDir in sys.path:
+            print "Already in sys.path:", validDir
+        else:
+            sys.path.append( validDir )
+            print 'Loaded:', str( validDir )
+    else:
+        raise ImportError("None of the specified directories were loaded") # Assume that not having this loaded is a bad thing
 
 # __ End PATH __
 
 
 # == Helper Functions ==
 
-def sep( title = "" , width = 6 , char = '=' , strOut = False ): # <<< resenv
+def sep( title = "" , width = 6 , char = '=' , strOut = False ): 
     """ Print a separating title card for debug """
     LINE = width * char
     if strOut:
@@ -102,10 +125,10 @@ elapsed_w_msg.lastTime = None
 elapsed_w_msg.s_in_hr = 60 * 60
 elapsed_w_msg.s_in_mn = 60
 
-nowTimeStamp = lambda: datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S') # http://stackoverflow.com/a/5215012/893511 # <<< resenv
+nowTimeStamp = lambda: datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S') # http://stackoverflow.com/a/5215012/893511
 """ Return a formatted timestamp string, useful for logging and debugging """
 
-nowTimeStampFine = lambda: datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S-%f') # http://stackoverflow.com/a/5215012/893511 # <<< resenv
+nowTimeStampFine = lambda: datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S-%f') # http://stackoverflow.com/a/5215012/893511
 """ Return a formatted timestamp string, useful for logging and debugging """
 
 def format_epoch_timestamp( sysTime ):
@@ -137,20 +160,35 @@ def tick_progress( div = 1000 , reset = False ):
             tick_progress.ticks += 1
             print tick_progress.sequence[ tick_progress.ticks % ( len( tick_progress.sequence ) ) ] ,
 tick_progress.totalCalls = 0
-tick_progress.sequence = [ "'" , "-" , "," , "_" , "," , "-" , "'" , "`" , "`" ] # This makes a quite pleasant wave
+tick_progress.sequence = [ "'" , "-" , "," , "_" , "," , "-" , "'" , "`" , "`" ] # This makes quite a pleasant wave
 tick_progress.ticks = 0
 
 # __ End Time __
 
+
 # == Data Structures , Special Lists , and Iterable Operations ==
 
 def elemw( iterable , i ): 
-    """ Return the 'i'th index of 'iterable', wrapping to index 0 at all integer multiples of 'len(iterable)' """
-    return iterable[ i % ( len(iterable) ) ]
+    """ Return the 'i'th index of 'iterable', wrapping to index 0 at all integer multiples of 'len(iterable)' , Wraps forward and backwards """
+    seqLen = len( iterable )
+    if i >= 0:
+        return iterable[ i % ( seqLen ) ]
+    else:
+        revDex = abs( i ) % ( seqLen )
+        if revDex == 0:
+            return iterable[ 0 ]
+        return iterable[ seqLen - revDex ]
                     
 def indexw( iterable , i ): 
     """ Return the 'i'th index of 'iterable', wrapping to index 0 at all integer multiples of 'len(iterable)' """
-    return i % ( len(iterable) )
+    seqLen = len( iterable )
+    if i >= 0:
+        return i % ( seqLen )
+    else:
+        revDex = abs( i ) % ( seqLen )
+        if revDex == 0:
+            return 0
+        return seqLen - revDex
     
 def same_contents_list( lst1 , lst2 ):
     """ Determine if every element in 'lst1' can be found in 'lst2' , and vice-versa , NOTE: This function assumes all elements are hashable """
@@ -163,7 +201,11 @@ def lst( *args ):
 
 def tpl( *args ):
     """ Return a tuple composed of the arbitrary 'args' """
-    return tuple( args )     
+    return tuple( args ) 
+
+def prepend( pList , item ):
+    """ Prepend an item to the front of the list """
+    pList.insert( 0 , item )
 
 def sort_list_to_tuple( pList ):
     """ Return a tuple that contains the sorted elements of 'pList' """
@@ -223,8 +265,6 @@ def index_max( pList ):
 def index_min( pList ): 
     """ Return the first index of 'pList' with the maximum numeric value """
     return pList.index( min( pList ) )
-    
-# [ ] TODO: ADD THE OTHER SPACES 
 
 def linspace_space( dim , sMin , sMax , num  ): 
     """ Return vector list covering a 'dim'-dimensional space with 'num' points in each dimension, from 'sMin' to 'sMax' in each dimension , O(n^2) """
@@ -324,18 +364,39 @@ def build_sublists_by_cadence( flatList , cadence ):
 def flatten_nested_sequence( multiSeq ):
     """ Flatten a sequence of sequences ( list or tuple ) into a single , flat sequence of the same type as 'multiSeq' """
     masterList = []
+    # print multiSeq
+    if isinstance( multiSeq , np.ndarray ):
+        # print "Converting to nested list"
+        multiSeq = multiSeq.tolist()
+        # return
     def flatten_recur( multLst , masterList ):
         """ Does the recursive work of 'flatten_nested_lists' """
         for elem in multLst:
             if isinstance( elem , list ):
                 flatten_recur( elem , masterList )
+            elif isinstance( elem , np.ndarray ):
+                # print "Element:" , elem
+                # print "To list:" , elem.tolist()
+                flatten_recur( elem.tolist() , masterList )
             else:
                 masterList.append( elem )
     flatten_recur( multiSeq , masterList )
-    if isinstance( multiSeq , tuple ):
+    if isinstance( multiSeq , tuple ): # If the original nested sequence was a tuple, then make sure to return a tuple
         return tuple( masterList )
     else:
+        # print "Got a list containing" , len( multiSeq ) , "elemets"
+        # print "Returning a list of  " , len( masterList ) , "elements"
         return masterList
+    
+def double_all_elem_except( inList , exceptedIndices = [] ):
+    """ Double all elements of a list except those indicated by 'exceptedIndices' """
+    rtnList = []
+    for i , elem in enumerate( inList ):
+        if i in exceptedIndices:
+            rtnList.append( elem )
+        else:
+            rtnList.extend( [ elem , elem ] )
+    return rtnList    
     
 # = Containers for Algorithms =
 
@@ -377,7 +438,7 @@ class Queue(list):
         """ Return a copy of the Queue as a list """
         return self[:]
 
-class PriorityQueue(list): # Requires heapq 
+class PriorityQueue( list ): # Requires heapq 
     """ Implements a priority queue data structure. """ 
     # NOTE: PriorityQueue does not allow you to change the priority of an item. 
     #       You may insert the same item multiple times with different priorities. 
@@ -693,30 +754,35 @@ def lists_as_columns_with_titles( titles , lists ):
     longestItem = 0
     prntLists = []
     pad = 4 * ' '
-    if len(titles) == len(lists):
+    rtnStr = ""
+    if len(titles) == len( lists ):
         for lst in lists:
-            if len(lst) > longestItem:
-                longestList = len(lst)
+            if len( lst ) > longestItem:
+                longestList = len( lst )
             prntLists.append( [] )
             for item in lst:
-                strItem = str(item)
+                strItem = str( item )
                 prntLists[-1].append( strItem )
-                if len(strItem) > longestItem:
-                    longestItem = len(strItem)
+                if len( strItem ) > longestItem:
+                    longestItem = len( strItem )
         line = ''
         for title in titles:
-            line += title[ : len(pad) + longestItem -1 ].rjust( len(pad) + longestItem , ' ' )
+            line += title[ : len(pad) + longestItem -1 ].rjust( len( pad ) + longestItem , ' ' )
         print line
-        for index in range(longestList):
+	rtnStr += line + endl
+        for index in range( longestList ):
             line = ''
             for lst in prntLists:
-                if index < len(lst):
-                    line += pad + lst[index].ljust(longestItem, ' ')
+                if index < len( lst ):
+                    line += pad + lst[ index ].ljust( longestItem , ' ' )
                 else:
                     line += pad + longestItem * ' '
             print line
+	    rtnStr += line + endl
+	return rtnStr
     else:
-        print "Titles" , len(titles) , "and lists" , len(lists) , "of unequal length"
+        print "Titles" , len( titles ) , "and lists" , len( lists ) , "of unequal length"
+	return ''
 
 def print_list( pList ):
     """ Print a list that is composed of the '__str__' of each of the elements in the format "[ elem_0 , ... , elem_n ]" , 
@@ -757,6 +823,11 @@ def pretty_print_dict( pDict ):
 
 # == File Operations ==
 
+def ensure_dir( dirName ):
+    """ Create the directory if it does not exist """
+    if not os.path.exists( dirName ):
+        os.makedirs( dirName )
+
 def struct_to_pkl( struct , pklPath ): # <<< resenv
     """ Serialize a 'struct' to 'pklPath' """
     f = open( pklPath , 'wb') # open a file for binary writing to receive pickled data
@@ -780,15 +851,17 @@ def load_pkl_struct( pklPath ): # <<< resenv
         f.close()
     return rtnStruct
     
-def process_txt_for_LaTeX( TXTpath ):  # <<< resenv
-    """ Add appropriate line breaks to a TXT file and return as TEX """
+def process_txt_for_LaTeX( TXTpath , ltxPath = None ):  
+    """ Add appropriate line breaks to a TXT file and return as TEX file handle """
+    # NOTE: This function writes a TEX file and returns the handle
     if os.path.isfile( TXTpath ):
         drctry , txtName = os.path.split( TXTpath )
         ltxName = txtName[:-4] + ".tex"
         txtFile = file( TXTpath , 'r' )
         txtLines = txtFile.readlines()
         txtFile.close()
-        ltxPath = os.path.join( drctry , ltxName )
+        if ltxPath == None:
+            ltxPath = os.path.join( drctry , ltxName )
         ltxFile = file( ltxPath , 'w' )
         for line in txtLines:
             # print "Line is:", line
@@ -797,6 +870,7 @@ def process_txt_for_LaTeX( TXTpath ):  # <<< resenv
             else:
                 ltxFile.write( " $\\ $ \\\\ " + endl ) 
         ltxFile.close()
+        return ltxFile
     else:
         raise IOError( "process_txt_for_LaTeX: " +str(TXTpath)+ " did not point to a file!" )
         
@@ -815,6 +889,9 @@ def string_from_file( fPath ): # <<< resenv
     return fStr
     
 def txt_file_for_w( fPath ): return file( fPath , 'w' )  # <<< resenv
+
+
+# = class accum =
     
 class accum:
     """ Singleton text buffer object to hold script output, with facilities to write contents """
@@ -826,12 +903,12 @@ class accum:
         """ Print args and store them in a string """
         for arg in args:
             accum.totalStr += str(arg) + " "
-            print str(arg),
+            print str(arg) ,
         print
         accum.totalStr += endl
 
     @staticmethod
-    def accum_sep( title = "" , char = '=' , width = 6 , strOut = False ):
+    def sep( title = "" , width = 6 , char = '=' , strOut = False ):
         """ Print a separating title card for debug """
         LINE = width * char
         if strOut:
@@ -842,9 +919,10 @@ class accum:
     @staticmethod
     def write( *args ):
         """ Store 'args' in the accumulation string without printing """
-        for arg in args:
-            accum.totalStr += str(arg) + " "
-        accum.totalStr += endl
+        numArgs = len( args )
+        for i , arg in enumerate( args ):
+            accum.totalStr += str(arg) + ( " " if i < numArgs-1 else "" )
+#        accum.totalStr += endl
 
     @staticmethod
     def out_and_clear( outPath ):
@@ -853,8 +931,16 @@ class accum:
         outFile.write( accum.totalStr )
         outFile.close()
         accum.totalStr = ""
+        
+    @staticmethod
+    def clear():
+        """ Clear the contents of 'accum.totalStr' """
+        accum.totalStr = ""
+
+# _ End accum _
 
 # __ End File __
+
 
 # == Batch Operations ==
 
@@ -876,7 +962,7 @@ def validate_dirs_writable( *dirList ):
 
 # == String Processing ==
 
-def strip_after_first( pStr , char ): # <<< resenv
+def strip_after_first( pStr , char ): 
     """ Return a version of 'pStr' in which the first instance of 'char' and everything that follows is removed, if 'char' exists in 'pStr', otherwise return 'pStr' """
     firstDex = pStr.find( char )
     if firstDex > -1:
@@ -891,6 +977,23 @@ def tokenize_with_char( rawStr , separator = ',' ,  evalFunc = str ):
     """ Return a list of tokens taken from 'rawStr' that is partitioned with a separating character, transforming each token with 'evalFunc' """
     return [ evalFunc( rawToken ) for rawToken in rawStr.split( separator ) ]
     
+def tokenize_with_separator( rawStr , separator , evalFunc = str ):
+    """ Return a list of tokens taken from 'rawStr' that is partitioned with 'separator', transforming each token with 'evalFunc' """
+    # TODO: Maybe this could be done with brevity using regex?
+    tokens = [] # list of tokens to return
+    currToken = '' # the current token, built a character at a time
+    for char in rawStr: # for each character of the input string
+        if not char.isspace(): # if the current char is not whitespace, process
+            if not char == separator: # if the character is not a separator, then
+                currToken += char # accumulate the char onto the current token
+            else: # else the character is a separator, process the previous token
+                tokens.append( evalFunc( currToken ) ) # transform token and append to the token list
+                currToken = '' # reset the current token
+        # else is whitespace, ignore
+    if currToken: # If there is data in 'currToken', process it
+        tokens.append( evalFunc( currToken ) ) # transform token and append to the token list
+    return tokens
+
 def format_dec_list( numList , places = 2 ): # <<< resenv
     """ Return a string representing a list of decimal numbers limited to 'places' """
     rtnStr = "[ "
@@ -905,8 +1008,16 @@ def format_dec_list( numList , places = 2 ): # <<< resenv
             rtnStr += ('{0:.' + str( places ) + 'g}').format( scalar )
     rtnStr += " ]"
     return rtnStr
+
+def string_contains_any( bigStr , subsList ):
+    """ Return True if 'bigStr' contains any of the substrings in 'subsList' , Otherwise return False """
+    for sub in subsList:
+        if sub in bigStr:
+            return True
+    return False
     
 # __ End Strings __
+
 
 # == Timing / Benchmarking ==
 
@@ -941,6 +1052,23 @@ class Stopwatch( object ):
         return Stopwatch.stopTime - Stopwatch.strtTime
 
 # __ End Timing __
+        
+    
+# === Reporting ===
+
+# == class Response ==
+        
+class Response:
+    """ Container class to hold the result of a search or an error """
+    def __init__( self , result = False , errCode = {} , data = [] ): # NOTE: Error codes are dict entries to make lookup easier
+        self.result     = result
+        self.errorCodes = errCode
+        self.data       = data
+    
+# __ End Response __
+    
+# ___ End Reporting ___
+
 
 # === Spare Parts ===
 

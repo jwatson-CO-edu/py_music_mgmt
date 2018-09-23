@@ -14,22 +14,22 @@ General purpose graph classes and methods
 import collections , sys 
 # ~ Special ~
 # ~ Local ~
-from marchhare import Counter
+from marchhare import Counter , Stack
 
-if "CV_Utils" not in sys.modules:
-    print "Loading special vars ..." , 
-    import os
-    EPSILON = 1e-7
-    infty = 1e309 # URL: http://stackoverflow.com/questions/1628026/python-infinity-any-caveats#comment31860436_1628026
-    endl = os.linesep
-    DISPLAYPLACES = 5 # Display 5 decimal places by default
-    print "Loaded!"
+
+print "Loading special vars ..." , 
+import os
+EPSILON = 1e-7
+infty = 1e309 # URL: http://stackoverflow.com/questions/1628026/python-infinity-any-caveats#comment31860436_1628026
+endl = os.linesep
+DISPLAYPLACES = 5 # Display 5 decimal places by default
+print "Loaded!"
 
 # === Data Structures ===
 
 # == Tagged Object ==
 
-class TaggedObject(object):
+class TaggedObject( object ):
     """ An object with a unique tag and a string alias """
     
     def __init__( self ):
@@ -94,6 +94,10 @@ class TaggedLookup( list ):
                 print "Object with tag",pTag,"DNE in this problem"
         return rtnObj
         
+    def tag_exists( self , tag ):
+        """ Return True if 'tag' exists in 'lookupByTag' as a key , Otherwise return False """
+        return tag in self.lookupByTag.keys()
+        
     def get_by_als(self, pAls):
         """ Return an object reference from the lookup with a matching alias if it exists, otherwise return None """
         try:
@@ -102,6 +106,10 @@ class TaggedLookup( list ):
             if self.verbose:
                 print "Object with alias",pAls,"DNE in this problem"
             return None
+        
+    def als_exists( self , als ):
+        """ Return True if 'als' exists in 'lookupByAls' as a key , Otherwise return False """
+        return als in self.lookupByAls.keys()    
                         
     def __str__(self):
         """ Print all contents by tag """
@@ -127,7 +135,7 @@ class TaggedLookup( list ):
         except ValueError:
             return None
     
-    def recalc_alias_lookup( self ):
+    def recalc_alias_lookup( self , erase = False ):
         """ Make sure that any elements that have recently acquired an alias appear in the alias lookup """
         for elem in self:
             if elem.has_alias():
@@ -139,8 +147,30 @@ class TaggedLookup( list ):
             elem.give_alias( index )
         self.recalc_alias_lookup() # Now that aliases have been assigned , add them to the lookup
         
-    # TODO: .pop()
-    # TODO: .remove() # This will work with object references
+    def pop( self , index = None ):
+        """ Remove the entry at the end of the list , or at 'index' if it is provided and valid """
+        if index == None:
+            index = len( self ) - 1
+        elif index > len( self ) - 1:
+            raise IndexError( "Index " + str( index )  + " is not valid for a structure of length " + str( len( self ) ) )
+        if self[ index ].has_alias(): # 1. Remove from the alias lookup if it exists there
+            del self.lookupByAls[ self[ index ].alias ]
+        del self.lookupByTag[ self[ index ].tag ] # 2. Remove from the tag lookup
+        return list.pop( self , index ) # 3. Remove from the structure itself
+        
+    def remove( self , value ):
+        """ Remove the entry that matches 'value' """
+        try:
+            rmDex = self.index( value )
+            self.pop( rmDex ) 
+        except ValueError:
+            raise ValueError( "No object " + str( value ) + " exists in this lookup" )
+            
+    def remove_by_alias( self , rmAlias ):
+        """ If 'rmAlias' exists in the lookup , remove that object from the lookup , otherwise take no action """
+        rmDex = self.get_alias_index( rmAlias )
+        if rmDex != None:
+            self.pop( rmDex )
 
 # = End TaggedLookup =  
 
@@ -170,7 +200,23 @@ class WeightedList( list ):
             self.weights.extend( costs   if costs   != None else [ 1.0 for elem in xrange( len( items ) ) ] )
         elif weights != None:
             raise IndexError( "LabeleWeightedListdList.extend: Items and labels did not have the same length! " + str( len( items ) ) + " , " + str( len( weights ) ) )
-        
+    
+    def pop( self , index = None ):
+        """ Remove the item at 'index' and the associated 'weights' & 'costs' , Note: 'weights' & 'costs' are not returned """
+        if index == None:
+            index = len( self ) - 1
+        self.weights.pop( index )
+        self.costs.pop( index )
+        return list.pop( self , index )
+    
+    def remove( self , value ):
+        """ Remove the 'value' and the associated 'weights' & 'costs' """
+        try:
+            rmDex = self.index( value )
+            self.pop( rmDex )
+        except ValueError:
+            raise ValueError( str( value ) + " was not found in the structure" )
+    
     def get_weight( self , index , weightName ):
         """ Get the 'label' value for the item at 'index' , if that label DNE at that index return None """
         try:
@@ -206,19 +252,56 @@ class WeightedList( list ):
 
 # === Graph Classes ===
 
+# == class SimpleNode ==
+
+class SimpleNode:
+    """ Search tree node without a specific application in mind """    
+    
+    def __init__( self , data = None , parent = None ):
+        self.data          = data # - Configuration
+        self.children      = [] # --- Successors , possibly leading to the goal configuration
+        self.parent        = parent # Parent , for constructing path back to the start configuration
+
+    def add_child( self , child ):
+        """ Add a successor node """
+        # NOTE: No correctness checks are made before adding
+        self.children.append( child )
+        
+    def remove_child_by_ref( self , childRef ):
+        """ Remove the object referred to by 'childRef' from 'self.children' , if 'childRef' DNE then fail gracefully """
+        try:
+            self.children.remove( childRef )
+        except ValueError:
+            print "WARN , Node.remove_child_by_ref: Reference" , childRef , "DNE in list of successors!"
+        
+    def __str__( self ):
+        """ Return a string representation of the TreeNode """
+        return "Node@" + str( id( self ) )
+
+# __ End SimpleNode __
+        
+
 # == class Node ==
 
-class Node(TaggedObject):
+class Node( TaggedObject ):
     """ A graph node with edges """    
     
     def __init__( self , pGraph = None , alias = None , nCost = 1.0 ):
         super( Node , self ).__init__()
         self.edges = WeightedList() # NOTE: These represent outgoing edges. Incoming edges are represented as references to this Node in other Nodes
-        self.graph = pGraph # The graph that this node belongs to
+        # The graph that this node belongs to
+        self.graph = pGraph 
         if alias != None: # If there was an alias specified , then store it
             self.give_alias( alias ) 
         self.bag = Counter( default = None ) # This is a generic place to dump miscellaneous
         self.cost = nCost # Numeric cost associated with this node
+        self.parent = None
+        
+    def add_child( self , pNode , weight = {} ):
+        """ Connect an edge between this Node and 'pNode' """
+        # NOTE: This function assumes that an undirected edge has the same weight in both directions
+        self.edges.append( pNode , weight ) # NOTE: This function assumes this Node is the tail
+        pNode.parent = self
         
     def connect_to( self , pNode , pDir = False , weight = {} ):
         """ Connect an edge between this Node and 'pNode' """
@@ -226,18 +309,11 @@ class Node(TaggedObject):
         self.edges.append( pNode , weight ) # NOTE: This function assumes this Node is the tail
         if not pDir: # If the edge is not directed, add a reference from 'pNode' back to this Node
             pNode.edges.append( self , weight )
-        if self.alias != None and pNode.alias != None:
-            return ( self.alias , pNode.alias , pDir ) # Return a representation of this edge for use with Graph
-            #      ( Tail        , Head       , Directed? )  : Tail ---> Head
-        else:
-            return ( self.tag , pNode.tag , pDir ) # Return a representation of this edge for use with Graph
-            #      ( Tail     , Head      , Directed? )  : Tail ---> Head
         
     def connect_to_checked( self , pNode , pDir = False , weight = {}  ):
         """ Connect an edge between this Node and 'pNode' , avoiding duplicates """
         if pNode not in self.edges and self not in pNode.edges:
-            return self.connect_to( pNode , pDir , weight )
-            #      ( Tail     , Head      , Directed? )  : Tail ---> Head
+            self.connect_to( pNode , pDir , weight )
         else: # Else this edge exists, connection failed
             return None
         
@@ -245,11 +321,15 @@ class Node(TaggedObject):
         """ Return a list of successors of the current node """
         return self.edges[:]
         
-# == End Node ==
+    def num_successors( self ):
+        """ Return the number of successors """
+        return len( self.edges )
+        
+# __ End Node __
 
 # == class Graph ==
 
-class Graph(TaggedObject):
+class Graph( TaggedObject ):
     """ A simple graph structure with nodes and edges """
     
     def __init__( self , rootNode = None ):
@@ -258,17 +338,40 @@ class Graph(TaggedObject):
         self.edges = [] # For now not providing any sort of fancy lookup structure for edges
         self.root = rootNode
         
+    def __str__( self ):
+        """ Return a string representation of the Graph """
+        return "Graph@" + str( id( self ) ) + " with " + str( len( self.nodes ) ) + " nodes"
+    
+    def get_root( self ):
+        """ Return the root node """
+        return self.root
+    
+    def set_root( self , rootNode ):
+        """ Set the root node """
+        self.root = rootNode
+        
     def add_node_by_ref( self , nodeRef ):
         """ Add a Node , make note of tag and alias for easy lookup """ 
         # NOTE: A Node needn't be a member of the Graph in order to be reachable , this function is for establishing the relationship when it is important
         nodeRef.graph = self # Establish node membership
         self.nodes.append( nodeRef )
         
+    def add_node_by_ref_safe( self , nodeRef ):
+        """ Add the node only if a Node with such a tag does not already exist in the Graph """
+        if ( not self.nodes.tag_exists( nodeRef.tag ) ) and ( not self.nodes.als_exists( nodeRef.alias ) ):
+            self.nodes.append( nodeRef )
+        
+    def rem_node_by_ref( self , nodeRef ):
+        """ Remove a Node that matches the reference """
+        self.nodes.remove( nodeRef )
+        # NOTE: At this time , not checking if edges still exist in 'edges' that refer to this node
+        
     def create_node_with_als( self , alias ):
         """ Create a Node with a given 'alias' and add it to the graph """
         temp = Node( self , alias )
         temp.graph = self # Establish node membership
         self.nodes.append( temp )
+        return temp
         
     def get_node_by_als( self , nodeAls ):
         """ Search for a node by its alias and return the reference if the node exists in the problem """
@@ -277,6 +380,15 @@ class Graph(TaggedObject):
     def connect_by_ref( self , tail , head , pDir = False , weight = {} ):
         """ Connect two nodes , assuming we already have references to them """
         self.edges.append( tail.connect_to( head , pDir , weight ) )
+        
+    def connect_by_als( self , tailAls , headAls , pDir = False , weight = {} ):
+        """ Connect two nodes using their aliases """
+        tail = self.get_node_by_als( tailAls )
+        head = self.get_node_by_als( headAls )
+        if ( tail and head ):
+            self.edges.append( tail.connect_to( head , pDir , weight ) )
+        else:
+            print "WARN , Graph.connect_by_als: One of" , tailAls , "or" , headAls , "DNE in this Graph"
         
     def get_node_list( self ):
         """ Return a list of nodes in this graph """
@@ -292,6 +404,38 @@ class Graph(TaggedObject):
         for noDex , currNode in enumerate( self.get_node_list() ):
             # URL , Two ways to remove dict key: https://stackoverflow.com/questions/11277432/how-to-remove-a-key-from-a-python-dictionary
             currNode.bag.pop( 'index' , None ) # Remove the 'index' key , if it exists
+            
+    def dfs( self , initNode , is_goal ):
+        ''' Depth First Search 
+    
+        init_state - the intial state on the map
+        f -          transition function of the form s_prime = f(s,a)
+        is_goal -    function taking as input a state s and returning True if its a goal state
+        actions -    set of actions which can be taken by the agent
+    
+        returns -     ((path, action_path), visited) or None if no path can be found
+            goal_node -   The first node that meets the goal requirement
+            path -        a list of tuples. The first element is the initial state followed by all states traversed until the final goal state
+            action_path - the actions taken to transition from the initial state to goal state '''
+        
+        frontier = Stack() # Search stack, pop from the top
+        n0 = initNode
+        n0.path = [] # Attach a sequence to each node to record the path to it, this may consume a lot of space for large problems
+        frontier.push( n0 ) # Push the starting node on the frontier
+        visited = set([]) 
+        while len( frontier ) > 0: # While states remain on the frontier
+            n_i = frontier.pop() # Pop last element
+            if n_i.tag not in visited: # If the state has not been previously popped, then
+                visited.add( n_i.tag ) # Log the visit
+                currentPath = n_i.path # Path to the current state
+                if is_goal( n_i ): # If the goal has been reached, return path and visited information
+                    return ( n_i , n_i.path + [ n_i.tag ] , visited )
+                else: # else is not goal
+                    for edge in n_i.edges:
+                        s_prime = edge
+                        s_prime.path = currentPath[:] + [ n_i.tag ] # Assemble a plan that is the path so far plus the current action
+                        frontier.push( s_prime ) # Push onto top of the frontier                        
+        return ( None , None , visited ) # The frontier has been exhausted without finding the goal, return the sad story of the journey    
         
 # == End Graph ==
         

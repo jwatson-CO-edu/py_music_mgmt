@@ -19,7 +19,7 @@ import numpy as np
 # import marchhare.marchhare
 
 from marchhare.Vector import vec_mag , vec_unit , vec_proj , np_add , vec_round_small , vec_angle_between , vec_eq , vec_copy , vec_linspace , vec_NaN
-from marchhare.MathKit import ver , eq , round_small 
+from marchhare.MathKit import ver , eq , round_small , decimal_part , copysign
 from marchhare.marchhare import format_dec_list , incr_max_step
 
 
@@ -369,7 +369,7 @@ class Quaternion(object):
         term3 = np.multiply( self._vctr , ( 2 * np.dot( self._vctr , vec ) ) )
         temp = term1 + term2 + term3
         # dbgLog(-1, str(temp) )
-        vec_round_small(temp) # Round float remnants to zero
+        # vec_round_small(temp) # Round float remnants to zero
         return temp
         
     def __str__(self):
@@ -380,12 +380,36 @@ class Quaternion(object):
     def principal_rot_Quat( basis1 , basis2 , basis3 ):
         """ For new 'bases' expressed in the old, find the quaternion that rotates the old onto the new """
         C = [ vec_unit( basis1 ) , vec_unit( basis2 ) , vec_unit( basis3 ) ] # Asssumed normalization enough times that I'll just do it
-        Phi = acos( 0.5 * ( C[0][0] + C[1][1] + C[2][2] - 1 ) )
+        inside = 0.5 * ( C[0][0] + C[1][1] + C[2][2] - 1 )
+        # print "DEBUG , 0.5 * ( C[0][0] + C[1][1] + C[2][2] - 1 ):" , inside
+        if abs( inside ) > 1:
+            # print "DEBUG , Applying correction!" , inside , "-->" ,
+            inside = -decimal_part( inside )
+            # print inside
+        Phi = acos( inside )
         e1 = 0.5 * sin( Phi ) * ( C[1][2] - C[2][1] )
         e2 = 0.5 * sin( Phi ) * ( C[2][0] - C[0][2] )
         e3 = 0.5 * sin( Phi ) * ( C[0][1] - C[1][0] )
         return Quaternion.k_rot_to_Quat( [ e1 , e2 , e3 ] , Phi )
      
+    @staticmethod
+    def bases_to_Quat( xBasis , yBasis , zBasis ):
+        """ For new bases expressed in the old, find the quaternion that rotates the old onto the new """
+        # FIXME , THIS IS WRONG , COMPARE TO 'principal_rot_Quat' !! FIXME , THIS IS WRONG , COMPARE TO 'principal_rot_Quat' !!
+        Q = [ vec_unit( xBasis ) , vec_unit( yBasis ) , vec_unit( zBasis ) ]
+        [ [ Qxx , Qxy , Qxz ] , 
+          [ Qyx , Qyy , Qyz ] , 
+          [ Qzx , Qzy , Qzz ] ] = Q
+        t = Qxx + Qyy + Qzz 
+        r = sqrt( 1 + t )
+        w = 0.5 * r
+        x = copysign( 0.5 * sqrt( 1 + Qxx - Qyy - Qzz ) , ( Qzy - Qyz ) )
+        y = copysign( 0.5 * sqrt( 1 - Qxx + Qyy - Qzz ) , ( Qxz - Qzx ) )
+        z = copysign( 0.5 * sqrt( 1 - Qxx - Qyy + Qzz ) , ( Qyx - Qxy ) )
+        temp = Quaternion( w , x , y , z )
+        temp.normalize()
+        return temp
+    
     def norm( self ):
         """ Return the norm of the Quaternion """
         return sqrt( self.sclr ** 2 + self._vctr[0] ** 2 + self._vctr[1] ** 2 + self._vctr[2] ** 2 )
@@ -393,6 +417,12 @@ class Quaternion(object):
     def normalize(self):
         """ Normalize the Quaternion, destructive """
         self.scale( 1 / self.norm() )
+        
+    def round_small( self ):
+        """ Round the very small components and renormalize """
+        self.sclr = round_small( self.sclr )
+        self.vctr = vec_round_small( self.vctr )
+        self.normalize()
        
     @staticmethod
     def conjugate( pQuat ):
@@ -593,7 +623,7 @@ def principal_rotation_test():
 
 # == class Pose ==
      
-class Pose(object):
+class Pose( object ):
     """ A simple container for position and orientation """
     def __init__( self , 
                   pPos = [ 0.0 , 0.0 , 0.0 ] , 
@@ -713,6 +743,12 @@ class Pose(object):
         for bDex , blendRot in enumerate( np.linspace( 0 , rotOrbit , numPts ) ): # For each angle increment: Rotate the position vector about the orbit
             rtnPoses.append( Pose( Quaternion.k_rot_to_Quat( kOrbit , blendRot ).apply_to( cenToA ) , orientations[bDex] ) )
         return rtnPoses
+    
+    @staticmethod
+    def origin_bases_to_Pose( origin , xBasis , yBasis , zBasis ):
+        """ Return a Pose at 'origin' , with an orientation defined by the given basis vectors """
+        return Pose( origin , Quaternion.principal_rot_Quat( xBasis , yBasis , zBasis ) )
+        # return Pose( origin , Quaternion.bases_to_Quat( xBasis , yBasis , zBasis ) )
         
     def serialize( self ):
         """ Encode the Pose into a tuple of two lists """ # NOTE: The unpacked version of the returned values is the format that regrasp 'arm_seek_pose' expects
@@ -727,6 +763,11 @@ class Pose(object):
         temp = otherPose.get_copy() # Make a copy so that Poses do not track each other
         self.position    = temp.position
         self.orientation = temp.orientation
+        
+    def round_small( self ):
+        """ Get rid of exremely small components """
+        self.position = vec_round_small( self.position )
+        self.orientation.round_small()
 
 # == End Pose ==     
      
@@ -799,15 +840,30 @@ class Frame3D( Pose ):
     def transform_points_to_lab( self , *ptsLst ):
         """ Transform each of the elements of 'ptsLst' to the lab frame as though they were in this reference frame """
         rtnList = []
+        self.transform_contents()
         for pnt in ptsLst: #                     vvv--- Note for spatial points there is an offset
+            # rtnList.append( vec_round_small( np.add( self.labPose.position , self.labPose.orientation.apply_to( pnt ) ) ) )
             rtnList.append( np.add( self.labPose.position , self.labPose.orientation.apply_to( pnt ) ) )
         return rtnList
             
     def transform_vectors_to_lab( self , *vecLst ):
         """ Transform each of the elements of 'vecLst' to the lab frame as though they were in this reference frame """
         rtnList = []
+        self.transform_contents()
         for vec in vecLst: #             vvv--- No offset , Rotation only
             rtnList.append( self.labPose.orientation.apply_to( vec ) )
+        return rtnList
+    
+    def transform_poses_to_lab( self , *poseList ):
+        """ Transform each of the elements of 'poseList' to the lab frame as though they were in this reference frame """
+        rtnList = []
+        self.transform_contents()
+        for pose in poseList:
+            rtnList.append(  
+                Pose( np.add( self.labPose.position , self.labPose.orientation.apply_to( pose.position ) ) , 
+                      # Quaternion.serial_rots( self.orientation , pose.orientation ) )
+                      Quaternion.serial_rots( pose.orientation , self.orientation ) )
+            )
         return rtnList
 
 # = End Frame =
@@ -912,3 +968,24 @@ def skew_sym_cross( vecR ):
              [ -vecR[1] ,  vecR[0] ,  0       ] ]
         
 # __ End Homogeneous __
+    
+    
+# == Drawing Helpers and Misc ==
+    
+def circle_arc_3D( axis , center , radius , beginMeasureVec , theta , N ):
+    """ Return points on a circular arc about 'axis' at 'radius' , beginning at 'beginMeasureVec' and turning 'theta' through 'N' points """
+    thetaList = np.linspace( 0 , theta , N )
+    k         = vec_unit( axis )
+    rtnList   = []
+    # 1. Project the theta = 0 vector onto the circle plane
+    measrVec = vec_unit( vec_proj_to_plane( beginMeasureVec , axis ) )
+    # 2. For each theta
+    for theta_i in thetaList:
+        # 3. Create a rotation matrix for the rotation
+        R = rot_matx_ang_axs( theta_i , k  )
+        # 4. Apply rotation to the measure vector && 5. Scale the vector to the radius && 6. Add to the center && 7. Append to the list
+        rtnList.append( np.add( center , np.multiply( np.dot( R , measrVec ) , radius ) ) )
+    # 8. Return
+    return rtnList
+    
+# __ End Misc __

@@ -2,6 +2,29 @@
 # -*- coding: utf-8 -*-
 # Template Version: 2016-07-08
 
+##### MIT LICENSE BEGIN ##############################################################################
+##                                                                                                  ##
+##    Copyright 2018 James Watson, University of Colorado Boulder                                   ##
+##                                                                                                  ##
+##    Permission is hereby granted, free of charge, to any person obtaining a copy of this          ##
+##    source file and associated documentation (the "File"), to deal in the File                    ##
+##    without restriction, including without limitation the rights to use, copy, modify, merge,     ##
+##    publish, distribute, sublicense, and/or sell copies of the File, and to permit persons        ##
+##    to whom the File is furnished to do so, subject to the following conditions:                  ##
+##                                                                                                  ##
+##    The above copyright notice and this permission notice shall be included                       ##
+##    in all copies or substantial portions of the File.                                            ##
+##                                                                                                  ##
+##    THE FILE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,               ##
+##    INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,                               ##
+##    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.                                         ##
+##    IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,                   ##
+##    DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,              ##
+##    ARISING FROM, OUT OF OR IN CONNECTION WITH THE FILE                                           ##
+##    OR THE USE OR OTHER DEALINGS IN THE FILE.                                                     ##
+##                                                                                                  ##
+##### MIT LICENSE END ################################################################################
+
 # ~~ Future First ~~
 from __future__ import division # Future imports must be called before everything else, including triple-quote docs!
 
@@ -36,6 +59,7 @@ def split_to_components( vecList ):
     plotYs = []
     plotZs = []
     for vec in vecList:
+#        print vec
         plotXs.append( vec[0] )
         plotYs.append( vec[1] )
         plotZs.append( vec[2] )
@@ -117,14 +141,30 @@ fig_num.num = 0
  
 def fig_3d():
     """ Create a new 3D figure and return handles to figure and axes """
+    # USAGE: fig , ax = fig_3d()
     fig = plt.figure( fig_num() )
-    ax = fig.add_subplot(111, projection='3d')
+    ax = fig.add_subplot( 111 , projection = '3d' )
     return fig , ax
     
 def show_3d():
     """ Show all the 3D figures, should only be called once per program """
-    plt.gca().set_aspect('equal')
+#    plt.gca().set_aspect('equal')
+    plt.axis('equal')
     plt.show()
+
+def fig_2d():
+    """ Create a new 2D figure (default) and return handles to figure and axes """
+    fig = plt.figure( fig_num() )
+    ax = fig.add_subplot( 111 )
+    return fig , ax
+
+def show_2d():
+    """ Show all the 2D figures, should only be called once per program """
+    plt.show()
+    
+def ax_view( ax , azimuth , elevation ):
+    """ Set the camera view for the axes """
+    ax.view_init( azimuth , elevation )
     
 def plot_points_to_ax( ax , ptsList , size = 14 , color = 'blue' , mrkr = 'o' ):
     xs , ys , zs = split_to_components( ptsList )
@@ -141,10 +181,10 @@ def plot_points_only_list( ptsList , size = 14 , color = 'blue' , mrkr = 'o' , p
     if paintAxes:
         plot_axes_3D_mpl( ax , scale = 0.05 )
     
-    plt.gca().set_aspect('equal')
+    # plt.gca().set_aspect('equal')
+    axes_equal( ax )
     plt.show()
     
-
 def plot_chain_to_ax( ax , ptsList , makeCycle = False , color = 'blue' , width = 1 ):
     xs , ys , zs = split_to_components( ptsList )
     if makeCycle:
@@ -166,3 +206,58 @@ def plot_chain( ptsList , makeCycle = False , color = 'blue' , paintAxes = False
     
     plt.gca().set_aspect( 'equal' )
     plt.show() 
+    
+def plot2D_chain_to_ax( ax , ptsList , makeCycle = False , color = 'blue' , width = 1 ):
+    xs , ys = split_to_2D( ptsList )
+    if makeCycle:
+        for coordList in [ xs , ys ]:
+            coordList.append( coordList[0] )
+    ax.plot( xs , ys , c = color , linewidth = width )
+    
+def plot_VF_to_ax( ax , V , F , color = 'blue' , width = 1 ):
+    """ Plot wireframe trimesh to axes """
+    for i , f_i in enumerate( F ):
+        triPts = []
+        for vDex in f_i:
+            triPts.append( V[vDex][:] )
+        plot_chain_to_ax( ax , triPts , True , color , width )
+      
+def axes_equal( ax ):
+    """ Use the pre-stretch axes limits to stretch the axes to equal scales """
+    xDataRange = ax.get_xlim();  xCen = ( xDataRange[1] + xDataRange[0] ) / 2.0;  lngth = abs( xDataRange[1] - xDataRange[0] )
+    yDataRange = ax.get_ylim();  yCen = ( yDataRange[1] + yDataRange[0] ) / 2.0;  width = abs( yDataRange[1] - yDataRange[0] )
+    zDataRange = ax.get_zlim();  zCen = ( zDataRange[1] + zDataRange[0] ) / 2.0;  depth = abs( zDataRange[1] - zDataRange[0] )
+    span = max( [ lngth , width , depth ] )
+    
+    xLims = [ xCen - span/2.0 , xCen + span/2.0 ]
+    yLims = [ yCen - span/2.0 , yCen + span/2.0 ]
+    zLims = [ zCen - span/2.0 , zCen + span/2.0 ]
+    
+    corners = []
+    
+    for x in xLims:
+        for y in yLims:
+            for z in zLims:
+                corners.append( [ x , y , z ] )
+                
+    plot_points_to_ax( ax , corners , size = 0.01 , color = 'white' , mrkr = '.' )
+
+def close_all_figs():
+    """ Close all open figures """
+    plt.close('all')
+        
+# === SPARE PARTS ==========================================================================================================================
+        
+
+            
+    
+#    ax.set_xlim(  );
+#    ax.set_ylim(  );
+#    ax.set_zlim(  );
+#    ax.set_xbound( xCen - span/2.0 , xCen + span/2.0 );
+#    ax.set_ybound( yCen - span/2.0 , yCen + span/2.0 );
+#    ax.set_zbound( zCen - span/2.0 , zCen + span/2.0 );
+    
+#    ax.set_aspect( 'equal' , adjustable = 'box' )
+        
+# ___ END SPARE ____________________________________________________________________________________________________________________________

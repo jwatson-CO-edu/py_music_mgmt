@@ -24,8 +24,7 @@ import collections , sys
 from random import randrange
 # ~ Special ~
 # ~ Local ~
-from AsmEnv import *
-from Graph import *
+from .. import Graph
 
 if "AsmEnv" not in sys.modules:
     print "Loading special vars ..." , 

@@ -38,20 +38,20 @@ piHalf = pi/2
 def vec_mag( vec ): 
     """ Return the magnitude of a vector """
     return np.linalg.norm( vec )
-    
+
 def vec_sqr( vec ): 
     """ Return the squared magnitude of the vector (avoid sqrt for quick comparison) """
     return np.dot( vec , vec ) # The squared magnitude is just the vector dotted with itself
-    
+
 def vec_dif_sqr( vec1 , vec2 ): 
     """ Return the squared magnitude of the vector difference between 'vec1' and 'vec2' """
     vecDiff = np.subtract( vec1 , vec2 )
     return np.dot( vecDiff , vecDiff ) # The squared magnitude is just the vector dotted with itself
-    
+
 def vec_dif_mag( vec1 , vec2 ):
     """ Return the magnitude of the vector difference between 'vec1' and 'vec2' """
     return vec_mag( np.subtract( vec1 , vec2 ) )
-    
+
 def vec_dif_unt( vec1 , vec2 ):
     """ Return the unit of the vector difference between 'vec1' and 'vec2' """
     return vec_unit( np.subtract( vec1 , vec2 ) )
@@ -78,24 +78,27 @@ def vec_round_small( vec ):
     for i in range( len( vec ) ):
         rtnVec.append( round_small( vec[i] ) )
     return rtnVec
-        
+
 def vec_unit( vec ): 
     """ Return a unit vector in the direction of 'vec', using numpy """
-    return np.divide( vec , np.linalg.norm( vec ) )
+    mag = np.linalg.norm( vec )
+    return np.divide( vec , 1 if eq( mag , 0 ) else mag )
 
 def vec_proj( a , b ): # <<< resenv
     """ a projected onto b, a scalar length, using numpy """
     return np.dot(a,b) / np.linalg.norm(b) # Note that the result will be negative if the angle between a and b is > pi/2
-    
+
 def vec_proj_onto( a , b ): # <<< resenv
     """ a projected onto b,  vector in the direction of b """
     return np.multiply( vec_unit( b ) , vec_proj( a , b ) )
-    
+
 def vec_angle_between( v1 , v2 ): 
     """ Returns the angle in radians between vectors 'v1' and 'v2' """
-	# URL, angle between two vectors: http://stackoverflow.com/a/13849249/893511
+        # URL, angle between two vectors: http://stackoverflow.com/a/13849249/893511
     v1_u = vec_unit( v1 )
     v2_u = vec_unit( v2 )
+    if eq( vec_mag( v1_u ) , 0 ) or eq( vec_mag( v2_u ) , 0 ):
+        return float('nan')
     angle = np.arccos( np.dot( v1_u , v2_u) )
     if np.isnan( angle ):
         if ( v1_u == v2_u ).all():
@@ -103,7 +106,7 @@ def vec_angle_between( v1 , v2 ):
         else:
             return np.pi
     return angle
-    
+
 def vec_parallel( v1 , v2 ):
     """ Return true if 'v1' and 'v2' are parallel within EPSILON, false otherwise """
     angle = vec_angle_between( v1 , v2 )
@@ -133,7 +136,7 @@ def np_subtract(*args): # <<< resenv
         return np.subtract( np_subtract(*args[:-1]) , args[-1] ) # Note the star operator is needed for recursive call, unpack to positional args
     else: # base case, there are 2 args*, use vanilla 'np.subtract'
         return np.subtract( args[0] , args[1] ) # *NOTE: This function assumes there are at least two args, if only 1 an error will occur
-        
+
 def vec_sum_chain(vecList): # <<< resenv
     """ Create a list of vectors that are the resultants of summing correspong vector in 'vecList' and all preceding vectors """
     ptsList = [ vecList[0][:] ] # first vector is the same as first in 'vecList'
@@ -141,7 +144,7 @@ def vec_sum_chain(vecList): # <<< resenv
         ptsList.append( np.add( ptsList[-1] , vecList[i] ) )
     return ptsList
 
-def vec_eq( vec1 , vec2 , margin = EPSILON ): # <<< resenv
+def vec_eq( vec1 , vec2 , margin = EPSILON ):
     """ Return true if two vectors are equal enough, otherwise false """
     if len(vec1) == len(vec2):
         for i in range(len(vec1)):
@@ -156,8 +159,8 @@ def vec_eq_test_w_margin( margin = EPSILON ):
     def eq_test( op1 , op2 ):
         return vec_eq( op1 , op2 , margin )
     return eq_test
-    
-def vec_linspace( vec1 , vec2, numPts ): # <<< resenv
+
+def vec_linspace( vec1 , vec2 , numPts ):
     """ Return a list of 'numPts' points (vectors) evenly spaced from 'vec1' to 'vec2', inclusive """
     diff = np.subtract( vec2 , vec1 ) # Vector from point 1 to point 2
     direction = vec_unit( diff ) # Direction of the vector between the two
@@ -168,16 +171,31 @@ def vec_linspace( vec1 , vec2, numPts ): # <<< resenv
                                 np.multiply( direction , # a vector that is an additional space along the difference
                                              value ) ) )
     return ptsList
-    
+
+def linspace_endpoints( bgnPnt , endPnt , numPnts ):
+    """ Create a list of 'numPnts' points between 'bgnPnt' and 'endPnt' , inclusive """
+    # NOTE: This function assumes that 'bgnPnt' and 'endPnt' have the same dimensionality
+    # NOTE: This is a re-implementation of 'Vector.vec_linspace' , but without np.ndarray
+    coordsList = []
+    rtnList = []
+    for i in xrange( len( bgnPnt ) ):
+        coordsList.append( np.linspace( bgnPnt[i] , endPnt[i] , numPnts ) )
+    for i in xrange( numPnts ):
+        temp = []
+        for j in xrange( len( bgnPnt ) ):
+            temp.append( coordsList[j][i] )
+        rtnList.append( temp )
+    return rtnList
+
 def vec_avg( *vectors ): 
     """ Return a vector that is the average of all the 'vectors', equal weighting """
     vecSum = np_add( *vectors ) # NOTE: This function assumes that all vectors are the same dimensionality
     return np.divide( vecSum , len( vectors ) * 1.0 )
 
-def is_vector( vec ): # <<< resenv
+def is_vector( vec ): 
     """ Return true if 'vec' is any of { list , numpy array } and thus may particpate in vector operations """
     return isinstance( vec , ( list , np.ndarray ) )
-    
+
 def vec_copy( vec ): # <<< resenv
     """ Return a copy of 'vec', using the appropriate copy mechanism for the underlying datatype """
     if isinstance( vec , list ): 
@@ -186,7 +204,7 @@ def vec_copy( vec ): # <<< resenv
         return vec.copy()
     else:
         raise TypeError("vec_copy: " + str(vec) + " was neither a 'list' nor a 'np.ndarray'!")
-    
+
 def vec_copy_deep( vec ): # <<< resenv
     """ Return a deep copy of 'vec', using the appropriate copy mechanism for the underlying datatype """
     if isinstance( vec , list ): 
@@ -194,16 +212,16 @@ def vec_copy_deep( vec ): # <<< resenv
     elif isinstance( vec , np.ndarray ):
         return vec.copy()
     else:
-	raise TypeError("vec_copy_deep: " + str(vec) + " was neither a 'list' nor a 'np.ndarray'!")
- 
+        raise TypeError("vec_copy_deep: " + str(vec) + " was neither a 'list' nor a 'np.ndarray'!")
+
 def vec_random( dim ): # <<< resenv
     """ Return a random vector in R-'dim' space with coordinates in [0,1) """
     rtnVec = []
     for i in range(dim):
         rtnVec.append( random() )
     return rtnVec
-    
-def vec_random_range( dim , limLo , limHi ): # <<< resenv
+
+def vec_random_range( dim , limLo , limHi ): 
     """ Return a vector in which each element takes on a random value between 'limLo' and 'limHi' with a uniform distribution """
     rtnVec = []
     randVec = vec_random( dim )
@@ -219,7 +237,7 @@ def vec_rand_range_lst( dim , limLo , limHi , N ):
         rtnList.append( vec_random_range( dim , limLo , limHi ) )
     return rtnList
 
-def vec_random_limits( dim , limits ): # <<< resenv
+def vec_random_limits( dim , limits ): 
     """ Return a vector in which each element takes on a random value between 'limits[i][0]' and 'limits[i][1]' with a uniform distribution """
     rtnVec = []
     randVec = vec_random( dim )
@@ -227,7 +245,7 @@ def vec_random_limits( dim , limits ): # <<< resenv
         span = abs( limits[i][1] - limits[i][0] )
         rtnVec.append( elem * span + limits[i][0] )
     return rtnVec
-    
+
 def vec_random_perturb( center , radius ): 
     """ Return a vector perturbed by length 'radius' away from 'center' in a random direction """
     randDir = vec_unit( vec_random_range( len( center ) , -1 ,  1 ) ) # Construct a random unit vector with the same dimensionality as 'center'
@@ -240,14 +258,14 @@ def vec_rand_prtrb_lst( center , radius , N ):
     for i in xrange( N ):
         rtnList.append( vec_random_perturb( center , radius ) )
     return rtnList
-        
+
 def vec_round( vec , places=0 ): # <<< resenv
     """ Round each element of 'vec' to specified 'places' """
     rtnVec = []
     for elem in vec:
         rtnVec.append( round( elem , places ) )
     return rtnVec
-    
+
 def vec_clamp( vec , loBnd , upBnd ): # <<< resenv
     """ Return a version of 'vec' with all elements clamped b/n ['loBnd' , 'upBnd'], inclusive """
     rtnVec = []
@@ -269,14 +287,14 @@ def vec_clamp_fraction( vec , loBnd , upBnd ): # <<< resenv
         else: # else angle greater than mid, scale
             scales.append( abs( ( elem - mid ) / ( upBnd - mid ) ) )
     return scales
-    
+
 def vec_scaled_clamp( vec , loBnd , upBnd ): # <<< resenv
     """ If any element of 'vec' is out of bounds, return a scaled copy of 'vec' such that the most-offending element is within bounds, or return 'vec' """
     if not vec_check_bounds( vec , loBnd , upBnd ):
         return np.divide( vec , max( vec_limit_fraction( vec , loBnd , upBnd ) ) )
     else:
         return vec
-    
+
 def vec_check_bounds( vec , loBnd , upBnd ): # <<< resenv
     """ Return true if all elements  of 'vec' are b/n ['loBnd' , 'upBnd'], inclusive """
     for coord in vec:
@@ -285,7 +303,7 @@ def vec_check_bounds( vec , loBnd , upBnd ): # <<< resenv
         elif coord > upBnd:
             return False
     return True
-    
+
 def vec_check_limits( vec , limits ): # <<< resenv
     """ Return True of 'vec' [x_0 ... x_N] falls within 'limits' ( ( x0min , x0max ) ... ( xNmin , xNmax ) ) , otherwise false """
     for i , lim in enumerate(limits):
@@ -311,7 +329,7 @@ def vec_scaled_limits( vec , limits ): # <<< resenv
         return np.divide( vec , np.absolute( vec_limit_fraction( vec , limits ) ) )
     else:
         return vec
-    
+
 def vec_from_seg( segment ):
     """ Return the vector that points in the direction from point 'segment[0]' to 'segment[1]' """
     return np.subtract( segment[1] , segment[0] )
@@ -325,6 +343,18 @@ def bbox_from_points( ptsList ):
             bbox[1][i] = max( bbox[1][i] , point[i] ) # Compare the component of the point to the max of the dimension
     return bbox
 
+def AABB( ptsList ):
+    """ Axis-Aligned Bounding Box, Alias for 'bbox_from_points' """
+    return bbox_from_points( ptsList )
+
+def AABB_span( ptsList ):
+    """ Return the span of each dimension covered by the AABB of 'ptsList' """
+    bbox = bbox_from_points( ptsList )
+    span = [ 0 for i in xrange( len( bbox[0] ) ) ]
+    for i in xrange( len( bbox[0] ) ):
+        span[i] = abs( bbox[1][i] - bbox[0][i] )
+    return span
+
 # == Plotting Helpers ==
 
 def split_to_components( vecList ): 
@@ -335,10 +365,10 @@ def split_to_components( vecList ):
             components[i].append( elem )
 
 # __ End Helpers __
-            
-            
+
+
 # == Printing Helpers ==
-            
+
 def matx_2D_pretty_print( matx ):
     """ Pretty print a 2D 'matx' , NOTE: This will also print lists of lists with variable row length """
     maxWidth = 0
@@ -367,6 +397,6 @@ def matx_2D_pretty_print( matx ):
             dsplyStr += " ]"
     dsplyStr += " ]"
     print dsplyStr
-        
-    
+
+
 # __ End Printing __
