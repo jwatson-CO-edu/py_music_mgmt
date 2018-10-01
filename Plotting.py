@@ -136,6 +136,8 @@ def plot_pose_axes_mpl( plotAX , vecPose , scale , labelNum = None ):
                       scale,
                       labelNum)
 
+# == Figure Create / Destroy ==
+
 def fig_num(): fig_num.num += 1 ; return fig_num.num # Functor to increment and return figure number with each call
 fig_num.num = 0
  
@@ -148,7 +150,6 @@ def fig_3d():
     
 def show_3d():
     """ Show all the 3D figures, should only be called once per program """
-#    plt.gca().set_aspect('equal')
     plt.axis('equal')
     plt.show()
 
@@ -161,6 +162,12 @@ def fig_2d():
 def show_2d():
     """ Show all the 2D figures, should only be called once per program """
     plt.show()
+
+def close_all_figs():
+    """ Close all open figures """
+    plt.close('all')
+
+# __ End Figure __
     
 def ax_view( ax , azimuth , elevation ):
     """ Set the camera view for the axes """
@@ -242,9 +249,17 @@ def axes_equal( ax ):
                 
     plot_points_to_ax( ax , corners , size = 0.01 , color = 'white' , mrkr = '.' )
 
-def close_all_figs():
-    """ Close all open figures """
-    plt.close('all')
+
+# == IPython / Jupyter ==
+
+def ipy_set_plots_interactive( allowRotate ):
+    # ~ MPL Mode ~
+    if allowRotate:
+        get_ipython().magic( 'matplotlib notebook' ) # Interactive plots
+    else:
+        get_ipython().magic( 'matplotlib inline' ) # Static plots
+
+# __ End Jupyter __
         
 # === SPARE PARTS ==========================================================================================================================
         
