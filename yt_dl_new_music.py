@@ -6,7 +6,7 @@ from __future__ import division , unicode_literals # Future imports must be call
 
 __progname__ = "yt_dl_new_music.py"
 __version__  = "2018.10" 
-__desc__     = "Fetch videos and music files from youtube for free"
+__desc__     = "Fetch videos from youtube and convert to music files , hopefully split by track"
 """
 James Watson , Template Version: 2018-05-14
 Built on Wing 101 IDE for Python 2.7
@@ -17,10 +17,28 @@ Dependencies: numpy , youtube-dl , FFmpeg
 
 """  
 ~~~ Developmnent Plan ~~~
-[Y] Test at the command line
+
+[Y] Test download at the command line
 [ ] Fetch example from the docs
     [ ] Test the example under linux
 [ ] Build a list of music to listen to
+    [ ] Study Jams
+    [ ] Establish a input playlist format
+    [ ] Review list
+    [ ] Artists to try
+[ ] Find example of how to split songs by track
+    [ ] URL , Split songs with multiprocess: https://codereview.stackexchange.com/q/166158
+    [ ] Test with dummy times
+[ ] Split songs by track
+    [ ] Locate timestamps in the description or comments
+    [ ] Discern artist & track for each listing
+    { } artist-track check: Google , Wikipedia?
+    [ ] Split audio by confirmed timestamps
+    [ ] Load id3 metadata for individual tracks
+[ ] Adjust program behavior
+    [ ] Limit download speed with random spacing between requests
+    [ ] Change user agent to FF browser
+{ } Bandcamp Scraper
 """
 
 # === Init Environment =====================================================================================================================
@@ -54,23 +72,27 @@ def __prog_signature__(): return __progname__ + " , Version " + __version__ # Re
 
 # = Classes =
 
-class MyLogger(object):
-    def debug(self, msg):
+class MyLogger( object ):
+    """ Logging class for YT downloads """
+    # https://github.com/rg3/youtube-dl/blob/master/README.md#embedding-youtube-dl
+    
+    def debug( self , msg ):
         pass
 
-    def warning(self, msg):
+    def warning( self , msg ):
         pass
 
-    def error(self, msg):
-        print(msg)
+    def error( self , msg ):
+        print( msg )
 
 # _ End Class _
 
 # = Program Functions =
 
-def my_hook(d):
-    if d['status'] == 'finished':
-        print('Done downloading, now converting ...')
+def my_hook( d ):
+    # https://github.com/rg3/youtube-dl/blob/master/README.md#embedding-youtube-dl
+    if d[ 'status' ] == 'finished':
+        print( 'Done downloading, now converting ...' )
 
 # _ End Func _
 
@@ -85,18 +107,22 @@ if __name__ == "__main__":
     termArgs = sys.argv[1:] # Terminal arguments , if they exist
     
     # Downloading youtube videos as MP3: https://github.com/rg3/youtube-dl/blob/master/README.md#embedding-youtube-dl
+    
+    # Options for youtube-dl
     ydl_opts = {
         'format': 'bestaudio/best',
-        'postprocessors': [{
+        'postprocessors': [ {
             'key': 'FFmpegExtractAudio',
             'preferredcodec': 'mp3',
             'preferredquality': '192',
-        }],
+        } ] ,
         'logger': MyLogger(),
         'progress_hooks': [my_hook],
     }
-    with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-        ydl.download(['https://www.youtube.com/watch?v=BaW_jenozKc'])  
+    
+    # Download file
+    with youtube_dl.YoutubeDL( ydl_opts ) as ydl:
+        ydl.download( [ 'https://www.youtube.com/watch?v=BaW_jenozKc' ] )  
     
 
 # ___ End Main _____________________________________________________________________________________________________________________________
