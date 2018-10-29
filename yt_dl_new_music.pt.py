@@ -17,8 +17,10 @@ Dependencies: numpy , youtube-dl , FFmpeg
 
 """  
 ~~~ Developmnent Plan ~~~
-[ ] ITEM1
-[ ] ITEM2
+[Y] Test at the command line
+[ ] Fetch example from the docs
+    [ ] Test the example under linux
+[ ] Build a list of music to listen to
 """
 
 # === Init Environment =====================================================================================================================
