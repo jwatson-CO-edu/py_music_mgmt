@@ -345,17 +345,20 @@ def execute_move_plan( movePlan , verbose = False ): # Set simulate to 'True' to
 	    dirSuccess = False
 	    # Check that the origin file exists
 	    if os.path.isfile( operation[ 'orgn' ] ):
-		# Check that the destination directory exists
-		if not os.path.isdir( operation[ 'destDir' ] ):
-		    # If the dest dir does not exist , create it
-		    try: # http://stackoverflow.com/a/5032238/7186022
-			os.makedirs( operation[ 'destDir' ] )
+		try:
+		    # Check that the destination directory exists
+		    if not os.path.isdir( operation[ 'destDir' ] ):
+			# If the dest dir does not exist , create it
+			try: # http://stackoverflow.com/a/5032238/7186022
+			    os.makedirs( operation[ 'destDir' ] )
+			    dirSuccess = True
+			except OSError as exception:
+			    if exception.errno != errno.EEXIST: # For any other error than an already existent directory , raise
+				raise
+		    else: # else the directory already exists , make sure to set the flag to allow move
 			dirSuccess = True
-		    except OSError as exception:
-			if exception.errno != errno.EEXIST: # For any other error than an already existent directory , raise
-			    raise
-		else: # else the directory already exists , make sure to set the flag to allow move
-		    dirSuccess = True
+		except Exception as err:
+		    dirSuccess = False
 		if dirSuccess: # If the directory exists
 		    # Move the file , else simulate
 		    shutil.move( operation[ 'orgn' ] , operation[ 'dest' ] )
@@ -594,13 +597,11 @@ if __name__ == "__main__":
     
     # ~~ Locate Music Library ~~
     #          Drive letter separator for Windows --v
-    TEST_LIBRARY_LOCATIONS = [ "/media/mawglin/MUSIC/Music",
-                               "/media/mawglin/FILEPILE/Python/py-music-mgmt/Amzn_2017-01-30" , 
-                               "/home/jwatson/Music" , 
-                               os.path.join( "D:" , os.sep , "Python" , "py-music-mgmt" , "Amzn_2017-01-30" ) ,
-                               "/media/jwatson/FILEPILE/Python/py-music-mgmt/Amzn_2017-01-30" ]
-    LIBDIR = first_valid_dir( TEST_LIBRARY_LOCATIONS )   
-    SCANDIR = LIBDIR
+    LIBRARY_LOCATIONS = [ "/media/mawglin/MUSIC/Music", 
+                          os.path.join( "D:" , os.sep , "Python" , "py-music-mgmt" , "Amzn_2017-01-30" ) ]
+    SCANDIR_LOCATIONS = [ "/media/mawglin/MUSIC/Music/zzz_Inbox" ]
+    LIBDIR = first_valid_dir( LIBRARY_LOCATIONS )   
+    SCANDIR = first_valid_dir( SCANDIR_LOCATIONS )
     print LIBDIR
     LOGDIR = os.path.join( LIBDIR , "Logs" )
     

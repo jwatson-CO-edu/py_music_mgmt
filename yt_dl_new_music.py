@@ -56,6 +56,7 @@ from math import pi , sqrt
 import numpy as np
 import youtube_dl
 # ~~ Local ~~
+from marchhare.marchhare import parse_lines
 
 # ~~ Constants , Shortcuts , Aliases ~~
 EPSILON = 1e-7
@@ -88,6 +89,16 @@ class MyLogger( object ):
 # _ End Class _
 
 # = Program Functions =
+
+def parse_video_entry( txtLine ):
+    """ Obtain the video url from the line """
+    components = [ rawToken for rawToken in txtLine.split( ',' ) ]
+    return { 'url' : components[0] ,
+             'seq' : components[1] }
+
+def process_video_list( fPath ):
+    """ Get all the URLs from the prepared list """
+    return parse_lines( fPath , parse_video_entry )
 
 def my_hook( d ):
     # https://github.com/rg3/youtube-dl/blob/master/README.md#embedding-youtube-dl
