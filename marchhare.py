@@ -872,24 +872,55 @@ def process_txt_for_LaTeX( TXTpath , ltxPath = None ):
         ltxFile.close()
         return ltxFile
     else:
-        raise IOError( "process_txt_for_LaTeX: " +str(TXTpath)+ " did not point to a file!" )
+        raise IOError( "process_txt_for_LaTeX: " + str( TXTpath ) + " did not point to a file!" )
         
-def lines_from_file( fPath ): # Added , 2016-09-27 # <<< resenv
+def lines_from_file( fPath ): 
     """ Open the file at 'fPath' , and return lines as a list of strings """
     f = file( fPath , 'r' )
     lines = f.readlines()
     f.close()
     return lines
     
-def string_from_file( fPath ): # <<< resenv
+def string_from_file( fPath ):
     """ Open the file at 'fPath' , and return the entire file as a single string """
     f = file( fPath , 'r' )
     fStr = f.read() # https://docs.python.org/2/tutorial/inputoutput.html#methods-of-file-objects
     f.close()
     return fStr
     
-def txt_file_for_w( fPath ): return file( fPath , 'w' )  # <<< resenv
+def txt_file_for_w( fPath ): return file( fPath , 'w' )
 
+def strip_comments_from_lines( lines ):
+    """ Remove everything after each # """
+    # NOTE: This function does not take into account a '#' within a string
+    rtnLines = []
+    for line in lines:
+	rtnLines.append( line.split( '#' , 1 )[0] )
+    return rtnLines
+
+def purge_empty_lines( lines ):
+    """ Given a list of lines , Remove all lines that are only whitespace """
+    rtnLines = []
+    for line in lines:
+	if not line.isspace():
+	    rtnLines.append( line )
+    return rtnLines
+
+def parse_lines( fPath , parseFunc ):
+    """ Parse lines with 'parseFunc' while ignoring Python-style # comments """
+    # NOTE: This function does not take into account a '#' within a string
+    rtnExprs = []
+    # 1. Fetch all the lines
+    lines = lines_from_file( fPath )
+    # 2. Scrub comments from lines
+    lines = strip_comments_from_lines( lines )
+    # 3. Purge empty lines
+    lines = purge_empty_lines( lines )
+    # 4. For each of the remaining lines , Run the parse function and save the results
+    for line in lines:
+	rtnExprs.append( parseFunc( line ) )
+    # 5. Return expressions that are the results of processing the lines
+    return rtnExprs
 
 # = class accum =
     
