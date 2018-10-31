@@ -23,7 +23,8 @@ Dependencies: numpy , youtube-dl , FFmpeg
     [ ] Test the example under linux
 [ ] Build a list of music to listen to
     [ ] Study Jams
-    [ ] Establish a input playlist format
+    [Y] Establish a input playlist format - COMPLETE:
+    # Comment
     [ ] Review list
     [ ] Artists to try
 [ ] Find example of how to split songs by track
@@ -56,6 +57,7 @@ from math import pi , sqrt
 import numpy as np
 import youtube_dl
 # ~~ Local ~~
+prepend_dir_to_path( PARENTDIR )
 from marchhare.marchhare import parse_lines
 
 # ~~ Constants , Shortcuts , Aliases ~~
