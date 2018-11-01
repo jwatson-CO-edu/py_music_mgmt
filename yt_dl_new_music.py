@@ -24,7 +24,9 @@ Dependencies: numpy , youtube-dl , FFmpeg
 [ ] Build a list of music to listen to
     [ ] Study Jams
     [Y] Establish a input playlist format - COMPLETE:
-    # Comment
+        # Comment
+        <URL>,<SEQNUM>
+    [Y] Parse a file - COMPLETE , made sure that strings are ASCII
     [ ] Review list
     [ ] Artists to try
 [ ] Find example of how to split songs by track
@@ -53,12 +55,13 @@ def prepend_dir_to_path( pathName ): sys.path.insert( 0 , pathName ) # Might nee
 # ~~~ Imports ~~~
 # ~~ Standard ~~
 from math import pi , sqrt
+import urllib2
 # ~~ Special ~~
 import numpy as np
 import youtube_dl
 # ~~ Local ~~
-prepend_dir_to_path( PARENTDIR )
-from marchhare.marchhare import parse_lines
+prepend_dir_to_path( SOURCEDIR )
+from marchhare.marchhare import parse_lines , ascii
 
 # ~~ Constants , Shortcuts , Aliases ~~
 EPSILON = 1e-7
@@ -95,8 +98,10 @@ class MyLogger( object ):
 def parse_video_entry( txtLine ):
     """ Obtain the video url from the line """
     components = [ rawToken for rawToken in txtLine.split( ',' ) ]
-    return { 'url' : components[0] ,
-             'seq' : components[1] }
+    print "Original Line:" , txtLine
+    print "Components:   " , components
+    return { ascii( "url" ) : str( components[0] ) ,
+             ascii( "seq" ) : int( components[1] ) }
 
 def process_video_list( fPath ):
     """ Get all the URLs from the prepared list """
@@ -119,23 +124,35 @@ if __name__ == "__main__":
     print __prog_signature__()
     termArgs = sys.argv[1:] # Terminal arguments , if they exist
     
-    # Downloading youtube videos as MP3: https://github.com/rg3/youtube-dl/blob/master/README.md#embedding-youtube-dl
+    entries = process_video_list( "input/url_sources.txt" )
+    for entry in entries:
+        print entry
+        
+    entry = entries[-2]
     
-    # Options for youtube-dl
-    ydl_opts = {
-        'format': 'bestaudio/best',
-        'postprocessors': [ {
-            'key': 'FFmpegExtractAudio',
-            'preferredcodec': 'mp3',
-            'preferredquality': '192',
-        } ] ,
-        'logger': MyLogger(),
-        'progress_hooks': [my_hook],
-    }
+    response = urllib2.urlopen( entry['url'] )
+    html = response.read()   
+    print type( html )
+    print html
     
-    # Download file
-    with youtube_dl.YoutubeDL( ydl_opts ) as ydl:
-        ydl.download( [ 'https://www.youtube.com/watch?v=BaW_jenozKc' ] )  
+    # ~~~~~~~~~~~~~~~ Downloading youtube videos as MP3: https://github.com/rg3/youtube-dl/blob/master/README.md#embedding-youtube-dl ~~~~~~
+    if 0:
+        
+        # Options for youtube-dl
+        ydl_opts = {
+            'format': 'bestaudio/best',
+            'postprocessors': [ {
+                'key': 'FFmpegExtractAudio',
+                'preferredcodec': 'mp3',
+                'preferredquality': '192',
+            } ] ,
+            'logger': MyLogger(),
+            'progress_hooks': [my_hook],
+        }
+        
+        # Download file
+        with youtube_dl.YoutubeDL( ydl_opts ) as ydl:
+            ydl.download( [ 'https://www.youtube.com/watch?v=BaW_jenozKc' ] )  
     
 
 # ___ End Main _____________________________________________________________________________________________________________________________
