@@ -890,19 +890,30 @@ def string_from_file( fPath ):
     
 def txt_file_for_w( fPath ): return file( fPath , 'w' )
 
+def strip_endlines_from_lines( lines ):
+    """ Remove the endlines from a list of lines read from a file """
+    rtnLines = []
+    for line in lines:
+	currLine = ''
+	for char in line:
+	    if char != '\n' and char != '\r':
+		currLine += char
+	rtnLines.append( currLine )
+    return rtnLines
+
 def strip_comments_from_lines( lines ):
     """ Remove everything after each # """
     # NOTE: This function does not take into account a '#' within a string
     rtnLines = []
     for line in lines:
-	rtnLines.append( line.split( '#' , 1 )[0] )
+	rtnLines.append( str( line.split( '#' , 1 )[0] ) )
     return rtnLines
 
 def purge_empty_lines( lines ):
     """ Given a list of lines , Remove all lines that are only whitespace """
     rtnLines = []
     for line in lines:
-	if not line.isspace():
+	if ( not line.isspace() ) and ( len( line ) > 0 ):
 	    rtnLines.append( line )
     return rtnLines
 
@@ -916,6 +927,8 @@ def parse_lines( fPath , parseFunc ):
     lines = strip_comments_from_lines( lines )
     # 3. Purge empty lines
     lines = purge_empty_lines( lines )
+    # 3.5. Remove newlines
+    lines = strip_endlines_from_lines( lines )
     # 4. For each of the remaining lines , Run the parse function and save the results
     for line in lines:
 	rtnExprs.append( parseFunc( line ) )
@@ -992,6 +1005,8 @@ def validate_dirs_writable( *dirList ):
 
 
 # == String Processing ==
+
+def ascii( strInput ): return strInput.encode( 'ascii' , 'ignore' )
 
 def strip_after_first( pStr , char ): 
     """ Return a version of 'pStr' in which the first instance of 'char' and everything that follows is removed, if 'char' exists in 'pStr', otherwise return 'pStr' """
