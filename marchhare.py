@@ -721,7 +721,7 @@ class RollingList( list ):
 
 # _ End Algo Containers _
 
-def is_nonempty_list( obj ): return isinstance( obj , list ) and len( obj ) > 0 # Return true if 'obj' is a 'list' with length greater than 0  # <<< resenv
+def is_nonempty_list( obj ): return isinstance( obj , list , tuple ) and len( obj ) > 0 # Return true if 'obj' is a 'list' with length greater than 0  # <<< resenv
 
 # __ End Structures __
 
