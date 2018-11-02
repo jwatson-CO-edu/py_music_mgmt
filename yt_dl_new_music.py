@@ -69,7 +69,7 @@ from apiclient.errors import HttpError
 from oauth2client.tools import argparser
 # ~~ Local ~~
 prepend_dir_to_path( SOURCEDIR )
-from marchhare.marchhare import parse_lines , ascii , sep
+from marchhare.marchhare import parse_lines , ascii , sep , is_nonempty_list
 
 # ~~ Constants , Shortcuts , Aliases ~~
 EPSILON = 1e-7
@@ -157,21 +157,42 @@ def videos_list_by_id( client , **kwargs ):
 
 def comment_threads_list_by_video_id( client , **kwargs ):
     # See full sample for function
-    kwargs = remove_empty_kwargs(**kwargs)
-    
-    response = client.commentThreads().list(
-        **kwargs
-    ).execute()
-    
-    return print_response(response)
+    kwargs   = remove_empty_kwargs(**kwargs)
+    response = client.commentThreads().list( **kwargs ).execute()
+    return print_response( response )
 
 def extract_description_lines( metadata ):
     """ Retrieve the description from the video data """
     return metadata['items'][0]['snippet']['localized']['description'].splitlines()
 
+def get_timestamp_from_line( line ):
+    """ Search for a timestamp substring and return it or [] """
+    rtnDict  = {}
+    rtnStamp = []
+    currNum  = ''
+    lastDigit_i = 0
+    for i , char in enumerate( line ):
+        if char.isdigit():
+            currNum += char
+            lastDigit_i = i
+        elif char == ':':
+            rtnStamp.append( int( currNum ) )
+            currNum  = ''
+        elif not char.isspace():
+            if len( currNum ) > 0:
+                tnStamp.append( int( currNum ) )
+            currNum  = ''  
+    balance = line[ lastDigit_i+1 : ]
+    return { 'stamp'   : rtnStamp , 
+             'balance' : balance  }
+
 def get_tracklist_from_lines( lines ):
     """ Return candidate tracklist or 'None' """
-    # FIXME : START HERE
+    trackList
+    # 1. For each line
+    for line in lines:
+        # 2. Check the line for timestamp
+        is_nonempty_list( get_timestamp_from_line( line )['stamp'] )
 
 # _ End Func _
 
