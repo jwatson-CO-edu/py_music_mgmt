@@ -1,0 +1,5 @@
+name,jwatson_CUBoulder
+key,AIzaSyDPWrEcvJXDct2aIC3J4Y90dG0w8x0w7Q8
+projName,StudyPlaylist-CU 
+projID,studyplaylist-cu 
+projNum,1027820812519
