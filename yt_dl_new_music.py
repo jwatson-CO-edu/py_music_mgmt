@@ -165,12 +165,23 @@ def extract_description_lines( metadata ):
     """ Retrieve the description from the video data """
     return metadata['items'][0]['snippet']['localized']['description'].splitlines()
 
+# :: FIXME ::
+# 1. Prefer timestamp links over plaintext stamps
+# 2. Try to evaluate text stamps when there are no links
+# 3. Notify if no stamps of any kind are found
+
 def get_timestamp_from_line( line ):
     """ Search for a timestamp substring and return it or [] """
+    # NOTE: Only accepting timestamps with ':' in between numbers
+    # NOTE: This function assumest that ':' is used only for separating parts of the timestamp
+    
+    # FIXME : SPLIT ON ':', FINITE STATE MACHINE NOT NEEDED
+    
     rtnDict  = {}
     rtnStamp = []
     currNum  = ''
     lastDigit_i = 0
+    begun = False
     for i , char in enumerate( line ):
         if char.isdigit():
             currNum += char
