@@ -170,6 +170,10 @@ def extract_description_lines( metadata ):
 # 2. Try to evaluate text stamps when there are no links
 # 3. Notify if no stamps of any kind are found
 
+def get_timelink_from_line( line ):
+    # FIXME: SEARCH FOR TIME LINKS TO SONGS WITHIN VIDEO , CHECK IS SAME VIDEO
+    pass
+
 def get_timestamp_from_line( line ):
     """ Search for a timestamp substring and return it or [] """
     # NOTE: Only accepting timestamps with ':' in between numbers
