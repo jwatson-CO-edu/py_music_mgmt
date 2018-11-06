@@ -11,7 +11,7 @@ __desc__     = "Fetch videos from youtube and convert to music files , hopefully
 James Watson , Template Version: 2018-05-14
 Built on Wing 101 IDE for Python 2.7
 
-Dependencies: numpy , youtube-dl , FFmpeg
+Dependencies: numpy , youtube-dl , google-api-python-client , urllib2 , FFmpeg
 """
 
 
@@ -51,7 +51,7 @@ Dependencies: numpy , youtube-dl , FFmpeg
 # === Init Environment =====================================================================================================================
 # ~~~ Prepare Paths ~~~
 import sys, os.path
-SOURCEDIR = os.path.dirname( os.path.abspath( __file__ ) ) # URL, dir containing source file: http://stackoverflow.com/a/7783326
+SOURCEDIR = os.path.dirname( os.path.abspath( '__file__' ) ) # URL, dir containing source file: http://stackoverflow.com/a/7783326
 PARENTDIR = os.path.dirname( SOURCEDIR )
 # ~~ Path Utilities ~~
 def prepend_dir_to_path( pathName ): sys.path.insert( 0 , pathName ) # Might need this to fetch a lib in a parent directory
@@ -59,13 +59,27 @@ def prepend_dir_to_path( pathName ): sys.path.insert( 0 , pathName ) # Might nee
 # ~~~ Imports ~~~
 # ~~ Standard ~~
 from math import pi , sqrt
-import urllib2
-# ~~ Special ~~
+try:
+    from urllib2 import urlopen
+except:
+    try:
+        from urllib.request import urlopen
+    except:
+        print( "COULD NOT IMPORT ANY URL OPENER" )
+        
+    # ~~ Special ~~
 import numpy as np
 import youtube_dl
 # https://medium.com/greyatom/youtube-data-in-python-6147160c5833
-from apiclient.discovery import build
-from apiclient.errors import HttpError
+try:
+    from apiclient.discovery import build
+    from apiclient.errors import HttpError
+except:
+    try:
+        from googleapiclient.discovery import build
+        from googleapiclient.errors import HttpError
+    except:
+        print( "COULD NOT IMPORT API UNDER EITHER ALIAS" )
 from oauth2client.tools import argparser
 # ~~ Local ~~
 prepend_dir_to_path( SOURCEDIR )
@@ -106,7 +120,10 @@ class MyLogger( object ):
 def get_id_from_URL( URLstr ):
     """ Get the 11-char video ID from the URL string """
     # NOTE: This function assumes that the URL has only one "=" and that the ID follows it
-    return ascii( URLstr.split( '=' , 1 )[1] )
+    components = URLstr.split( '=' , 1 )
+    if len( components ) > 1:
+        return ascii( components[1] )
+    return ''
 
 def parse_video_entry( txtLine ):
     """ Obtain the video url from the line """
@@ -174,32 +191,72 @@ def get_timelink_from_line( line ):
     # FIXME: SEARCH FOR TIME LINKS TO SONGS WITHIN VIDEO , CHECK IS SAME VIDEO
     pass
 
+def get_last_digits( inputStr ):
+    """ Get the last contiguous substring of digits in the 'inputStr' """
+    rtnStr = ""
+    lastWasDigit = False
+    # 1. For each character in the string
+    for char in inputStr:
+        # 2. If the character is a digit, then we potentially care about it
+        if char.isdigit():
+            # 3. If the last character was a digit , then add it to the string of digits to return
+            if lastWasDigit:
+                rtnStr += char
+            # 4. else last character was not digit , Begin new digit string
+            else:
+                rtnStr = char
+            # 5. Set flag for digit char
+            lastWasDigit = True
+        # else the character is not digit , Set flag
+        else:
+            lastWasDigit = False
+    return rtnStr
+        
+def get_first_digits( inputStr ):
+    """ Get the first contiguous substring of digits in the 'inputStr' """
+    rtnStr = ""
+    gatheredDigits = False
+    # 1. For each character in the string
+    for char in inputStr:
+        # 2. If the character is a digit, then we care about it
+        if char.isdigit():
+            gatheredDigits = True
+            rtnStr += char
+        # 3. else char was not digit, but we have collected digits , so return them
+        elif gatheredDigits:
+            return rtnStr
+        # else was not digit and have no digits, keep searching
+    # 4. If we made it here then either no digits were found, or the string ended with the first digit substring which we wish to return
+    return rtnStr    
+
 def get_timestamp_from_line( line ):
     """ Search for a timestamp substring and return it or [] """
     # NOTE: Only accepting timestamps with ':' in between numbers
     # NOTE: This function assumest that ':' is used only for separating parts of the timestamp
     
-    # FIXME : SPLIT ON ':', FINITE STATE MACHINE NOT NEEDED
+    # 1. Fetch the parts of the string that are separated by ":"s
+    components = line.split(':') 
+    stampParts = []
     
-    rtnDict  = {}
-    rtnStamp = []
-    currNum  = ''
-    lastDigit_i = 0
-    begun = False
-    for i , char in enumerate( line ):
-        if char.isdigit():
-            currNum += char
-            lastDigit_i = i
-        elif char == ':':
-            rtnStamp.append( int( currNum ) )
-            currNum  = ''
-        elif not char.isspace():
-            if len( currNum ) > 0:
-                tnStamp.append( int( currNum ) )
-            currNum  = ''  
-    balance = line[ lastDigit_i+1 : ]
-    return { 'stamp'   : rtnStamp , 
-             'balance' : balance  }
+    # 2. If there was at least one interior ":"
+    if len( components ):
+        # 3. For each of the split components
+        for i , comp in enumerate( components ):
+            # 4. For any component except the last, assume that the pertinent substring appears last
+            if i < len( components ) - 1:
+                # 5. Fetch last digits and cast to int if they exist , append to timestamp
+                digits = get_last_digits( comp )
+                if len( digits ) > 0:
+                    stampParts.append( int( digits ) )
+            # 5. For the last component, assume that the pertinent substring appears first
+            else:
+                # 6. Fetch first digits and cast to int if they exist , append to timestamp
+                digits = get_first_digits( comp )
+                if len( digits ) > 0:
+                    stampParts.append( int( digits ) )   
+    # Return timestamp components if found, Otherwise return empty list
+    return stampParts
+    
 
 def get_tracklist_from_lines( lines ):
     """ Return candidate tracklist or 'None' """
@@ -218,25 +275,26 @@ def get_tracklist_from_lines( lines ):
 # _ End Vars _
 
 if __name__ == "__main__":
-    print __prog_signature__()
+    print( __prog_signature__() )
     termArgs = sys.argv[1:] # Terminal arguments , if they exist
     
     # 1. Load video playlist
     entries = process_video_list( "input/url_sources.txt" )
     if 1:
         for entry in entries:
-            print entry
+            print( entry )
         
-    entry = entries[-2]    
+    entry = entries[0]    
     
     # 2. Init API connection
     authDict = read_api_key( "APIKEY.txt" )
-    print authDict 
+    print( authDict )
     
     DEVELOPER_KEY            = authDict['key']
     YOUTUBE_API_SERVICE_NAME = "youtube"
     YOUTUBE_API_VERSION      = "v3"
     METADATA_SPEC            = 'snippet,contentDetails,statistics'
+    #METADATA_SPEC            = 'id,snippet,contentDetails,statistics'
     COMMENT_THREAD_SPEC      = 'replies'
     
     
@@ -244,7 +302,7 @@ if __name__ == "__main__":
                      YOUTUBE_API_VERSION , 
                      developerKey = DEVELOPER_KEY )
     
-    print "Created an API connection with key" , youtube._developerKey
+    print( "Created an API connection with key" , youtube._developerKey )
     
     # 3. Fetch video data
     
@@ -254,6 +312,13 @@ if __name__ == "__main__":
         part = METADATA_SPEC ,
         id   = entry['id']
     )    
+    
+    descLines = extract_description_lines( result )
+    sep( "Candidate Tracklist" , 2 )
+    for line in descLines:
+        stamp = get_timestamp_from_line( line )
+        if len( stamp ) > 0:
+            print( line , "," , stamp )
     
     # Fetch comment threads
     allThreads = comment_threads_list_by_video_id(
@@ -265,32 +330,32 @@ if __name__ == "__main__":
     print
     sep( "Video Metadata" )
     for key , val in result.iteritems():
-        print key , ':' , val
+        print( key , ':' , val )
       
-    print
+    print()
     sep( "Comment Data" )     
     for key , val in allThreads.iteritems():
-        print key , ':' , val    
+        print( key , ':' , val )
         
     for item in allThreads['items']:
-        print item
+        print( item )
         
     for item in allThreads['items'][0]['replies']['comments']:
-        print item
+        print( item )
         
     for key , val in result['items'][0].iteritems():
-        print key , ":" , val
+        print( key , ":" , val )
         
-    print
+    print()
     
     if 0:
         components = dir( youtube )
         for comp in components:
-            print comp
+            print( comp )
     
     
     if 0:
-        response = urllib2.urlopen( entry['url'] )
+        response = urlopen( entry['url'] )
         html = response.read()   
     
     
