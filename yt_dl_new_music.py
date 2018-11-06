@@ -45,6 +45,17 @@ Dependencies: numpy , youtube-dl , google-api-python-client , urllib2 , FFmpeg
 [ ] Adjust program behavior
     [ ] Limit download speed with random spacing between requests
     [ ] Change user agent to FF browser
+[ ] Cache scraped data && Pickle
+    [ ] URL
+    [ ] HTML
+    [ ] JSON objects
+        [ ] Metadata
+        [ ] Comment info
+    [ ] Identified categories
+        [ ] Timestamps
+    [ ] Unpickle on startup
+    [ ] Cache flag
+    [ ] WARN: Switch to database at 10k entries
 { } Bandcamp Scraper
 """
 
@@ -183,12 +194,13 @@ def extract_description_lines( metadata ):
     return metadata['items'][0]['snippet']['localized']['description'].splitlines()
 
 # :: FIXME ::
-# 1. Prefer timestamp links over plaintext stamps
-# 2. Try to evaluate text stamps when there are no links
+# 2. Try to evaluate text stamps 
 # 3. Notify if no stamps of any kind are found
+# 4. If no stamps were found, Then attempt to split by pauses and give generic names to tracks
 
-def get_timelink_from_line( line ):
-    # FIXME: SEARCH FOR TIME LINKS TO SONGS WITHIN VIDEO , CHECK IS SAME VIDEO
+def digits_before_char( inputStr , char ):
+    """ Get all the digits that preceed 'char' in 'inputStr' """
+    # FIXME: FOR EACH OCCURRENCE, SEARCH FOR DIGITS BEFORE LETTER AND PREPEND TO THE RETURN STRING
     pass
 
 def get_last_digits( inputStr ):
@@ -239,22 +251,32 @@ def get_timestamp_from_line( line ):
     stampParts = []
     
     # 2. If there was at least one interior ":"
-    if len( components ):
+    if len( components ) and ":" in line:
         # 3. For each of the split components
         for i , comp in enumerate( components ):
-            # 4. For any component except the last, assume that the pertinent substring appears last
-            if i < len( components ) - 1:
+            # 4. For the first component, assume that the pertinent substring appears last
+            if i == 0:
                 # 5. Fetch last digits and cast to int if they exist , append to timestamp
                 digits = get_last_digits( comp )
                 if len( digits ) > 0:
                     stampParts.append( int( digits ) )
             # 5. For the last component, assume that the pertinent substring appears first
-            else:
+            elif i == len( components ) - 1:
                 # 6. Fetch first digits and cast to int if they exist , append to timestamp
                 digits = get_first_digits( comp )
                 if len( digits ) > 0:
-                    stampParts.append( int( digits ) )   
-    # Return timestamp components if found, Otherwise return empty list
+                    stampParts.append( int( digits ) )  
+            # 7. Middle components should have digits only
+            else:
+                comp = comp.strip()
+                # 8. If middle was digits only, add to stamp
+                if comp.isdigit():
+                    stampParts.append( int( comp ) ) 
+                # 9. else middle was somthing else, fail
+                else:
+                    return []
+                    
+    # N. Return timestamp components if found, Otherwise return empty list
     return stampParts
     
 
@@ -319,6 +341,10 @@ if __name__ == "__main__":
         stamp = get_timestamp_from_line( line )
         if len( stamp ) > 0:
             print( line , "," , stamp )
+    print()
+    sep( "Complete Description" )
+    for line in descLines:
+        print( line.strip() )    
     
     # Fetch comment threads
     allThreads = comment_threads_list_by_video_id(
@@ -385,7 +411,17 @@ if __name__ == "__main__":
 
 # === Spare Parts ==========================================================================================================================
 
-
+#def get_timelinks_from_HTML( ytHTML ):
+    #""" Attempt to scrape times links from page HTML """
+    ## NOTE: This function assumes that the link can be found on a single line, beginning with "&t="
+    #lines = ytHTML.splitlines()
+    #linkToken = "&t="
+    #rtnStamps = []
+    #for line in lines:
+        #if linkToken in line:
+            ## FIXME: ATTEMPT TO GET THE NUMBER THAT PRECEEDS EACH TIME DIVISION
+            ## FIXME: WHAT TO DO ABOUT TIME LINKS IN THE COMMENTS THAT ARE NOT TRACK LISTS?
+            #pass
 
 # ___ End Spare ____________________________________________________________________________________________________________________________
 
