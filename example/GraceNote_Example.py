@@ -35,6 +35,9 @@ from math import pi , sqrt
 # ~~ Special ~~
 import numpy as np
 # ~~ Local ~~
+prepend_dir_to_path( os.path.join( PARENTDIR , "marchhare" ) )
+from pygn.pygn import register , search
+from marchhare import parse_lines
 
 # ~~ Constants , Shortcuts , Aliases ~~
 EPSILON = 1e-7
@@ -51,7 +54,14 @@ def __prog_signature__(): return __progname__ + " , Version " + __version__ # Re
 
 # = Program Functions =
 
-
+def read_api_key( fPath ):
+    """ Read the Google API key """
+    entryFunc = lambda txtLine : [ str( rawToken ) for rawToken in txtLine.split( ',' ) ]
+    lines = parse_lines( fPath , entryFunc )
+    rtnDict = {}
+    for line in lines:
+        rtnDict[ line[0] ] = line[1]
+    return rtnDict
 
 # _ End Func _
 
@@ -65,7 +75,24 @@ if __name__ == "__main__":
     print __prog_signature__()
     termArgs = sys.argv[1:] # Terminal arguments , if they exist
     
-
+    apiKey = read_api_key( "GNWKEY.txt" )
+    print apiKey
+    
+    clientID = apiKey[ 'clientID' ] # Enter your Client ID here '*******-************************'
+    userID   = register( clientID ) # Registration should not be done more than once per session
+    
+    # The search function requires a clientID, userID, and at least one of either { artist , album , track } to be specified.
+    metadata = search(
+        clientID = clientID , 
+        userID   = userID , 
+        artist   = 'Kings Of Convenience' , 
+        album    = 'Riot On An Empty Street' , 
+        track    = 'Homesick' 
+    )
+    
+    for key , val in metadata.iteritems():
+        print key , ":" , val 
+    
 # ___ End Main _____________________________________________________________________________________________________________________________
 
 
