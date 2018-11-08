@@ -24,7 +24,7 @@ Dependencies: numpy , youtube-dl , google-api-python-client , urllib2 , FFmpeg
 [ ] Split songs by track
     [Y] Establish YouTube API with key
     [Y] Download video descriptions
-    [ ] Download video comments
+        [ ] If no tracklist is found, then Download video comments
     [ ] Locate timestamps in the description or comments
         [ ] Search for timestamp candidates
     [ ] Discern artist & track for each listing
@@ -53,9 +53,12 @@ Dependencies: numpy , youtube-dl , google-api-python-client , urllib2 , FFmpeg
         [ ] Comment info
     [ ] Identified categories
         [ ] Timestamps
+    [ ] Locations of raw files
+        [ ] Check if exist && flag
     [ ] Unpickle on startup
     [ ] Cache flag
     [ ] WARN: Switch to database at 10k entries
+[ ] Store raw files
 { } Bandcamp Scraper
 """
 
@@ -193,6 +196,10 @@ def extract_description_lines( metadata ):
     """ Retrieve the description from the video data """
     return metadata['items'][0]['snippet']['localized']['description'].splitlines()
 
+def extract_video_duration( metadata ):
+    """ Get the ISO 8601 string from the video metadata """
+    return ascii( metadata['items'][0]['contentDetails']['duration'] )
+
 # :: FIXME ::
 # 2. Try to evaluate text stamps 
 # 3. Notify if no stamps of any kind are found
@@ -261,7 +268,7 @@ def get_timestamp_from_line( line ):
                 if len( digits ) > 0:
                     stampParts.append( int( digits ) )
             # 5. For the last component, assume that the pertinent substring appears first
-            elif i == len( components ) - 1:
+            elif i == len( components ) - 1: 
                 # 6. Fetch first digits and cast to int if they exist , append to timestamp
                 digits = get_first_digits( comp )
                 if len( digits ) > 0:
@@ -275,18 +282,73 @@ def get_timestamp_from_line( line ):
                 # 9. else middle was somthing else, fail
                 else:
                     return []
-                    
     # N. Return timestamp components if found, Otherwise return empty list
     return stampParts
-    
+        
+def parse_ISO8601_timestamp( PT_H_M_S ):
+    """ Return a dictionary representing the time represented by the ISO 8601 standard for durations """
+    # ISO 8601 standard for durations: https://en.wikipedia.org/wiki/ISO_8601#Durations
+    dividers = ( 'H' , 'M' , 'S' )
+    H = '' ; M = '' ; S = ''
+    currStr = ''
+    rtnStamp = {}
+    for char in PT_H_M_S:
+        if char.isdigit():
+            currStr += char
+        elif ( char in dividers ) and ( len( currStr ) > 0 ):
+            rtnStamp[ char ] = int( currStr )
+            currStr = ''
+    return rtnStamp
 
-def get_tracklist_from_lines( lines ):
-    """ Return candidate tracklist or 'None' """
-    trackList
-    # 1. For each line
-    for line in lines:
-        # 2. Check the line for timestamp
-        is_nonempty_list( get_timestamp_from_line( line )['stamp'] )
+def parse_list_timestamp( compList ):
+    """ Standardise the list of timestamp components into a standard dictionary """
+    # NOTE: This function assumes that 'compList' will have no more than 3 elements , If it does then only the last 3 will be parsed
+    # NOTE: This function assumes that 'compList' is ordered largest to smallest time division, and that it will always include at least seconds
+    dividers = ( 'H' , 'M' , 'S' )
+    j = 0
+    tsLen = len( compList )
+    rtnStamp = {}
+    for i in range( -1 , -4 , -1 ):
+        if j < tsLen:
+            rtnStamp[ dividers[i] ] = compList[i]
+            j += 1
+    return rtnStamp
+
+def timestamp_leq( op1 , op2 ):
+    """ Return true if 'op1' <= 'op2' """
+    # For each descending devision in time
+    for div in ( 'H' , 'M' , 'S' ): 
+        try:
+            val1 = op1[ div ] ; val2 = op2[ div ]
+            if val1 < val2:
+                return True
+            elif val1 > val2:
+                return False
+        except KeyError:
+            pass
+    return True
+            
+def scrape_and_check_timestamps( reponseObj ):
+    """ Attempt to get the tracklist from the response object and return it , Return if all the stamps are lesser than the duration """
+    # 1. Get the description from the response object
+    descLines = extract_description_lines( reponseObj )
+    # 2. Get the video length from the response object
+    duration  = parse_ISO8601_timestamp( extract_video_duration( reponseObj ) )
+    # 3. Get candidate tracklist from the description 
+    trkLstFltrd = []
+    for line in descLines:
+        stamp = get_timestamp_from_line( line )
+        if len( stamp ) > 0:
+            stamp = parse_list_timestamp( stamp )
+            if timestamp_leq( stamp , duration ):
+                trkLstFltrd.append(
+                    { ascii( 'timestamp' ) : stamp ,
+                      ascii( 'line' ) :      line  }
+                )
+    # N. Return tracklist
+    return trkLstFltrd
+    
+#def query_and_
 
 # _ End Func _
 
@@ -302,7 +364,7 @@ if __name__ == "__main__":
     
     # 1. Load video playlist
     entries = process_video_list( "input/url_sources.txt" )
-    if 1:
+    if 0:
         for entry in entries:
             print( entry )
         
@@ -335,16 +397,17 @@ if __name__ == "__main__":
         id   = entry['id']
     )    
     
-    descLines = extract_description_lines( result )
-    sep( "Candidate Tracklist" , 2 )
-    for line in descLines:
-        stamp = get_timestamp_from_line( line )
-        if len( stamp ) > 0:
-            print( line , "," , stamp )
-    print()
-    sep( "Complete Description" )
-    for line in descLines:
-        print( line.strip() )    
+    if 0:
+        descLines = extract_description_lines( result )
+        sep( "Candidate Tracklist" , 2 )
+        for line in descLines:
+            stamp = get_timestamp_from_line( line )
+            if len( stamp ) > 0:
+                print( line , "," , stamp )
+        print()
+        sep( "Complete Description" )
+        for line in descLines:
+            print( line.strip() )    
     
     # Fetch comment threads
     allThreads = comment_threads_list_by_video_id(
@@ -371,6 +434,12 @@ if __name__ == "__main__":
         
     for key , val in result['items'][0].iteritems():
         print( key , ":" , val )
+        
+    print extract_video_duration( result )
+    print parse_ISO8601_timestamp( extract_video_duration( result ) )
+    stamps = scrape_and_check_timestamps( result )
+    for stamp in stamps:
+        print stamp
         
     print()
     
@@ -422,6 +491,14 @@ if __name__ == "__main__":
             ## FIXME: ATTEMPT TO GET THE NUMBER THAT PRECEEDS EACH TIME DIVISION
             ## FIXME: WHAT TO DO ABOUT TIME LINKS IN THE COMMENTS THAT ARE NOT TRACK LISTS?
             #pass
+            
+#def get_tracklist_from_lines( lines ):
+    #""" Return candidate tracklist or 'None' """
+    #trackList
+    ## 1. For each line
+    #for line in lines:
+        ## 2. Check the line for timestamp
+        #is_nonempty_list( get_timestamp_from_line( line )['stamp'] )
 
 # ___ End Spare ____________________________________________________________________________________________________________________________
 
