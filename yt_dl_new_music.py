@@ -25,9 +25,13 @@ Dependencies: numpy , youtube-dl , google-api-python-client , urllib2 , FFmpeg
     [Y] Establish YouTube API with key
     [Y] Download video descriptions
         [ ] If no tracklist is found, then Download video comments
-    [ ] Locate timestamps in the description or comments
-        [ ] Search for timestamp candidates
+    [Y] Locate timestamps in the description or comments
+        [Y] Search for timestamp candidates
     [ ] Discern artist & track for each listing
+	[Y] GraceNote Test
+	[ ] Separate candidate artist and track
+	[ ] Query (1,2) and (2,1) to see which one returns a hit
+	[ ] If gracenote fails, Query wikiP
     { } artist-track check: Google , Wikipedia?
     [ ] Find example of how to split songs by track
         [ ] URL , Split songs with multiprocess: https://codereview.stackexchange.com/q/166158
