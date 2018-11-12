@@ -218,11 +218,6 @@ def extract_video_duration( metadata ):
 # 3. Notify if no stamps of any kind are found
 # 4. If no stamps were found, Then attempt to split by pauses and give generic names to tracks
 
-def digits_before_char( inputStr , char ):
-    """ Get all the digits that preceed 'char' in 'inputStr' """
-    # FIXME: FOR EACH OCCURRENCE, SEARCH FOR DIGITS BEFORE LETTER AND PREPEND TO THE RETURN STRING
-    pass
-
 def get_last_digits( inputStr ):
     """ Get the last contiguous substring of digits in the 'inputStr' """
     rtnStr = ""
@@ -367,14 +362,23 @@ def remove_timestamp_from_line( line ):
         return line[ :bgnDex ] + line[ endDex+1: ]
     else:
         return line
-    
-# FIXME : IF THE BALANCE LEADS WITH DIGITS , THEN ASSUME THAT IS THE TRACK NUMBER
-    # GIVE THIS A NAME THAT DOES NOT NECESSARILY IMPLY TRACK NUM ON AN ALBUM
-    
-# FIXME : REMOVE LEADING DIGITS AND SPACE
+
+def remove_leading_digits_from_line( line ):
+    """ Remove the leading digits and leading space from a string """
+    bgnDex = 0
+    for i , char in enumerate( line ):
+        if char.isdigit() or char.isspace():
+            pass
+        else:
+            bgnDex = i
+            break
+    return line[bgnDex:]
             
 def scrape_and_check_timestamps( reponseObj ):
     """ Attempt to get the tracklist from the response object and return it , Return if all the stamps are lesser than the duration """
+    # NOTE: This function assumes that a playlist can be found in the decription
+    # NOTE: This function assumes that if there is a number representing a songs's place in the sequence, then it is the first digits in a line
+    
     # 1. Get the description from the response object
     descLines = extract_description_lines( reponseObj )
     # 2. Get the video length from the response object
@@ -387,16 +391,30 @@ def scrape_and_check_timestamps( reponseObj ):
             stamp = parse_list_timestamp( stamp )
             if timestamp_leq( stamp , duration ):
                 linBal = remove_timestamp_from_line( line )
-                # FIXME : GET SEQUENCE IN VIDEO , SEE ABOVE
+                vidSeq = get_first_digits( line )
+                if vidSeq:
+                    vidSeq = int( vidSeq )
+                    linBal = remove_leading_digits_from_line( linBal )
+                else:
+                    vidSeq = -1
                 trkLstFltrd.append(
-                    { ascii( 'timestamp' ) : stamp  ,
-                      ascii( 'line' ) :      line   ,
-                      ascii( 'balance' ) :   linBal }
+                    { ascii( 'timestamp' ) : stamp  , # When the song begins in the video
+                      ascii( 'videoSeq' ) :  vidSeq , # Sequence number in the video, if labeled
+                      ascii( 'balance' ) :   linBal , # Remainder of scraped line after the timestamp and sequence number are removed
+                      ascii( 'line' ) :      line   } # Full text of the scraped line 
                 )
     # N. Return tracklist
     return trkLstFltrd
     
-#def query_and_
+def extract_and_query_artist_and_track( inputStr ):
+    """ Given the balance of the timestamp-sequence extraction , Attempt to infer the artist and track names """
+    # 1. Split on dividing char "-"
+    # 2. Strip leading and trailing whitespace
+    # 3. Retain nonempty strings
+    # FIXME : THERE SHOULD ONLY BE 2 LEFT
+    # FIXME : STORE CANDIDATES
+    # FIXME : GRACENOTE SEARCH (1,2) AND (2,1) , Assign Score
+    # FIXME : ASSIGN MOST LIKELY ARTIST AND TRACK NAMES
 
 # _ End Func _
 
