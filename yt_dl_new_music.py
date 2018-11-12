@@ -332,6 +332,33 @@ def timestamp_leq( op1 , op2 ):
         except KeyError:
             pass
     return True
+
+def remove_timestamp_from_line( line ):
+    """ Remove timestamp from the line """
+    # NOTE: This function assumes that the timestamp is contiguous
+    # NOTE: This function assumes the timestampe begins and ends with a number
+    foundNum = False ; foundCln = False
+    bgnDex = 0 ; endDex = 0
+    
+    for i , char in enumerate( line ):
+        if char.isdigit():
+            if not foundNum:
+                foundNum = True
+                bgnDex   = i
+            if foundNum and foundCln:
+                endDex   = i
+        elif char == ':':
+            foundCln = True
+        elif foundNum and foundCln:
+            break
+        else:
+            foundNum = False ; foundCln = False
+            bgnDex = 0 ; endDex = 0            
+            
+    if foundNum and foundCln:
+        return line[ :bgnDex ] + line[ endDex+1: ]
+    else:
+        return line
             
 def scrape_and_check_timestamps( reponseObj ):
     """ Attempt to get the tracklist from the response object and return it , Return if all the stamps are lesser than the duration """
@@ -348,7 +375,8 @@ def scrape_and_check_timestamps( reponseObj ):
             if timestamp_leq( stamp , duration ):
                 trkLstFltrd.append(
                     { ascii( 'timestamp' ) : stamp ,
-                      ascii( 'line' ) :      line  }
+                      ascii( 'line' ) :      line  ,
+                      ascii( 'balance' ) :   remove_timestamp_from_line( line ) }
                 )
     # N. Return tracklist
     return trkLstFltrd
@@ -373,7 +401,7 @@ if __name__ == "__main__":
         for entry in entries:
             print( entry )
         
-    entry = entries[0]    
+    entry = entries[30]    
     
     # 2. Init API connection
     authDict = read_api_key( "APIKEY.txt" )
@@ -434,8 +462,8 @@ if __name__ == "__main__":
     for item in allThreads['items']:
         print( item )
         
-    for item in allThreads['items'][0]['replies']['comments']:
-        print( item )
+    #for item in allThreads['items'][0]['replies']['comments']:
+        #print( item )
         
     for key , val in result['items'][0].iteritems():
         print( key , ":" , val )
