@@ -28,16 +28,21 @@ Dependencies: numpy , youtube-dl , google-api-python-client , urllib2 , FFmpeg
         [Y] Search for timestamp candidates
     [ ] Discern artist & track for each listing
 	[Y] GraceNote Test
-        [ ] pygn pull request "__init__.py"
 	[ ] Separate candidate artist and track
 	[ ] Query (1,2) and (2,1) to see which one returns a hit
-	[ ] If gracenote fails, Query wikiP
-    { } artist-track fallback: Google , Wikipedia?
+        [ ] pygn pull request "__init__.py"
+            [Y] Fork pygn
+	{ } artist-track fallback: Google , Wikipedia?
     [ ] Find example of how to split songs by track
         [ ] URL , Split songs with multiprocess: https://codereview.stackexchange.com/q/166158
         [ ] Test with dummy times
     [ ] Split audio by confirmed timestamps
-    [ ] Load id3 metadata for individual tracks    
+    [ ] Load id3 metadata for individual tracks  
+        [ ] Artist
+        [ ] Title
+        [ ] Album
+        [ ] Album Art (Or YT thumbnail) , Can this be obtained from GN?
+        [ ] Additional GN data
 [ ] Build a list of music to listen to
     [ ] Study Jams
     [Y] Establish a input playlist format - COMPLETE:
@@ -46,6 +51,8 @@ Dependencies: numpy , youtube-dl , google-api-python-client , urllib2 , FFmpeg
     [Y] Parse a file - COMPLETE , made sure that strings are ASCII
     [ ] Review list
     [ ] Artists to try
+[ ] Make API connection functions persistent functors
+    [ ] Write an IDE object persistence test
 [ ] Adjust program behavior
     [ ] Limit download speed with random spacing between requests
     [ ] Change user agent to FF browser
@@ -360,6 +367,11 @@ def remove_timestamp_from_line( line ):
         return line[ :bgnDex ] + line[ endDex+1: ]
     else:
         return line
+    
+# FIXME : IF THE BALANCE LEADS WITH DIGITS , THEN ASSUME THAT IS THE TRACK NUMBER
+    # GIVE THIS A NAME THAT DOES NOT NECESSARILY IMPLY TRACK NUM ON AN ALBUM
+    
+# FIXME : REMOVE LEADING DIGITS AND SPACE
             
 def scrape_and_check_timestamps( reponseObj ):
     """ Attempt to get the tracklist from the response object and return it , Return if all the stamps are lesser than the duration """
@@ -374,10 +386,12 @@ def scrape_and_check_timestamps( reponseObj ):
         if len( stamp ) > 0:
             stamp = parse_list_timestamp( stamp )
             if timestamp_leq( stamp , duration ):
+                linBal = remove_timestamp_from_line( line )
+                # FIXME : GET SEQUENCE IN VIDEO , SEE ABOVE
                 trkLstFltrd.append(
-                    { ascii( 'timestamp' ) : stamp ,
-                      ascii( 'line' ) :      line  ,
-                      ascii( 'balance' ) :   remove_timestamp_from_line( line ) }
+                    { ascii( 'timestamp' ) : stamp  ,
+                      ascii( 'line' ) :      line   ,
+                      ascii( 'balance' ) :   linBal }
                 )
     # N. Return tracklist
     return trkLstFltrd
