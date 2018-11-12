@@ -29,6 +29,7 @@ Dependencies: numpy , youtube-dl , google-api-python-client , urllib2 , FFmpeg
         [Y] Search for timestamp candidates
     [ ] Discern artist & track for each listing
 	[Y] GraceNote Test
+        [ ] pygn pull request "__init__.py"
 	[ ] Separate candidate artist and track
 	[ ] Query (1,2) and (2,1) to see which one returns a hit
 	[ ] If gracenote fails, Query wikiP

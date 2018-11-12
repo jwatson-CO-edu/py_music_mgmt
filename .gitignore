@@ -2,3 +2,5 @@
 *.mp3*
 APIKEY.txt
 GNWKEY.txt
+pygn/__init__.py
+example/pygn/__init__.py
