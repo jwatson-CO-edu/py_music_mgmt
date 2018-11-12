@@ -7,3 +7,6 @@
 [submodule "example/pygn"]
 	path = example/pygn
 	url = https://github.com/cweichen/pygn.git
+[submodule "english-words"]
+	path = english-words
+	url = https://github.com/dwyl/english-words.git
