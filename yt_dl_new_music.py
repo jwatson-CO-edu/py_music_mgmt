@@ -406,15 +406,37 @@ def scrape_and_check_timestamps( reponseObj ):
     # N. Return tracklist
     return trkLstFltrd
     
+def GN_most_likely_artist_and_track( op1 , op2 ):
+    """ Given the strings 'op1' and 'op2' , Determine which of the two are the most likely artist and track according to GraceNote """
+    # FIXME : START HERE
+    # FIXME : GRACENOTE SEARCH (1,2) AND (2,1) , Assign Score
+    # ~ Dev Plan ~
+    # [ ] Try a GN search with each and review the results
+    # [ ] Determine failure mode of the results
+    #     [ ] Introduce a small, intentional error into a good search to see how GN handles it
+    # [ ] Assign scores
+    # [ ] Return a structure with scores
+    
 def extract_and_query_artist_and_track( inputStr ):
     """ Given the balance of the timestamp-sequence extraction , Attempt to infer the artist and track names """
     # 1. Split on dividing char "-"
+    components = inputStr.split( '-' )
     # 2. Strip leading and trailing whitespace
+    components = [ comp.strip() for comp in components ]
     # 3. Retain nonempty strings
-    # FIXME : THERE SHOULD ONLY BE 2 LEFT
-    # FIXME : STORE CANDIDATES
-    # FIXME : GRACENOTE SEARCH (1,2) AND (2,1) , Assign Score
+    components = [ comp for comp in components if len( comp ) ]
+    print components
+    numComp    = len( components )
+    if numComp > 2:
+        # FIXME : THERE SHOULD ONLY BE 2 LEFT
+        print "WARN: There were more than 2 components! ," , components
+    op1 = components[0]
+    op2 = components[1]
     # FIXME : ASSIGN MOST LIKELY ARTIST AND TRACK NAMES
+    # FIXME : HASH OF KNOWN ARTIST NAMES
+    
+# FIXME : WHAT TO DO ABOUT ONE-ARTIST ALBUMS?
+# FIXME : WHAT TO DO ABOUT ONE-SONG VIDEOS?
 
 # _ End Func _
 
@@ -506,6 +528,8 @@ if __name__ == "__main__":
     stamps = scrape_and_check_timestamps( result )
     for stamp in stamps:
         print stamp
+        print extract_and_query_artist_and_track( stamp['balance'] )
+        print
         
     print()
     
