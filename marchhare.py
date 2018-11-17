@@ -809,7 +809,7 @@ def str_args( *args , **kwargs ):
         return prnStr
     
 def pretty_print_dict( pDict ):
-    """ print a dictionary """
+    """ print a dictionary with uniform columns """
     longestRep = 0
     for key in pDict:
         longestRep = max( longestRep , len( str( key ) ) )
