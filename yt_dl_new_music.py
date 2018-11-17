@@ -28,8 +28,8 @@ Dependencies: numpy , youtube-dl , google-api-python-client , urllib2 , FFmpeg
         [Y] Search for timestamp candidates
     [ ] Discern artist & track for each listing
 	[Y] GraceNote Test
-	[ ] Separate candidate artist and track
-	[ ] Query (1,2) and (2,1) to see which one returns a hit
+	[Y] Separate candidate artist and track
+	[Y] Query (1,2) and (2,1) to see which one returns a hit
         [ ] pygn pull request "__init__.py"
             [Y] Fork pygn
 	{ } artist-track fallback: Google , Wikipedia?
@@ -51,8 +51,8 @@ Dependencies: numpy , youtube-dl , google-api-python-client , urllib2 , FFmpeg
     [Y] Parse a file - COMPLETE , made sure that strings are ASCII
     [ ] Review list
     [ ] Artists to try
-[ ] Make API connection functions persistent functors
-    [ ] Write an IDE object persistence test
+[Y] Make API connection functions persistent functors - Not possible, just run connections once per script
+    [Y] Write an IDE object persistence test - Objects in the script cannot persist between runs of the script, console is erased each run
 [ ] Adjust program behavior
     [ ] Limit download speed with random spacing between requests
     [ ] Change user agent to FF browser
@@ -101,16 +101,22 @@ import youtube_dl
 try:
     from apiclient.discovery import build
     from apiclient.errors import HttpError
+    print "Loaded 'apiclient'! (Google)"
 except:
     try:
         from googleapiclient.discovery import build
         from googleapiclient.errors import HttpError
+        print "Loaded 'googleapiclient'!"
     except:
         print( "COULD NOT IMPORT API UNDER EITHER ALIAS" )
 from oauth2client.tools import argparser
+print "Loaded 'oauth2client'!"
+import pygn
+from pygn.pygn import register , search
+print "Loaded 'pygn'! (GraceNote)"
 # ~~ Local ~~
 prepend_dir_to_path( SOURCEDIR )
-from marchhare.marchhare import parse_lines , ascii , sep , is_nonempty_list
+from marchhare.marchhare import parse_lines , ascii , sep , is_nonempty_list , pretty_print_dict
 
 # ~~ Constants , Shortcuts , Aliases ~~
 EPSILON = 1e-7
@@ -130,19 +136,21 @@ def __prog_signature__(): return __progname__ + " , Version " + __version__ # Re
 class MyLogger( object ):
     """ Logging class for YT downloads """
     # https://github.com/rg3/youtube-dl/blob/master/README.md#embedding-youtube-dl
-    
     def debug( self , msg ):
         pass
-
     def warning( self , msg ):
         pass
-
     def error( self , msg ):
         print( msg )
 
 # _ End Class _
 
 # = Program Functions =
+
+def my_hook( d ):
+    # https://github.com/rg3/youtube-dl/blob/master/README.md#embedding-youtube-dl
+    if d[ 'status' ] == 'finished':
+        print( 'Done downloading, now converting ...' )
 
 def get_id_from_URL( URLstr ):
     """ Get the 11-char video ID from the URL string """
@@ -155,8 +163,6 @@ def get_id_from_URL( URLstr ):
 def parse_video_entry( txtLine ):
     """ Obtain the video url from the line """
     components = [ rawToken for rawToken in txtLine.split( ',' ) ]
-    # print "Original Line:" , txtLine
-    # print "Components:   " , components
     return { ascii( "url" ) : str( components[0] )             ,
              ascii( "seq" ) : int( components[1] )             ,
              ascii( "id"  ) : get_id_from_URL( components[0] ) }
@@ -173,11 +179,6 @@ def read_api_key( fPath ):
     for line in lines:
         rtnDict[ line[0] ] = line[1]
     return rtnDict
-
-def my_hook( d ):
-    # https://github.com/rg3/youtube-dl/blob/master/README.md#embedding-youtube-dl
-    if d[ 'status' ] == 'finished':
-        print( 'Done downloading, now converting ...' )
 
 def remove_empty_kwargs( **kwargs ):
     """ Remove keyword arguments that are not set """
@@ -212,11 +213,6 @@ def extract_description_lines( metadata ):
 def extract_video_duration( metadata ):
     """ Get the ISO 8601 string from the video metadata """
     return ascii( metadata['items'][0]['contentDetails']['duration'] )
-
-# :: FIXME ::
-# 2. Try to evaluate text stamps 
-# 3. Notify if no stamps of any kind are found
-# 4. If no stamps were found, Then attempt to split by pauses and give generic names to tracks
 
 def get_last_digits( inputStr ):
     """ Get the last contiguous substring of digits in the 'inputStr' """
@@ -405,22 +401,11 @@ def scrape_and_check_timestamps( reponseObj ):
                 )
     # N. Return tracklist
     return trkLstFltrd
-    
-def GN_most_likely_artist_and_track( op1 , op2 ):
-    """ Given the strings 'op1' and 'op2' , Determine which of the two are the most likely artist and track according to GraceNote """
-    # FIXME : START HERE
-    # FIXME : GRACENOTE SEARCH (1,2) AND (2,1) , Assign Score
-    # ~ Dev Plan ~
-    # [ ] Try a GN search with each and review the results
-    # [ ] Determine failure mode of the results
-    #     [ ] Introduce a small, intentional error into a good search to see how GN handles it
-    # [ ] Assign scores
-    # [ ] Return a structure with scores
-    
-def extract_and_query_artist_and_track( inputStr ):
+
+def extract_candidate_artist_and_track( inputStr ):
     """ Given the balance of the timestamp-sequence extraction , Attempt to infer the artist and track names """
-    # 1. Split on dividing char "-"
-    components = inputStr.split( '-' )
+    # 1. Split on dividing char "- "
+    components = inputStr.split( '- ' )
     # 2. Strip leading and trailing whitespace
     components = [ comp.strip() for comp in components ]
     # 3. Retain nonempty strings
@@ -428,12 +413,123 @@ def extract_and_query_artist_and_track( inputStr ):
     print components
     numComp    = len( components )
     if numComp > 2:
-        # FIXME : THERE SHOULD ONLY BE 2 LEFT
+        # If there are more than 2 components, then only take the longest 2
+        components.sort( lambda x , y : cmp( len(y) , len(x) ) ) # Sort Longest --to-> Shortest
         print "WARN: There were more than 2 components! ," , components
+        return components[:2]
+    elif numComp == 2:
+        return components
+    else:
+        for i in range( 2 - numComp ):
+            components.append( '' )
+        return components
+    
+def obj_to_dict( obj ):
+    """ Return a dictionary version of the object """
+    # Easy: The object already has a dictionary
+    try:
+        if len( obj.__dict__ ) == 0:
+            raise KeyError( "Empty Dict" )
+        print "About to return a dictionary with" , len( obj.__dict__ ) , "attributes"
+        return obj.__dict__
+    # Hard: Fetch and associate attributes
+    except:
+        objDict = {}
+        attrs = dir( obj )
+        print "Found" , len( attrs ) , "attributes in the" , type( obj )
+        for attr in attrs:
+            objDict[ attr ] = getattr( obj , attr )
+        return objDict
+
+def count_nested_values( superDict , val ):
+    """ Count the number of times that 'val' occurs in 'superDict' """
+    # 1. Base Case : This is a value of the dictionary
+    if type( superDict ) not in ( dict , pygn.pygn.gnmetadata ):
+        print "Base case with type" , type( superDict )
+        try:
+            print "Got" , superDict , ", Type:" , type( superDict )
+            num = superDict.count( val )
+            print "Base: Searching" , superDict , 'for' , val , ", Occurrences:" , num
+            return num
+        except:
+            return 0
+    # 2. Recursive Case : This is an inner dictionary or object
+    else:
+        print "Recursive case with type" , type( superDict )
+        total = 0
+        if type( superDict ) == dict:
+            for key , dVal in superDict.iteritems():
+                print "Reecurring on" , dVal , "..."
+                total += count_nested_values( dVal , val )
+        elif type( superDict ) == pygn.pygn.gnmetadata:
+            gotDict = obj_to_dict( superDict )
+            print gotDict
+            for key , dVal in gotDict.iteritems():
+                print "Reecurring on" , dVal , "..."
+                total += count_nested_values( dVal , val )  
+        else:
+            print "Found some other type:" , type( superDict )
+        return total
+    
+"""
+### ISSUE: 'GN_score_result_with_components' DOES NOT FIND OBVIOUS MATCHES ###
+There are occurrences of search keys that are not turning up in the count
+"""
+    
+def GN_score_result_with_components( resultObj , components ):
+    """ Tally the instances for each of the components in the result object """
+    total = 0
+    currCount = 0
+    for comp in components:
+        currCount = count_nested_values( resultObj , comp )
+        total += currCount
+        print "Component:" , comp , ", Occurrences:" , currCount
+    return total
+    
+def GN_most_likely_artist_and_track( GN_client , GN_user , components ):
+    """ Given the strings 'op1' and 'op2' , Determine which of the two are the most likely artist and track according to GraceNote """
     op1 = components[0]
-    op2 = components[1]
+    op2 = components[1]    
+    flagPrint = True
+    
+    # 1. Perform search (1,0)
+    # The search function requires a clientID, userID, and at least one of either { artist , album , track } to be specified.
+    metadata = search(
+        clientID = GN_client , 
+        userID   = GN_user   , 
+        artist   = op2       , 
+        track    = op1
+    )
+    if flagPrint: 
+        pretty_print_dict( metadata )
+        print "Score for this result:" , GN_score_result_with_components( metadata , components )
+    
+    # 2. Perform search (0,1)   
+    # The search function requires a clientID, userID, and at least one of either { artist , album , track } to be specified.
+    metadata = search(
+        clientID = GN_client , 
+        userID   = GN_user   , 
+        artist   = op1       , 
+        track    = op2
+    )    
+    if flagPrint: 
+        pretty_print_dict( metadata )
+        print "Score for this result:" , GN_score_result_with_components( metadata , components )
+    
+    # FIXME : START HERE
+    # FIXME : GRACENOTE SEARCH (1,2) AND (2,1) , Assign Score
+    
+    # ~ Dev Plan ~
+    # [ ] Try a GN search with each and review the results
+    # [ ] Determine failure mode of the results
+    #     [ ] Introduce a small, intentional error into a good search to see how GN handles it
+    # [ ] Assign scores
+    # [ ] Return a structure with scores
+    
     # FIXME : ASSIGN MOST LIKELY ARTIST AND TRACK NAMES
-    # FIXME : HASH OF KNOWN ARTIST NAMES
+    # FIXME : HASH OF KNOWN ARTIST NAMES    
+    
+
     
 # FIXME : WHAT TO DO ABOUT ONE-ARTIST ALBUMS?
 # FIXME : WHAT TO DO ABOUT ONE-SONG VIDEOS?
@@ -458,7 +554,7 @@ if __name__ == "__main__":
         
     entry = entries[30]    
     
-    # 2. Init API connection
+    # 2. Init Google API connection
     authDict = read_api_key( "APIKEY.txt" )
     print( authDict )
     
@@ -475,6 +571,14 @@ if __name__ == "__main__":
                      developerKey = DEVELOPER_KEY )
     
     print( "Created an API connection with key" , youtube._developerKey )
+    
+    # 3. Init GraceNote API Connection
+    
+    gnKey = read_api_key( "GNWKEY.txt" )
+    print gnKey
+    
+    gnClient = gnKey[ 'clientID' ] #_ Enter your Client ID here '*******-************************'
+    gnUser   = register( gnClient ) # Registration should not be done more than once per session    
     
     # 3. Fetch video data
     
@@ -528,10 +632,13 @@ if __name__ == "__main__":
     stamps = scrape_and_check_timestamps( result )
     for stamp in stamps:
         print stamp
-        print extract_and_query_artist_and_track( stamp['balance'] )
+        # print extract_and_query_artist_and_track( stamp['balance'] )
         print
         
-    print()
+    print
+    
+    GN_most_likely_artist_and_track( gnClient , gnUser , 
+                                     extract_candidate_artist_and_track( stamps[6]['balance'] ) )
     
     if 0:
         components = dir( youtube )
