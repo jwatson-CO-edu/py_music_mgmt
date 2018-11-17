@@ -1006,7 +1006,7 @@ def validate_dirs_writable( *dirList ):
 
 # == String Processing ==
 
-def ascii( strInput ): return strInput.encode( 'ascii' , 'ignore' )
+def ascii( strInput ): return str( strInput ).encode( 'ascii' , 'ignore' )
 
 def strip_after_first( pStr , char ): 
     """ Return a version of 'pStr' in which the first instance of 'char' and everything that follows is removed, if 'char' exists in 'pStr', otherwise return 'pStr' """
