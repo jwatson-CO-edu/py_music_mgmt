@@ -442,35 +442,54 @@ def obj_to_dict( obj ):
         for attr in attrs:
             objDict[ attr ] = getattr( obj , attr )
         return objDict
+    
+def GN_dictify_response_obj( resultObj ):
+    """ Iterate over the response object and convert into a dictionary """
+    # being able to 'pretty_print_dict' seems to imply that we can just iterate over keys in a for loop and access them with 'response[ key ]'
+    rtnDict = {}
+    try:
+        for item in resultObj:
+            #print "key:" , str( item ) , ", val:" , resultObj[ item ]
+            rtnDict[ item ] = resultObj[ item ]
+    except TypeError:
+        print "WARN:" , type( resultObj ) , "is not iterable!"
+    return rtnDict
 
 def count_nested_values( superDict , val ):
     """ Count the number of times that 'val' occurs in 'superDict' """
+    debugPrnt = False
     # 1. Base Case : This is a value of the dictionary
-    if type( superDict ) not in ( dict , pygn.pygn.gnmetadata ):
-        print "Base case with type" , type( superDict )
+    if type( superDict ) not in ( dict , pygn.pygn.gnmetadata , list ):
+        if debugPrnt: print "Base case with type" , type( superDict )
         try:
-            print "Got" , superDict , ", Type:" , type( superDict )
+            if debugPrnt: print "Got" , superDict , ", Type:" , type( superDict )
             num = superDict.count( val )
-            print "Base: Searching" , superDict , 'for' , val , ", Occurrences:" , num
+            if debugPrnt: print "Base: Searching" , superDict , 'for' , val , ", Occurrences:" , num
             return num
         except:
             return 0
-    # 2. Recursive Case : This is an inner dictionary or object
+    # 2. Recursive Case : This is an inner list
+    elif type( superDict ) == list:
+        total = 0
+        for item in superDict:
+            total += count_nested_values( item , val )
+        return total
+    # 3. Recursive Case : This is an inner dictionary or object
     else:
-        print "Recursive case with type" , type( superDict )
+        if debugPrnt: print "Recursive case with type" , type( superDict )
         total = 0
         if type( superDict ) == dict:
             for key , dVal in superDict.iteritems():
-                print "Reecurring on" , dVal , "..."
+                if debugPrnt: print "Reecurring on" , dVal , "..."
                 total += count_nested_values( dVal , val )
         elif type( superDict ) == pygn.pygn.gnmetadata:
-            gotDict = obj_to_dict( superDict )
-            print gotDict
+            gotDict = GN_dictify_response_obj( superDict )
+            #print gotDict
             for key , dVal in gotDict.iteritems():
-                print "Reecurring on" , dVal , "..."
+                if debugPrnt: print "Reecurring on" , dVal , "..."
                 total += count_nested_values( dVal , val )  
         else:
-            print "Found some other type:" , type( superDict )
+            if debugPrnt: print "Found some other type:" , type( superDict )
         return total
     
 """
@@ -482,23 +501,28 @@ def GN_score_result_with_components( resultObj , components ):
     """ Tally the instances for each of the components in the result object """
     total = 0
     currCount = 0
+    debugPrnt = False
     for comp in components:
         currCount = count_nested_values( resultObj , comp )
         total += currCount
-        print "Component:" , comp , ", Occurrences:" , currCount
+        if debugPrnt: print "Component:" , comp , ", Occurrences:" , currCount
     return total
 
 def GN_examine_response_obj( resultObj ):
-    """ FIXME : CAN WE UST ITERATE OVER THIS? """
-    # FIXME : START HERE
+    """ CAN WE JUST ITERATE OVER THIS? : YES """
     # being able to 'pretty_print_dict' seems to imply that we can just iterate over keys in a for loop and access them with 'response[ key ]'
-    pass
+    try:
+        for item in resultObj:
+            print "key:" , str( item ) , ", val:" , resultObj[ item ]
+    except TypeError:
+        print "WARN:" , type( resultObj ) , "is not iterable!"
     
 def GN_most_likely_artist_and_track( GN_client , GN_user , components ):
     """ Given the strings 'op1' and 'op2' , Determine which of the two are the most likely artist and track according to GraceNote """
     op1 = components[0]
     op2 = components[1]    
     flagPrint = True
+    rtnScores = []
     
     # 1. Perform search (1,0)
     # The search function requires a clientID, userID, and at least one of either { artist , album , track } to be specified.
@@ -508,9 +532,19 @@ def GN_most_likely_artist_and_track( GN_client , GN_user , components ):
         artist   = op2       , 
         track    = op1
     )
+    
+    score21 = GN_score_result_with_components( metadata , components )
+    
+    rtnScores.append(
+        { 'artist' : metadata['album_artist_name'] ,
+          'track'  : metadata['track_title']       ,
+          'score'  : score21                       }
+    )
+    
     if flagPrint: 
         pretty_print_dict( metadata )
-        print "Score for this result:" , GN_score_result_with_components( metadata , components )
+        #GN_examine_response_obj( metadata )
+        print "Score for this result:" , score21
     
     # 2. Perform search (0,1)   
     # The search function requires a clientID, userID, and at least one of either { artist , album , track } to be specified.
@@ -520,22 +554,34 @@ def GN_most_likely_artist_and_track( GN_client , GN_user , components ):
         artist   = op1       , 
         track    = op2
     )    
+    
+    score12 = GN_score_result_with_components( metadata , components )
+    
+    rtnScores.append(
+        { 'artist' : metadata['album_artist_name'] ,
+          'track'  : metadata['track_title']       ,
+          'score'  : score12                       }
+    )    
+    
     if flagPrint: 
         pretty_print_dict( metadata )
-        print "Score for this result:" , GN_score_result_with_components( metadata , components )
+        #GN_examine_response_obj( metadata )
+        print "Score for this result:" , score12
+        
+    return rtnScores
     
     # FIXME : START HERE
     # FIXME : GRACENOTE SEARCH (1,2) AND (2,1) , Assign Score
     
     # ~ Dev Plan ~
-    # [ ] Try a GN search with each and review the results
-    # [ ] Determine failure mode of the results
-    #     [ ] Introduce a small, intentional error into a good search to see how GN handles it
-    # [ ] Assign scores
-    # [ ] Return a structure with scores
+    # [Y] Try a GN search with each and review the results
+    # [y] Determine failure mode of the results - Search returns whatever the closest hit is, there is no failure mode
+    #     [N] Introduce a small, intentional error into a good search to see how GN handles it
+    # [y] Assign scores
+    # [Y] Return a structure with scores
     
-    # FIXME : ASSIGN MOST LIKELY ARTIST AND TRACK NAMES
-    # FIXME : HASH OF KNOWN ARTIST NAMES    
+# FIXME : ASSIGN MOST LIKELY ARTIST AND TRACK NAMES
+# FIXME : HASH OF KNOWN ARTIST NAMES    
     
 
     
@@ -645,8 +691,8 @@ if __name__ == "__main__":
         
     print
     
-    GN_most_likely_artist_and_track( gnClient , gnUser , 
-                                     extract_candidate_artist_and_track( stamps[6]['balance'] ) )
+    print GN_most_likely_artist_and_track( gnClient , gnUser , 
+                                           extract_candidate_artist_and_track( stamps[6]['balance'] ) )
     
     if 0:
         components = dir( youtube )
