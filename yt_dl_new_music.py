@@ -75,6 +75,32 @@ Dependencies: numpy , youtube-dl , google-api-python-client , urllib2 , FFmpeg
 [ ] If no tracklist is found, then Download video comments
 [ ] Remove log files from repo
 { } Bandcamp Scraper
+
+~~~ Test Plan ~~~
+NOTE: This utility must be run in Linux
+[ ] 1. Download and Store
+    [ ] Open API
+    [ ] Check Write location
+    [ ] Create Dir for each video
+    [ ] Raw File
+    [ ] Raw File Location
+    [ ] File Success
+    [ ] URL
+    [ ] Description Data
+    [ ] Comment Data
+    [ ] LOG
+    [ ] Pickle all data
+    [ ] Close API
+[ ] 2. Process and Split
+    [ ] Restore Pickle
+    [ ] Tracklist Success
+    [ ] Tracklist Data
+    [ ] Split File Success
+    [ ] Split File Metadata
+    [ ] Split File Locations
+[ ] 3. Edit Metadata and Finish
+    [ ] Add ID3 metadata
+    [ ] Copy all output files to the Song Inbox
 """
 
 # === Init Environment =====================================================================================================================
