@@ -32,7 +32,9 @@ Dependencies: numpy , youtube-dl , google-api-python-client , urllib2 , FFmpeg
 	[Y] Query (1,2) and (2,1) to see which one returns a hit
         [ ] pygn pull request "__init__.py"
             [Y] Fork pygn
-	{ } artist-track fallback: Google , Wikipedia?
+	{ } artist-track fallback: 
+            { } MusicBrainz - Open Access Database
+            { } Google , Wikipedia?
     [ ] Find example of how to split songs by track
         [ ] URL , Split songs with multiprocess: https://codereview.stackexchange.com/q/166158
         [ ] Test with dummy times
@@ -485,6 +487,12 @@ def GN_score_result_with_components( resultObj , components ):
         total += currCount
         print "Component:" , comp , ", Occurrences:" , currCount
     return total
+
+def GN_examine_response_obj( resultObj ):
+    """ FIXME : CAN WE UST ITERATE OVER THIS? """
+    # FIXME : START HERE
+    # being able to 'pretty_print_dict' seems to imply that we can just iterate over keys in a for loop and access them with 'response[ key ]'
+    pass
     
 def GN_most_likely_artist_and_track( GN_client , GN_user , components ):
     """ Given the strings 'op1' and 'op2' , Determine which of the two are the most likely artist and track according to GraceNote """
