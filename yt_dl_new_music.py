@@ -21,7 +21,7 @@ Dependencies: numpy , youtube-dl , google-api-python-client , urllib2 , FFmpeg
 [Y] Test download at the command line
 [Y] Fetch example from the docs
     [Y] Test the example under linux
-[ ] Split songs by track
+[Y] Build Tracklist
     [Y] Establish YouTube API with key
     [Y] Download video descriptions
     [Y] Locate timestamps in the description or comments
@@ -36,6 +36,7 @@ Dependencies: numpy , youtube-dl , google-api-python-client , urllib2 , FFmpeg
 	{ } artist-track fallback: 
             { } MusicBrainz - Open Access Database
             { } Google , Wikipedia?
+[ ] Split songs by track
     [ ] Find example of how to split songs by track
         [ ] URL , Split songs with multiprocess: https://codereview.stackexchange.com/q/166158
         [ ] Test with dummy times
@@ -614,6 +615,27 @@ def GN_most_likely_artist_and_track( GN_client , GN_user , components ):
     
 # FIXME : WHAT TO DO ABOUT ONE-ARTIST ALBUMS?
 # FIXME : WHAT TO DO ABOUT ONE-SONG VIDEOS?
+
+# ~~~ MAIN EXECUTION ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+def open_all_APIs( googKeyFile , GNKeyFile ):
+    """ Open an API connection for {Google , GraceNote} , Return connection objects """
+
+def Stage1_Download_w_Data( inputFile ,
+                            minDelay_s = 20 , maxDelay_s = 180 ):
+    """ Check environment for download , Fetch files and metadata , Save files and metadata """
+    # [ ] Open API
+    # [ ] Check Write location
+    # [ ] Create Dir for each video
+    # [ ] Raw File
+    # [ ] Raw File Location
+    # [ ] File Success
+    # [ ] URL
+    # [ ] Description Data
+    # [ ] Comment Data
+    # [ ] LOG
+    # [ ] Pickle all data
+    # [ ] Close API    
 
 # _ End Func _
 
