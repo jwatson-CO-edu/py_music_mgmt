@@ -26,12 +26,13 @@ Dependencies: numpy , youtube-dl , google-api-python-client , urllib2 , FFmpeg
     [Y] Download video descriptions
     [Y] Locate timestamps in the description or comments
         [Y] Search for timestamp candidates
-    [ ] Discern artist & track for each listing
+    [Y] Discern artist & track for each listing
 	[Y] GraceNote Test
 	[Y] Separate candidate artist and track
 	[Y] Query (1,2) and (2,1) to see which one returns a hit
-        [ ] pygn pull request "__init__.py"
+        [Y] pygn pull request "__init__.py": https://github.com/cweichen/pygn/pull/15
             [Y] Fork pygn
+            [Y] Submit request
 	{ } artist-track fallback: 
             { } MusicBrainz - Open Access Database
             { } Google , Wikipedia?
