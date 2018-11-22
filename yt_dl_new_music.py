@@ -618,13 +618,54 @@ def GN_most_likely_artist_and_track( GN_client , GN_user , components ):
 
 # ~~~ MAIN EXECUTION ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-def open_all_APIs( googKeyFile , GNKeyFile ):
-    """ Open an API connection for {Google , GraceNote} , Return connection objects """
+# == Connection Vars ==
 
+DEVELOPER_KEY            = None
+YOUTUBE_API_SERVICE_NAME = "youtube"
+YOUTUBE_API_VERSION      = "v3"
+METADATA_SPEC            = 'snippet,contentDetails,statistics'
+#METADATA_SPEC            = 'id,snippet,contentDetails,statistics'
+COMMENT_THREAD_SPEC      = 'replies'
+
+authDict = {}
+youtube  = None
+gnKey    = None
+gnClient = None
+gnUser   = None
+
+# __ End Connection __
+
+def open_all_APIs( googKeyFile , GNKeyFile ):
+    """ Open an API connection for {Google , GraceNote} """
+    global DEVELOPER_KEY , authDict , youtube , gnKey , gnClient , gnUser
+    # 2. Init Google API connection
+    authDict = read_api_key( googKeyFile ) # "APIKEY.txt"
+    DEVELOPER_KEY = authDict['key']
+    print( authDict )
+    
+    youtube = build( YOUTUBE_API_SERVICE_NAME , 
+                     YOUTUBE_API_VERSION , 
+                     developerKey = DEVELOPER_KEY )
+    
+    # 3. Init GraceNote API Connection
+    
+    gnKey = read_api_key( GNKeyFile ) # "GNWKEY.txt"
+    gnClient = gnKey[ 'clientID' ] #_ Enter your Client ID here '*******-************************'
+    gnUser   = register( gnClient ) # Registration should not be done more than once per session      
+    
+def fetch_metadata_by_yt_video_ID( ytVideoID ):
+    """ Fetch and return the response object that results from a YouTube API search for 'ytVideoID' """
+    global youtube , METADATA_SPEC
+    return videos_list_by_id(
+        youtube ,
+        part = METADATA_SPEC ,
+        id   = ytVideoID
+    )        
+    
 def Stage1_Download_w_Data( inputFile ,
                             minDelay_s = 20 , maxDelay_s = 180 ):
     """ Check environment for download , Fetch files and metadata , Save files and metadata """
-    # [ ] Open API
+    
     # [ ] Check Write location
     # [ ] Create Dir for each video
     # [ ] Raw File
@@ -651,58 +692,18 @@ if __name__ == "__main__":
     
     # 1. Load video playlist
     entries = process_video_list( "input/url_sources.txt" )
-    if 0:
-        for entry in entries:
-            print( entry )
-        
-    entry = entries[30]    
     
-    # 2. Init Google API connection
-    authDict = read_api_key( "APIKEY.txt" )
-    print( authDict )
+    # 2. Set test entry
+    entry = entries[8]    
     
-    DEVELOPER_KEY            = authDict['key']
-    YOUTUBE_API_SERVICE_NAME = "youtube"
-    YOUTUBE_API_VERSION      = "v3"
-    METADATA_SPEC            = 'snippet,contentDetails,statistics'
-    #METADATA_SPEC            = 'id,snippet,contentDetails,statistics'
-    COMMENT_THREAD_SPEC      = 'replies'
+    # 3. Open APIs
+    open_all_APIs( "APIKEY.txt" , "GNWKEY.txt" )
+    print "Created a YouTube API connection with key  " , youtube._developerKey 
+    print "Created a GraceNote API connection with key" , gnKey    
+      
     
-    
-    youtube = build( YOUTUBE_API_SERVICE_NAME , 
-                     YOUTUBE_API_VERSION , 
-                     developerKey = DEVELOPER_KEY )
-    
-    print( "Created an API connection with key" , youtube._developerKey )
-    
-    # 3. Init GraceNote API Connection
-    
-    gnKey = read_api_key( "GNWKEY.txt" )
-    print gnKey
-    
-    gnClient = gnKey[ 'clientID' ] #_ Enter your Client ID here '*******-************************'
-    gnUser   = register( gnClient ) # Registration should not be done more than once per session    
-    
-    # 3. Fetch video data
-    
-    # Fetch video data
-    result = videos_list_by_id(
-        youtube ,
-        part = METADATA_SPEC ,
-        id   = entry['id']
-    )    
-    
-    if 0:
-        descLines = extract_description_lines( result )
-        sep( "Candidate Tracklist" , 2 )
-        for line in descLines:
-            stamp = get_timestamp_from_line( line )
-            if len( stamp ) > 0:
-                print( line , "," , stamp )
-        print()
-        sep( "Complete Description" )
-        for line in descLines:
-            print( line.strip() )    
+    # 3. Fetch video metadata
+    result = fetch_metadata_by_yt_video_ID( entry['id'] ) 
     
     # Fetch comment threads
     allThreads = comment_threads_list_by_video_id(
@@ -741,7 +742,7 @@ if __name__ == "__main__":
     print
     
     print GN_most_likely_artist_and_track( gnClient , gnUser , 
-                                           extract_candidate_artist_and_track( stamps[6]['balance'] ) )
+                                           extract_candidate_artist_and_track( stamps[0]['balance'] ) )
     
     if 0:
         components = dir( youtube )
