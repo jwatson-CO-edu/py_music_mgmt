@@ -141,11 +141,11 @@ def sep( title = "" , width = 6 , char = '=' , strOut = False ):
     else:
         print LINE + ' ' + title + ' ' + LINE
 
-def format_epoch_timestamp( sysTime ): # TODO: Send to HARMLESS
+def format_epoch_timestamp( sysTime ): 
     """ Format epoch time into a readable timestamp """
     return datetime.fromtimestamp( sysTime ).strftime('%Y-%m-%d_%H-%M-%S-%f')
 
-def validate_dirs_writable( *dirList ): # TODO: Add to HARMLESS
+def validate_dirs_writable( *dirList ): 
     """ Return true if every directory argument both exists and is writable, otherwise return false """
     # NOTE: This function exits on the first failed check and does not provide info for any subsequent element of 'dirList'
     # NOTE: Assume that a writable directory is readable

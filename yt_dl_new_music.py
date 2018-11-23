@@ -618,8 +618,9 @@ def GN_most_likely_artist_and_track( GN_client , GN_user , components ):
 
 # ~~~ MAIN EXECUTION ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-# == Connection Vars ==
+# == Program Vars ==
 
+# ~ API Connection Vars ~
 DEVELOPER_KEY            = None
 YOUTUBE_API_SERVICE_NAME = "youtube"
 YOUTUBE_API_VERSION      = "v3"
@@ -627,28 +628,36 @@ METADATA_SPEC            = 'snippet,contentDetails,statistics'
 #METADATA_SPEC            = 'id,snippet,contentDetails,statistics'
 COMMENT_THREAD_SPEC      = 'replies'
 
+# ~ Authentication Vars ~
 authDict = {}
 youtube  = None
 gnKey    = None
 gnClient = None
 gnUser   = None
 
-# __ End Connection __
+# ~ Session Vars ~
+RAW_FILE_DIR       = ""
+CHOPPED_SONG_DIR   = ""
+PICKLE_DIR         = ""
+ACTIVE_PICKLE_PATH = ""
+LOG_DIR            = ""
+ACTIVE_SESSION     = False
+
+# __ End Vars __
 
 def open_all_APIs( googKeyFile , GNKeyFile ):
     """ Open an API connection for {Google , GraceNote} """
     global DEVELOPER_KEY , authDict , youtube , gnKey , gnClient , gnUser
+    
     # 2. Init Google API connection
     authDict = read_api_key( googKeyFile ) # "APIKEY.txt"
     DEVELOPER_KEY = authDict['key']
     print( authDict )
-    
     youtube = build( YOUTUBE_API_SERVICE_NAME , 
                      YOUTUBE_API_VERSION , 
                      developerKey = DEVELOPER_KEY )
     
     # 3. Init GraceNote API Connection
-    
     gnKey = read_api_key( GNKeyFile ) # "GNWKEY.txt"
     gnClient = gnKey[ 'clientID' ] #_ Enter your Client ID here '*******-************************'
     gnUser   = register( gnClient ) # Registration should not be done more than once per session      
@@ -660,13 +669,27 @@ def fetch_metadata_by_yt_video_ID( ytVideoID ):
         youtube ,
         part = METADATA_SPEC ,
         id   = ytVideoID
-    )        
+    )  
+
+def fetch_comment_threads_by_yt_ID( ytVideoID ): 
+    """ Fetch and return comment thread data that results from a YouTube API search for 'ytVideoID' """
+    global youtube , COMMENT_THREAD_SPEC
+    return comment_threads_list_by_video_id(
+        youtube ,
+        part    = COMMENT_THREAD_SPEC,
+        videoId = ytVideoID 
+    )
+
+def load_session( sessionPath ):
+    """ Read session file and populate session vars """
+    # FIXME : START HERE
     
 def Stage1_Download_w_Data( inputFile ,
                             minDelay_s = 20 , maxDelay_s = 180 ):
     """ Check environment for download , Fetch files and metadata , Save files and metadata """
-    
-    # [ ] Check Write location
+    # [ ] Load session
+    # [ ] Check Write locations
+    #validDirsFlag = validate_dirs_writable(  )
     # [ ] Create Dir for each video
     # [ ] Raw File
     # [ ] Raw File Location
@@ -676,7 +699,7 @@ def Stage1_Download_w_Data( inputFile ,
     # [ ] Comment Data
     # [ ] LOG
     # [ ] Pickle all data
-    # [ ] Close API    
+    # { } Close APIs?
 
 # _ End Func _
 
@@ -700,17 +723,12 @@ if __name__ == "__main__":
     open_all_APIs( "APIKEY.txt" , "GNWKEY.txt" )
     print "Created a YouTube API connection with key  " , youtube._developerKey 
     print "Created a GraceNote API connection with key" , gnKey    
-      
     
     # 3. Fetch video metadata
     result = fetch_metadata_by_yt_video_ID( entry['id'] ) 
     
     # Fetch comment threads
-    allThreads = comment_threads_list_by_video_id(
-        youtube ,
-        part    = COMMENT_THREAD_SPEC,
-        videoId = entry['id']
-    )
+    allThreads = fetch_comment_threads_by_yt_ID( entry['id'] )
     
     print
     sep( "Video Metadata" )
