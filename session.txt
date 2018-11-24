@@ -1,5 +1,6 @@
-RAW_FILE_DIR,       
-CHOPPED_SONG_DIR,   
-PICKLE_DIR,         
-ACTIVE_PICKLE_PATH, 
+RAW_FILE_DIR,output
+CHOPPED_SONG_DIR,output/chopped
+PICKLE_DIR,output     
+ACTIVE_PICKLE_PATH,output/session.pkl 
+LOG_DIR,logs
 ACTIVE_SESSION,0

@@ -201,8 +201,8 @@ def process_video_list( fPath ):
     """ Get all the URLs from the prepared list """
     return parse_lines( fPath , parse_video_entry )
 
-def read_api_key( fPath ):
-    """ Read the Google API key """
+def comma_sep_key_val_from_file( fPath ):
+    """ Read a file, treating each line as a key-val pair separated by a comma """
     entryFunc = lambda txtLine : [ str( rawToken ) for rawToken in txtLine.split( ',' ) ]
     lines = parse_lines( fPath , entryFunc )
     rtnDict = {}
@@ -642,6 +642,7 @@ PICKLE_DIR         = ""
 ACTIVE_PICKLE_PATH = ""
 LOG_DIR            = ""
 ACTIVE_SESSION     = False
+SESSION_PATH       = "session.txt"
 
 # __ End Vars __
 
@@ -650,7 +651,7 @@ def open_all_APIs( googKeyFile , GNKeyFile ):
     global DEVELOPER_KEY , authDict , youtube , gnKey , gnClient , gnUser
     
     # 2. Init Google API connection
-    authDict = read_api_key( googKeyFile ) # "APIKEY.txt"
+    authDict = comma_sep_key_val_from_file( googKeyFile ) # "APIKEY.txt"
     DEVELOPER_KEY = authDict['key']
     print( authDict )
     youtube = build( YOUTUBE_API_SERVICE_NAME , 
@@ -658,7 +659,7 @@ def open_all_APIs( googKeyFile , GNKeyFile ):
                      developerKey = DEVELOPER_KEY )
     
     # 3. Init GraceNote API Connection
-    gnKey = read_api_key( GNKeyFile ) # "GNWKEY.txt"
+    gnKey = comma_sep_key_val_from_file( GNKeyFile ) # "GNWKEY.txt"
     gnClient = gnKey[ 'clientID' ] #_ Enter your Client ID here '*******-************************'
     gnUser   = register( gnClient ) # Registration should not be done more than once per session      
     
@@ -682,7 +683,18 @@ def fetch_comment_threads_by_yt_ID( ytVideoID ):
 
 def load_session( sessionPath ):
     """ Read session file and populate session vars """
-    # FIXME : START HERE
+    # FIXME : SESSION VARS GLOBAL
+    sesnDict = comma_sep_key_val_from_file( sessionPath );              print "Loaded session file:" , sessionPath
+    RAW_FILE_DIR       = sesnDict['RAW_FILE_DIR'];                      print "RAW_FILE_DIR:" , RAW_FILE_DIR
+    CHOPPED_SONG_DIR   = sesnDict['CHOPPED_SONG_DIR'];                  print "CHOPPED_SONG_DIR" , CHOPPED_SONG_DIR
+    PICKLE_DIR         = sesnDict['PICKLE_DIR'];                        print "" # FIXME: START HERE
+    ACTIVE_PICKLE_PATH = sesnDict['ACTIVE_PICKLE_PATH'];                print ""
+    LOG_DIR            = sesnDict['LOG_DIR'];                           print ""
+    ACTIVE_SESSION     = bool( int( sesnDict['ACTIVE_SESSION'] ) );     print ""
+    
+def save_session( sessionPath ):
+    """ Write session vars to the session file """
+    # FIXME : SAVE SESSION
     
 def Stage1_Download_w_Data( inputFile ,
                             minDelay_s = 20 , maxDelay_s = 180 ):
