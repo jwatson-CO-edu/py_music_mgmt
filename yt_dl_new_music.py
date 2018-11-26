@@ -146,7 +146,7 @@ from pygn.pygn import register , search
 print "Loaded 'pygn'! (GraceNote)"
 # ~~ Local ~~
 prepend_dir_to_path( SOURCEDIR )
-from marchhare.marchhare import parse_lines , ascii , sep , is_nonempty_list , pretty_print_dict
+from marchhare.marchhare import parse_lines , ascii , sep , is_nonempty_list , pretty_print_dict , unpickle_dict , yesno
 
 # ~~ Constants , Shortcuts , Aliases ~~
 EPSILON = 1e-7
@@ -683,18 +683,25 @@ def fetch_comment_threads_by_yt_ID( ytVideoID ):
 
 def load_session( sessionPath ):
     """ Read session file and populate session vars """
-    # FIXME : SESSION VARS GLOBAL
+    global RAW_FILE_DIR , CHOPPED_SONG_DIR , PICKLE_DIR , ACTIVE_PICKLE_PATH , LOG_DIR , ACTIVE_SESSION
     sesnDict = comma_sep_key_val_from_file( sessionPath );              print "Loaded session file:" , sessionPath
     RAW_FILE_DIR       = sesnDict['RAW_FILE_DIR'];                      print "RAW_FILE_DIR:" , RAW_FILE_DIR
-    CHOPPED_SONG_DIR   = sesnDict['CHOPPED_SONG_DIR'];                  print "CHOPPED_SONG_DIR" , CHOPPED_SONG_DIR
-    PICKLE_DIR         = sesnDict['PICKLE_DIR'];                        print "" # FIXME: START HERE
-    ACTIVE_PICKLE_PATH = sesnDict['ACTIVE_PICKLE_PATH'];                print ""
-    LOG_DIR            = sesnDict['LOG_DIR'];                           print ""
-    ACTIVE_SESSION     = bool( int( sesnDict['ACTIVE_SESSION'] ) );     print ""
+    CHOPPED_SONG_DIR   = sesnDict['CHOPPED_SONG_DIR'];                  print "CHOPPED_SONG_DIR:" , CHOPPED_SONG_DIR
+    PICKLE_DIR         = sesnDict['PICKLE_DIR'];                        print "PICKLE_DIR:" , PICKLE_DIR 
+    ACTIVE_PICKLE_PATH = sesnDict['ACTIVE_PICKLE_PATH'];                print "ACTIVE_PICKLE_PATH:" , ACTIVE_PICKLE_PATH
+    LOG_DIR            = sesnDict['LOG_DIR'];                           print "LOG_DIR" , LOG_DIR
+    ACTIVE_SESSION     = bool( int( sesnDict['ACTIVE_SESSION'] ) );     print "ACTIVE_SESSION:" , yesno( ACTIVE_SESSION )
     
 def save_session( sessionPath ):
     """ Write session vars to the session file """
-    # FIXME : SAVE SESSION
+    # 1. If a file exists at this path, erase it
+    if os.path.isfile( sessionPath ):
+        # FIXME : ERASE THE FILE
+        pass
+    # 2. Write each line
+    # DEV: USE THE CATEGORIES ABOVE
+    
+#unpickle_dict( filename ) # DEV: USE THIS TO UNPICKLE PROCESS PROGRESS DATA
     
 def Stage1_Download_w_Data( inputFile ,
                             minDelay_s = 20 , maxDelay_s = 180 ):
