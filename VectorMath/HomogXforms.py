@@ -101,5 +101,16 @@ def skew_sym_cross( vecR ):
     return [ [  0       , -vecR[2] ,  vecR[1] ] , 
              [  vecR[2] ,  0       , -vecR[0] ] ,
              [ -vecR[1] ,  vecR[0] ,  0       ] ]
+
+def pos_from_xform( xform ):
+    """ Get the position vector from the homogeneous transformation """
+    return [ xform[0][3] , xform[0][1] , xform[0][2] ]
+
+def get_basis_vectors_for_xform( xform ):
+    """ Return the basis vector for the transformation """
+    xBasis = apply_homog( xform , [1,0,0] )
+    yBasis = apply_homog( xform , [0,1,0] )
+    zBasis = apply_homog( xform , [0,0,1] )
+    return xBasis , yBasis , zBasis
         
 # __ End Homogeneous __
