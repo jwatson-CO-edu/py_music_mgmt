@@ -828,13 +828,13 @@ def ensure_dir( dirName ):
     if not os.path.exists( dirName ):
         os.makedirs( dirName )
 
-def struct_to_pkl( struct , pklPath ): # <<< resenv
+def struct_to_pkl( struct , pklPath ): 
     """ Serialize a 'struct' to 'pklPath' """
     f = open( pklPath , 'wb') # open a file for binary writing to receive pickled data
     cPickle.dump( struct , f ) # changed: pickle.dump --> cPickle.dump
     f.close()
     
-def load_pkl_struct( pklPath ): # <<< resenv
+def load_pkl_struct( pklPath ): 
     """ Load a pickled object and return it, return None if error """
     fileLoaded = False
     rtnStruct = None
@@ -850,6 +850,18 @@ def load_pkl_struct( pklPath ): # <<< resenv
             print "load_pkl_struct: Could not unpickle file,",pklPath,",",err
         f.close()
     return rtnStruct
+
+def unpickle_dict( filename ):
+    """ Return the dictionary stored in the file , Otherwise return an empty dictionary if there were no items """
+    try:
+        infile = open( filename , 'rb' )
+        rtnDict = cPickle.load( infile )
+        if len( rtnDict ) > 0:
+            return rtnDict
+        else:
+            return {}
+    except FileNotFoundError:
+        return {}
     
 def process_txt_for_LaTeX( TXTpath , ltxPath = None ):  
     """ Add appropriate line breaks to a TXT file and return as TEX file handle """
