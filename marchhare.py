@@ -817,6 +817,10 @@ def pretty_print_dict( pDict ):
     for key in sorted( pDict ):
         print "\t" , str( key ).ljust( longestRep , ' ' ) , ":" , pDict[ key ]
     print "}"
+    
+def yesno( pBool ):
+    """ Return YES if True, Otherwise return NO """
+    return ( "YES" if pBool else "NO" )
 
 # __ End Printing __
 
