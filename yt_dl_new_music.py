@@ -107,7 +107,7 @@ NOTE: This utility must be run in Linux
 
 # === Init Environment =====================================================================================================================
 # ~~~ Prepare Paths ~~~
-import sys, os.path
+import sys , os.path , os
 SOURCEDIR = os.path.dirname( os.path.abspath( '__file__' ) ) # URL, dir containing source file: http://stackoverflow.com/a/7783326
 PARENTDIR = os.path.dirname( SOURCEDIR )
 # ~~ Path Utilities ~~
@@ -696,9 +696,11 @@ def save_session( sessionPath ):
     """ Write session vars to the session file """
     # 1. If a file exists at this path, erase it
     if os.path.isfile( sessionPath ):
-        # FIXME : ERASE THE FILE
-        pass
+        print "Session" , sessionPath , "was overwritten!"
+        os.remove( sessionPath )
     # 2. Write each line
+    f = open( sessionPath , "w+" )
+    # FIXME : START HERE
     # DEV: USE THE CATEGORIES ABOVE
     
 #unpickle_dict( filename ) # DEV: USE THIS TO UNPICKLE PROCESS PROGRESS DATA
