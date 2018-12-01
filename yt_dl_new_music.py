@@ -700,8 +700,12 @@ def save_session( sessionPath ):
         os.remove( sessionPath )
     # 2. Write each line
     f = open( sessionPath , "w+" )
-    # FIXME : START HERE
-    # DEV: USE THE CATEGORIES ABOVE
+    f.write( 'RAW_FILE_DIR'       + ',' + str( sesnDict['RAW_FILE_DIR'] )          + '\n' )
+    f.write( 'CHOPPED_SONG_DIR'   + ',' + str( sesnDict['CHOPPED_SONG_DIR'] )      + '\n' )
+    f.write( 'PICKLE_DIR'         + ',' + str( sesnDict['PICKLE_DIR'] )            + '\n' )
+    f.write( 'ACTIVE_PICKLE_PATH' + ',' + str( sesnDict['ACTIVE_PICKLE_PATH'] )    + '\n' )
+    f.write( 'LOG_DIR'            + ',' + str( sesnDict['LOG_DIR'] )               + '\n' )
+    f.write( 'ACTIVE_SESSION'     + ',' + str( int( sesnDict['ACTIVE_SESSION'] ) ) + '\n' )
     
 #unpickle_dict( filename ) # DEV: USE THIS TO UNPICKLE PROCESS PROGRESS DATA
     
