@@ -810,6 +810,9 @@ def Stage1_Download_w_Data( inputFile ,
         # 6. Download Raw MP3 File
         LOG.prnt( "Downloading" , entry['url'] )
         
+        # [ ] If this file has an entry, the raw file exists, and the file is ok, then skip download
+        # [ ] else could not find raw file , empty the target dir and downoad again
+        
         # DEBUG: DISABLE DOWNLOAD UNTIL CACHING IS IMPLEMENTED
         #ydl.download( [ entry['url'] ] )  # This function MUST be passed a list!
         
@@ -822,6 +825,7 @@ def Stage1_Download_w_Data( inputFile ,
         # [ ] Fetch Description Data
         # [ ] Verify that the downloaded file is as long as the original video
         # [ ] Fetch Comment Data
+        # [ ] Get time and date for this file
         # [ ] Add file data to a dictionary
         count += 1
     # [ ] Pickle all data
