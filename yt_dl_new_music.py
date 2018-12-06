@@ -147,7 +147,7 @@ print "Loaded 'pygn'! (GraceNote)"
 # ~~ Local ~~
 prepend_dir_to_path( SOURCEDIR )
 from marchhare.marchhare import ( parse_lines , ascii , sep , is_nonempty_list , pretty_print_dict , unpickle_dict , yesno ,
-                                  validate_dirs_writable , )
+                                  validate_dirs_writable , LogMH , Stopwatch , )
 
 # ~~ Constants , Shortcuts , Aliases ~~
 EPSILON = 1e-7
@@ -162,26 +162,39 @@ def __prog_signature__(): return __progname__ + " , Version " + __version__ # Re
 
 # === Main Application =====================================================================================================================
 
-# = Classes =
+# = youtube-dl Logging =
 
 class MyLogger( object ):
     """ Logging class for YT downloads """
     # https://github.com/rg3/youtube-dl/blob/master/README.md#embedding-youtube-dl
+    global LOG
+    
+    def __init__( self ):
+        """ Put ther noisier output in separate logs for easier debugging """
+        self.dbgLog = LogMH()
+        self.wrnLog = LogMH()
+        
     def debug( self , msg ):
-        pass
+        """ Log debug output """
+        self.dbgLog.prnt( "DEBUG:" , msg )
+        
     def warning( self , msg ):
-        pass
+        """ Log warnings """
+        self.wrnLog.prnt( "WARN:" , msg )
+        
     def error( self , msg ):
-        print( msg )
-
-# _ End Class _
-
-# = Program Functions =
+        """ Log erros in the main log """
+        LOG.prnt( "ERROR:" , msg )
 
 def my_hook( d ):
     # https://github.com/rg3/youtube-dl/blob/master/README.md#embedding-youtube-dl
     if d[ 'status' ] == 'finished':
         print( 'Done downloading, now converting ...' )
+
+# _ End Logging _
+
+
+# = Program Functions =
 
 def get_id_from_URL( URLstr ):
     """ Get the 11-char video ID from the URL string """
@@ -204,7 +217,7 @@ def process_video_list( fPath ):
 
 def comma_sep_key_val_from_file( fPath ):
     """ Read a file, treating each line as a key-val pair separated by a comma """
-    entryFunc = lambda txtLine : [ str( rawToken ) for rawToken in txtLine.split( ',' ) ]
+    entryFunc = lambda txtLine : [ str( rawToken ).strip() for rawToken in txtLine.split( ',' ) ]
     lines = parse_lines( fPath , entryFunc )
     rtnDict = {}
     for line in lines:
@@ -644,6 +657,21 @@ ACTIVE_PICKLE_PATH = ""
 LOG_DIR            = ""
 ACTIVE_SESSION     = False
 SESSION_PATH       = "session.txt"
+LOG                = None
+METADATA           = {} 
+
+# ~ Processing Vars ~
+# Options for youtube-dl
+YDL_OPTS = {
+    'format': 'bestaudio/best',
+    'postprocessors': [ {
+        'key': 'FFmpegExtractAudio',
+        'preferredcodec': 'mp3',
+        'preferredquality': '192',
+    } ] ,
+    'logger': MyLogger(),
+    'progress_hooks': [my_hook],
+}
 
 # __ End Vars __
 
@@ -712,32 +740,63 @@ def save_session( sessionPath ):
 def verify_session_writable( sesnDict ):
     """ Make sure that we can write to the relevant directories """
     allWrite = validate_dirs_writable(  
-        sesnDict['RAW_FILE_DIR']       ,
-        sesnDict['CHOPPED_SONG_DIR']   ,
-        sesnDict['PICKLE_DIR']         ,
-        sesnDict['LOG_DIR']            ,
+        os.path.join( SOURCEDIR , sesnDict['RAW_FILE_DIR'] )     ,
+        os.path.join( SOURCEDIR , sesnDict['CHOPPED_SONG_DIR'] ) ,
+        os.path.join( SOURCEDIR , sesnDict['PICKLE_DIR'] )       ,
+        os.path.join( SOURCEDIR , sesnDict['LOG_DIR'] )          ,
     )
     print "Session dirs writable:" , yesno( allWrite )
     return allWrite
-    
-#unpickle_dict( filename ) # DEV: USE THIS TO UNPICKLE PROCESS PROGRESS DATA
+
+def get_EXT( fName ):
+    """ Return the capitalized file extension at the end of a path without the period """
+    return os.path.splitext( fName )[-1][1:].upper()
+
+def list_all_files_w_EXT( searchPath , EXTlst ):
+    """ Return all of the paths in 'searchPath' that have extensions that appear in 'EXTlst' , Extensions are not case sensitive """
+    items = os.listdir( searchPath )
+    rtnLst = []
+    for item in items:
+        fEXT = get_EXT( item )
+        if fEXT in EXTlst:
+            rtnLst.append( item )
+    return rtnLst
     
 def Stage1_Download_w_Data( inputFile ,
                             minDelay_s = 20 , maxDelay_s = 180 ):
     """ Check environment for download , Fetch files and metadata , Save files and metadata """
+    global LOG , METADATA
+    LOG = LogMH()
+    dlTimer = Stopwatch()
+    # DEBUG
+    limit = 1
+    count = 0
     # 0. Indicate file
-    print "Processing" , inputFile , "..."
+    LOG.prnt( "Processing" , inputFile , "..." )
     # 1. Load session
     session = load_session( SESSION_PATH )
+    if os.path.isfile( ACTIVE_PICKLE_PATH ):
+        LOG.prnt( "Found cached metadata at" , ACTIVE_PICKLE_PATH )
+        METADATA = unpickle_dict( ACTIVE_PICKLE_PATH ) 
+    else:
+        METADATA = {}
     # 1.1. Activate session
     ACTIVE_SESSION = True
     # 2. Check Write locations
     dirsWritable = verify_session_writable( session )
+    if not dirsWritable:
+        return False
     # 3. Process input file
     entries = process_video_list( "input/url_sources.txt" )
-    print "Read input file with" , len( entries ) , "entries"
+    LOG.prnt( "Read input file with" , len( entries ) , "entries" )
+    # 4. Init downloaded
+    ydl = youtube_dl.YoutubeDL( YDL_OPTS )
     # 4. For each entry
     for entry in entries:
+        # I. If the debug file limit exceeded, exit loop
+        if not count < limit:
+            break
+        dlTimer.start()
         # 5. Create Dir
         enID = entry['id']
         enRawDir = os.path.join( RAW_FILE_DIR , enID )
@@ -745,17 +804,26 @@ def Stage1_Download_w_Data( inputFile ,
             try:  
                 os.mkdir( enRawDir )
             except OSError:  
-                print( "Creation of the directory %s failed" % enRawDir )
+                LOG.prnt(  "Creation of the directory %s failed" % enRawDir )
             else:  
-                print( "Successfully created the directory %s " % enRawDir )            
-        # [ ] Raw File
-        # FIXME : NEED TO VERIFY THAT THE DOWNLOADED FILE IS AS LONG AS THE ORIGINAL VIDEO
-        # [ ] Raw File Location
+                LOG.prnt(  "Successfully created the directory %s " % enRawDir )            
+        # 6. Download Raw MP3 File
+        LOG.prnt( "Downloading" , entry['url'] )
+        
+        # DEBUG: DISABLE DOWNLOAD UNTIL CACHING IS IMPLEMENTED
+        #ydl.download( [ entry['url'] ] )  # This function MUST be passed a list!
+        
+        enElapsed = dlTimer.elapsed()
+        LOG.prnt( "Downloading and Processing:" , enElapsed , "seconds" )
+        # [ ] Locate and move the raw file
+        # [ ] Raw File End Location
         # [ ] File Success
         # [ ] URL
-        # [ ] Description Data
-        # [ ] Comment Data
-        # [ ] LOG
+        # [ ] Fetch Description Data
+        # [ ] Verify that the downloaded file is as long as the original video
+        # [ ] Fetch Comment Data
+        # [ ] Add file data to a dictionary
+        count += 1
     # [ ] Pickle all data
     # { } Close APIs?
 
