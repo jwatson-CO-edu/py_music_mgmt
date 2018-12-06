@@ -146,7 +146,8 @@ from pygn.pygn import register , search
 print "Loaded 'pygn'! (GraceNote)"
 # ~~ Local ~~
 prepend_dir_to_path( SOURCEDIR )
-from marchhare.marchhare import parse_lines , ascii , sep , is_nonempty_list , pretty_print_dict , unpickle_dict , yesno
+from marchhare.marchhare import ( parse_lines , ascii , sep , is_nonempty_list , pretty_print_dict , unpickle_dict , yesno ,
+                                  validate_dirs_writable , )
 
 # ~~ Constants , Shortcuts , Aliases ~~
 EPSILON = 1e-7
@@ -691,6 +692,7 @@ def load_session( sessionPath ):
     ACTIVE_PICKLE_PATH = sesnDict['ACTIVE_PICKLE_PATH'];                print "ACTIVE_PICKLE_PATH:" , ACTIVE_PICKLE_PATH
     LOG_DIR            = sesnDict['LOG_DIR'];                           print "LOG_DIR" , LOG_DIR
     ACTIVE_SESSION     = bool( int( sesnDict['ACTIVE_SESSION'] ) );     print "ACTIVE_SESSION:" , yesno( ACTIVE_SESSION )
+    return sesnDict
     
 def save_session( sessionPath ):
     """ Write session vars to the session file """
@@ -706,24 +708,54 @@ def save_session( sessionPath ):
     f.write( 'ACTIVE_PICKLE_PATH' + ',' + str( sesnDict['ACTIVE_PICKLE_PATH'] )    + '\n' )
     f.write( 'LOG_DIR'            + ',' + str( sesnDict['LOG_DIR'] )               + '\n' )
     f.write( 'ACTIVE_SESSION'     + ',' + str( int( sesnDict['ACTIVE_SESSION'] ) ) + '\n' )
+  
+def verify_session_writable( sesnDict ):
+    """ Make sure that we can write to the relevant directories """
+    allWrite = validate_dirs_writable(  
+        sesnDict['RAW_FILE_DIR']       ,
+        sesnDict['CHOPPED_SONG_DIR']   ,
+        sesnDict['PICKLE_DIR']         ,
+        sesnDict['LOG_DIR']            ,
+    )
+    print "Session dirs writable:" , yesno( allWrite )
+    return allWrite
     
 #unpickle_dict( filename ) # DEV: USE THIS TO UNPICKLE PROCESS PROGRESS DATA
     
 def Stage1_Download_w_Data( inputFile ,
                             minDelay_s = 20 , maxDelay_s = 180 ):
     """ Check environment for download , Fetch files and metadata , Save files and metadata """
+    # 0. Indicate file
+    print "Processing" , inputFile , "..."
     # 1. Load session
-    load_session( SESSION_PATH )
-    # [ ] Check Write locations
-    #validDirsFlag = validate_dirs_writable(  )
-    # [ ] Create Dir for each video
-    # [ ] Raw File
-    # [ ] Raw File Location
-    # [ ] File Success
-    # [ ] URL
-    # [ ] Description Data
-    # [ ] Comment Data
-    # [ ] LOG
+    session = load_session( SESSION_PATH )
+    # 1.1. Activate session
+    ACTIVE_SESSION = True
+    # 2. Check Write locations
+    dirsWritable = verify_session_writable( session )
+    # 3. Process input file
+    entries = process_video_list( "input/url_sources.txt" )
+    print "Read input file with" , len( entries ) , "entries"
+    # 4. For each entry
+    for entry in entries:
+        # 5. Create Dir
+        enID = entry['id']
+        enRawDir = os.path.join( RAW_FILE_DIR , enID )
+        if not os.path.isdir( enRawDir ):
+            try:  
+                os.mkdir( enRawDir )
+            except OSError:  
+                print( "Creation of the directory %s failed" % enRawDir )
+            else:  
+                print( "Successfully created the directory %s " % enRawDir )            
+        # [ ] Raw File
+        # FIXME : NEED TO VERIFY THAT THE DOWNLOADED FILE IS AS LONG AS THE ORIGINAL VIDEO
+        # [ ] Raw File Location
+        # [ ] File Success
+        # [ ] URL
+        # [ ] Description Data
+        # [ ] Comment Data
+        # [ ] LOG
     # [ ] Pickle all data
     # { } Close APIs?
 
@@ -739,91 +771,96 @@ if __name__ == "__main__":
     print( __prog_signature__() )
     termArgs = sys.argv[1:] # Terminal arguments , if they exist
     
-    # 1. Load video playlist
-    entries = process_video_list( "input/url_sources.txt" )
+    # ~~~ Stage 1 ~~~
+    Stage1_Download_w_Data( "input/url_sources.txt" ,
+                            minDelay_s = 20 , maxDelay_s = 180 )
     
-    # 2. Set test entry
-    entry = entries[8]    
-    
-    # 3. Open APIs
-    open_all_APIs( "APIKEY.txt" , "GNWKEY.txt" )
-    print "Created a YouTube API connection with key  " , youtube._developerKey 
-    print "Created a GraceNote API connection with key" , gnKey    
-    
-    # 3. Fetch video metadata
-    result = fetch_metadata_by_yt_video_ID( entry['id'] ) 
-    
-    # Fetch comment threads
-    allThreads = fetch_comment_threads_by_yt_ID( entry['id'] )
-    
-    print
-    sep( "Video Metadata" )
-    for key , val in result.iteritems():
-        print( key , ':' , val )
-      
-    print()
-    sep( "Comment Data" )     
-    for key , val in allThreads.iteritems():
-        print( key , ':' , val )
-        
-    for item in allThreads['items']:
-        print( item )
-        
-    #for item in allThreads['items'][0]['replies']['comments']:
-        #print( item )
-        
-    for key , val in result['items'][0].iteritems():
-        print( key , ":" , val )
-        
-    print extract_video_duration( result )
-    print parse_ISO8601_timestamp( extract_video_duration( result ) )
-    stamps = scrape_and_check_timestamps( result )
-    for stamp in stamps:
-        print stamp
-        # print extract_and_query_artist_and_track( stamp['balance'] )
-        print
-        
-    print
-    
-    print GN_most_likely_artist_and_track( gnClient , gnUser , 
-                                           extract_candidate_artist_and_track( stamps[0]['balance'] ) )
-    
-    if 0:
-        components = dir( youtube )
-        for comp in components:
-            print( comp )
-    
-    
-    if 0:
-        response = urlopen( entry['url'] )
-        html = response.read()   
-    
-    
-    
-    # ~~~~~~~~~~~~~~~ Downloading youtube videos as MP3: https://github.com/rg3/youtube-dl/blob/master/README.md#embedding-youtube-dl ~~~~~~
-    if 0:
-        
-        # Options for youtube-dl
-        ydl_opts = {
-            'format': 'bestaudio/best',
-            'postprocessors': [ {
-                'key': 'FFmpegExtractAudio',
-                'preferredcodec': 'mp3',
-                'preferredquality': '192',
-            } ] ,
-            'logger': MyLogger(),
-            'progress_hooks': [my_hook],
-        }
-        
-        # Download file
-        with youtube_dl.YoutubeDL( ydl_opts ) as ydl:
-            ydl.download( [ 'https://www.youtube.com/watch?v=BaW_jenozKc' ] )  
     
 
 # ___ End Main _____________________________________________________________________________________________________________________________
 
 
 # === Spare Parts ==========================================================================================================================
+
+## 1. Load video playlist
+#entries = process_video_list( "input/url_sources.txt" )
+
+## 2. Set test entry
+#entry = entries[8]    
+
+## 3. Open APIs
+#open_all_APIs( "APIKEY.txt" , "GNWKEY.txt" )
+#print "Created a YouTube API connection with key  " , youtube._developerKey 
+#print "Created a GraceNote API connection with key" , gnKey    
+
+## 3. Fetch video metadata
+#result = fetch_metadata_by_yt_video_ID( entry['id'] ) 
+
+## Fetch comment threads
+#allThreads = fetch_comment_threads_by_yt_ID( entry['id'] )
+
+#print
+#sep( "Video Metadata" )
+#for key , val in result.iteritems():
+    #print( key , ':' , val )
+  
+#print()
+#sep( "Comment Data" )     
+#for key , val in allThreads.iteritems():
+    #print( key , ':' , val )
+    
+#for item in allThreads['items']:
+    #print( item )
+    
+##for item in allThreads['items'][0]['replies']['comments']:
+    ##print( item )
+    
+#for key , val in result['items'][0].iteritems():
+    #print( key , ":" , val )
+    
+#print extract_video_duration( result )
+#print parse_ISO8601_timestamp( extract_video_duration( result ) )
+#stamps = scrape_and_check_timestamps( result )
+#for stamp in stamps:
+    #print stamp
+    ## print extract_and_query_artist_and_track( stamp['balance'] )
+    #print
+    
+#print
+
+#print GN_most_likely_artist_and_track( gnClient , gnUser , 
+                                       #extract_candidate_artist_and_track( stamps[0]['balance'] ) )
+
+#if 0:
+    #components = dir( youtube )
+    #for comp in components:
+        #print( comp )
+
+
+#if 0:
+    #response = urlopen( entry['url'] )
+    #html = response.read()   
+
+
+
+## ~~~~~~~~~~~~~~~ Downloading youtube videos as MP3: https://github.com/rg3/youtube-dl/blob/master/README.md#embedding-youtube-dl ~~~~~~
+#if 0:
+    
+    ## Options for youtube-dl
+    #ydl_opts = {
+        #'format': 'bestaudio/best',
+        #'postprocessors': [ {
+            #'key': 'FFmpegExtractAudio',
+            #'preferredcodec': 'mp3',
+            #'preferredquality': '192',
+        #} ] ,
+        #'logger': MyLogger(),
+        #'progress_hooks': [my_hook],
+    #}
+    
+    ## Download file
+    #with youtube_dl.YoutubeDL( ydl_opts ) as ydl:
+        #ydl.download( [ 'https://www.youtube.com/watch?v=BaW_jenozKc' ] )  
 
 #def get_timelinks_from_HTML( ytHTML ):
     #""" Attempt to scrape times links from page HTML """
