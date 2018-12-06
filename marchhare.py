@@ -951,53 +951,49 @@ def parse_lines( fPath , parseFunc ):
     # 5. Return expressions that are the results of processing the lines
     return rtnExprs
 
-# = class accum =
-    
-class accum:
-    """ Singleton text buffer object to hold script output, with facilities to write contents """
-    
-    totalStr = ""
 
-    @staticmethod
-    def prnt( *args ):
+# = class LogMH =
+
+class LogMH:
+    """ Text buffer object to hold script output, with facilities to write contents """
+    
+    def __init__( self ):
+	""" String to store logs """
+	self.totalStr = ""
+
+    def prnt( self , *args ):
         """ Print args and store them in a string """
         for arg in args:
-            accum.totalStr += str(arg) + " "
-            print str(arg) ,
+            self.totalStr += str( arg ) + " "
+            print str( arg ) ,
         print
-        accum.totalStr += endl
+        self.totalStr += endl
 
-    @staticmethod
-    def sep( title = "" , width = 6 , char = '=' , strOut = False ):
+    def sep( self , title = "" , width = 6 , char = '=' , strOut = False ):
         """ Print a separating title card for debug """
         LINE = width * char
+	self.prnt( LINE + ' ' + title + ' ' + LINE )
         if strOut:
             return LINE + ' ' + title + ' ' + LINE
-        else:
-            accum.prnt( LINE + ' ' + title + ' ' + LINE )
-        
-    @staticmethod
-    def write( *args ):
+            
+    def write( self , *args ):
         """ Store 'args' in the accumulation string without printing """
         numArgs = len( args )
         for i , arg in enumerate( args ):
-            accum.totalStr += str(arg) + ( " " if i < numArgs-1 else "" )
-#        accum.totalStr += endl
+            self.totalStr += str( arg ) + ( " " if i < numArgs-1 else "" )
 
-    @staticmethod
-    def out_and_clear( outPath ):
-        """ Write the contents of 'accum.totalStr' to a file and clear """
+    def out_and_clear( self , outPath ):
+        """ Write the contents of 'totalStr' to a file and clear """
         outFile = file( outPath , 'w' )
-        outFile.write( accum.totalStr )
+        outFile.write( self.totalStr )
         outFile.close()
         accum.totalStr = ""
         
-    @staticmethod
-    def clear():
+    def clear( self ):
         """ Clear the contents of 'accum.totalStr' """
-        accum.totalStr = ""
+        self.totalStr = ""
 
-# _ End accum _
+# _ End LogMH _
 
 # __ End File __
 
@@ -1009,11 +1005,11 @@ def validate_dirs_writable( *dirList ):
     # NOTE: This function exits on the first failed check and does not provide info for any subsequent element of 'dirList'
     # NOTE: Assume that a writable directory is readable
     for directory in dirList:
-        if not os.path.isdir(directory):
-            print "Directory",directory,"does not exist!"
+        if not os.path.isdir( directory ):
+            print "Directory" , directory , "does not exist!"
             return False
-        if not os.access(directory, os.W_OK): # URL, Check write permission: http://stackoverflow.com/a/2113511/893511
-            print "System does not have write permission for",directory,"!"
+        if not os.access( directory , os.W_OK ): # URL, Check write permission: http://stackoverflow.com/a/2113511/893511
+            print "System does not have write permission for" , directory , "!"
             return False
     return True # All checks finished OK, return true
 
@@ -1056,7 +1052,7 @@ def tokenize_with_separator( rawStr , separator , evalFunc = str ):
         tokens.append( evalFunc( currToken ) ) # transform token and append to the token list
     return tokens
 
-def format_dec_list( numList , places = 2 ): # <<< resenv
+def format_dec_list( numList , places = 2 ): 
     """ Return a string representing a list of decimal numbers limited to 'places' """
     rtnStr = "[ "
     for nDex , num in enumerate( numList ):
@@ -1097,21 +1093,26 @@ class HeartRate: # NOTE: This fulfills a purpose similar to the rospy rate
         self.last = time.time()
         
 class Stopwatch( object ):
-    """ Singleton object for benchmarking """
+    """ Timer for benchmarking """
     strtTime = 0
     stopTime = 0
     
-    @staticmethod
-    def start():
-        Stopwatch.strtTime = time.time()
+    def __init__( self ):
+	""" Init with watch started """
+	self.strtTime = time.time()
+	self.stopTime = infty
+	
+    def start( self ):
+        self.strtTime = time.time()
         
-    @staticmethod
-    def stop():
-        Stopwatch.stopTime = time.time()
+    def stop( self ):
+        self.stopTime = time.time()
         
-    @staticmethod
-    def elapsed():
-        return Stopwatch.stopTime - Stopwatch.strtTime
+    def duration( self ):
+        return self.stopTime - self.strtTime
+    
+    def elapsed( self ):
+        return time.time() - self.strtTime    
 
 # __ End Timing __
         
