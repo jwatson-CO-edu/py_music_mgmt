@@ -712,7 +712,8 @@ def save_session( sessionPath ):
 def Stage1_Download_w_Data( inputFile ,
                             minDelay_s = 20 , maxDelay_s = 180 ):
     """ Check environment for download , Fetch files and metadata , Save files and metadata """
-    # [ ] Load session
+    # 1. Load session
+    load_session( SESSION_PATH )
     # [ ] Check Write locations
     #validDirsFlag = validate_dirs_writable(  )
     # [ ] Create Dir for each video
