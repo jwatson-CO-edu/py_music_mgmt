@@ -1094,8 +1094,6 @@ class HeartRate: # NOTE: This fulfills a purpose similar to the rospy rate
         
 class Stopwatch( object ):
     """ Timer for benchmarking """
-    strtTime = 0
-    stopTime = 0
     
     def __init__( self ):
 	""" Init with watch started """
