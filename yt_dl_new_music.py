@@ -11,7 +11,9 @@ __desc__     = "Fetch videos from youtube and convert to music files , hopefully
 James Watson , Template Version: 2018-05-14
 Built on Wing 101 IDE for Python 2.7
 
-Dependencies: numpy , youtube-dl , google-api-python-client , urllib2 , FFmpeg
+~ Dependencies ~
+    Packages: numpy , youtube-dl , google-api-python-client , oauth2client , urllib2 
+    Programs: FFmpeg
 """
 
 
@@ -116,6 +118,7 @@ def prepend_dir_to_path( pathName ): sys.path.insert( 0 , pathName ) # Might nee
 # ~~~ Imports ~~~
 # ~~ Standard ~~
 from math import pi , sqrt
+import shutil
 try:
     from urllib2 import urlopen
 except:
@@ -635,6 +638,8 @@ def GN_most_likely_artist_and_track( GN_client , GN_user , components ):
 # == Program Vars ==
 
 # ~ API Connection Vars ~
+GOOG_KEY_PATH = "APIKEY.txt" 
+GRNT_KEY_PATH = "GNWKEY.txt"
 DEVELOPER_KEY            = None
 YOUTUBE_API_SERVICE_NAME = "youtube"
 YOUTUBE_API_VERSION      = "v3"
@@ -818,11 +823,22 @@ def Stage1_Download_w_Data( inputFile ,
         
         enElapsed = dlTimer.elapsed()
         LOG.prnt( "Downloading and Processing:" , enElapsed , "seconds" )
-        # [ ] Locate and move the raw file
-        # [ ] Raw File End Location
-        # [ ] File Success
-        # [ ] URL
-        # [ ] Fetch Description Data
+        # I. Locate and move the raw file
+        fNames = list_all_files_w_EXT( SOURCEDIR , [ 'MP3' ] )
+        # Assume that the first item is the newly-arrived file
+        fSaved = fNames[0]
+        # I. Raw File End Destination
+        enDest = os.path.join( enRawDir , fSaved )
+        enCpSuccess = False # I. File Success
+        try:
+            shutil.copy2( fSaved , enDest )
+            enCpSuccess = True
+        except Exception:
+            enCpSuccess = False
+        # I. URL
+        enURL = entry['url']
+        # I. Fetch Description Data
+        enMeta = fetch_metadata_by_yt_video_ID( entry['id'] )
         # [ ] Verify that the downloaded file is as long as the original video
         # [ ] Fetch Comment Data
         # [ ] Get time and date for this file
@@ -842,6 +858,9 @@ def Stage1_Download_w_Data( inputFile ,
 if __name__ == "__main__":
     print( __prog_signature__() )
     termArgs = sys.argv[1:] # Terminal arguments , if they exist
+    
+    # 1. Open API connections
+    open_all_APIs( GOOG_KEY_PATH , GRNT_KEY_PATH )
     
     # ~~~ Stage 1 ~~~
     Stage1_Download_w_Data( "input/url_sources.txt" ,
