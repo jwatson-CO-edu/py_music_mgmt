@@ -150,7 +150,7 @@ print "Loaded 'pygn'! (GraceNote)"
 # ~~ Local ~~
 prepend_dir_to_path( SOURCEDIR )
 from marchhare.marchhare import ( parse_lines , ascii , sep , is_nonempty_list , pretty_print_dict , unpickle_dict , yesno ,
-                                  validate_dirs_writable , LogMH , Stopwatch , )
+                                  validate_dirs_writable , LogMH , Stopwatch , nowTimeStampFine , struct_to_pkl , )
 
 # ~~ Constants , Shortcuts , Aliases ~~
 EPSILON = 1e-7
@@ -727,7 +727,7 @@ def load_session( sessionPath ):
     ACTIVE_SESSION     = bool( int( sesnDict['ACTIVE_SESSION'] ) );     print "ACTIVE_SESSION:" , yesno( ACTIVE_SESSION )
     return sesnDict
     
-def save_session( sessionPath ):
+def save_session( sessionPath , sesnDict ):
     """ Write session vars to the session file """
     # 1. If a file exists at this path, erase it
     if os.path.isfile( sessionPath ):
@@ -825,27 +825,45 @@ def Stage1_Download_w_Data( inputFile ,
         LOG.prnt( "Downloading and Processing:" , enElapsed , "seconds" )
         # I. Locate and move the raw file
         fNames = list_all_files_w_EXT( SOURCEDIR , [ 'MP3' ] )
-        # Assume that the first item is the newly-arrived file
-        fSaved = fNames[0]
-        # I. Raw File End Destination
-        enDest = os.path.join( enRawDir , fSaved )
-        enCpSuccess = False # I. File Success
-        try:
-            shutil.copy2( fSaved , enDest )
-            enCpSuccess = True
-        except Exception:
-            enCpSuccess = False
+        if len( fNames ) > 0:
+            # Assume that the first item is the newly-arrived file
+            fSaved = fNames[0]
+            # I. Raw File End Destination
+            enDest = os.path.join( enRawDir , fSaved )
+            enCpSuccess = False # I. File Success
+            try:
+                shutil.copy2( fSaved , enDest )
+                enCpSuccess = True
+            except Exception:
+                enCpSuccess = False
         # I. URL
         enURL = entry['url']
         # I. Fetch Description Data
         enMeta = fetch_metadata_by_yt_video_ID( entry['id'] )
         # [ ] Verify that the downloaded file is as long as the original video
+        enDur = parse_ISO8601_timestamp( extract_video_duration( enMeta ) ) 
+        print "Duration:" , enDur
         # [ ] Fetch Comment Data
+        enComment = fetch_comment_threads_by_yt_ID( entry['id'] )
         # [ ] Get time and date for this file
+        enTime = nowTimeStampFine()
+        LOG.prnt( "Recorded Time:" , enTime )
         # [ ] Add file data to a dictionary
+        METADATA[ enID ] = {
+            'ID' :        enID ,
+            'RawPath' :   enRawDir ,
+            'ProcTime' :  enElapsed ,
+            'URL' :       enURL ,
+            'Metadata' :  enMeta ,
+            'Threads' :   enComment ,
+            'Timestamp' : enTime
+        }
+        # I. Increment counter
         count += 1
     # [ ] Pickle all data
-    # { } Close APIs?
+    struct_to_pkl( METADATA , ACTIVE_PICKLE_PATH )
+    # [ ] Save session
+    save_session( SESSION_PATH , session )
 
 # _ End Func _
 
