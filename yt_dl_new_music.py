@@ -781,8 +781,8 @@ def Stage1_Download_w_Data( inputFile ,
     # 1. Load session
     session = load_session( SESSION_PATH )
     if os.path.isfile( ACTIVE_PICKLE_PATH ):
-        LOG.prnt( "Found cached metadata at" , ACTIVE_PICKLE_PATH )
         METADATA = unpickle_dict( ACTIVE_PICKLE_PATH ) 
+        LOG.prnt( "Found cached metadata at" , ACTIVE_PICKLE_PATH , "with" , len( METADATA ) , "entries" )
     else:
         METADATA = {}
     # 1.1. Activate session
@@ -797,13 +797,20 @@ def Stage1_Download_w_Data( inputFile ,
     # 4. Init downloaded
     ydl = youtube_dl.YoutubeDL( YDL_OPTS )
     # 4. For each entry
+    LOG.prnt( "## Media Files ##" )
     for entry in entries:
+        enID = entry['id']
+        cacheMod = False
+        if( enID in METADATA ):
+            LOG.prnt( "Found cached data for" , enID )
+            enCache = METADATA[ enID ]
+        else:
+            enCache = None
+            cacheMod = True
         # I. If the debug file limit exceeded, exit loop
         if not count < limit:
             break
-        dlTimer.start()
         # 5. Create Dir
-        enID = entry['id']
         enRawDir = os.path.join( RAW_FILE_DIR , enID )
         if not os.path.isdir( enRawDir ):
             try:  
@@ -813,57 +820,77 @@ def Stage1_Download_w_Data( inputFile ,
             else:  
                 LOG.prnt(  "Successfully created the directory %s " % enRawDir )            
         # 6. Download Raw MP3 File
-        LOG.prnt( "Downloading" , entry['url'] )
-        
-        # [ ] If this file has an entry, the raw file exists, and the file is ok, then skip download
-        # [ ] else could not find raw file , empty the target dir and downoad again
-        
-        # DEBUG: DISABLE DOWNLOAD UNTIL CACHING IS IMPLEMENTED
-        ydl.download( [ entry['url'] ] )  # This function MUST be passed a list!
-        
-        enElapsed = dlTimer.elapsed()
-        LOG.prnt( "Downloading and Processing:" , enElapsed , "seconds" )
-        # I. Locate and move the raw file
-        fNames = list_all_files_w_EXT( SOURCEDIR , [ 'MP3' ] )
-        if len( fNames ) > 0:
-            # Assume that the first item is the newly-arrived file
-            fSaved = fNames[0]
-            # I. Raw File End Destination
-            enDest = os.path.join( enRawDir , fSaved )
-            enCpSuccess = False # I. File Success
-            try:
-                shutil.copy2( fSaved , enDest )
-                enCpSuccess = True
-            except Exception:
-                enCpSuccess = False
+        # [ ] If this file does not have an entry, the raw file exists, and the file is ok, then download
+        if not ( enCache and enCache['fSuccess'] ):
+            cacheMod = True
+            LOG.prnt( "No file from" , entry['url'] , ", dowloading ..." )
+            dlTimer.start()
+            ydl.download( [ entry['url'] ] )  # This function MUST be passed a list!
+            enElapsed = dlTimer.elapsed()
+            LOG.prnt( "Downloading and Processing:" , enElapsed , "seconds" )
+            # I. Locate and move the raw file
+            fNames = list_all_files_w_EXT( SOURCEDIR , [ 'MP3' ] )
+            if len( fNames ) > 0:
+                # Assume that the first item is the newly-arrived file
+                fSaved = fNames[0]
+                # I. Raw File End Destination
+                enDest = os.path.join( enRawDir , fSaved )
+                enCpSuccess = False # I. File Success
+                try:
+                    shutil.move( fSaved , enDest )
+                    enCpSuccess = True
+                    LOG.prnt( "Move success!:" , fSaved , "--to->" , enDest )
+                except Exception:
+                    enCpSuccess = False
+            else:
+                LOG.prnt( "No downloaded MP3s detected!" )
+                enDest = None
+                enCpSuccess = False            
+        # [ ] else skip download
+        else:
+            LOG.prnt( "Raw file from" , entry['url'] , "was previously cached at" , enCache['Timestamp'] )
+            enDest      = None
+            enCpSuccess = True
+            enElapsed   = None
         # I. URL
         enURL = entry['url']
         # I. Fetch Description Data
-        enMeta = fetch_metadata_by_yt_video_ID( entry['id'] )
+        if not ( enCache and enCache['Metadata'] ):
+            cacheMod = True
+            enMeta = fetch_metadata_by_yt_video_ID( entry['id'] )
+        else:
+            enMeta = enCache['Metadata']
         # [ ] Verify that the downloaded file is as long as the original video
         enDur = parse_ISO8601_timestamp( extract_video_duration( enMeta ) ) 
         print "Duration:" , enDur
         # I. Fetch Comment Data
-        enComment = fetch_comment_threads_by_yt_ID( entry['id'] )
+        if not ( enCache and enCache['Threads'] ):
+            cacheMod = True
+            enComment = fetch_comment_threads_by_yt_ID( entry['id'] )
+        else:
+            enComment = enCache['Threads']
         # I. Get time and date for this file
         enTime = nowTimeStampFine()
         LOG.prnt( "Recorded Time:" , enTime )
         # I. Add file data to a dictionary
         METADATA[ enID ] = {
             'ID' :        enID ,
-            'RawPath' :   enRawDir ,
-            'ProcTime' :  enElapsed ,
+            'RawPath' :   enDest if enDest else enCache['RawPath'] ,
+            'fSuccess' :  enCpSuccess ,
+            'ProcTime' :  enElapsed if enElapsed else enCache['ProcTime'] ,
             'URL' :       enURL ,
             'Metadata' :  enMeta ,
             'Threads' :   enComment ,
-            'Timestamp' : enTime
+            'Timestamp' : enTime if cacheMod else enCache['Timestamp']
         }
         # I. Increment counter
         count += 1
-    # [ ] Pickle all data
+        LOG.prnt( "# ~~~~~" )
+    # I. Pickle all data
     struct_to_pkl( METADATA , ACTIVE_PICKLE_PATH )
-    # [ ] Save session
+    # I. Save session && output log data
     save_session( SESSION_PATH , session )
+    LOG.out_and_clear( os.path.join( LOG_DIR , "YouTube-Music-Log_" + nowTimeStampFine() + ".txt" ) ) 
 
 # _ End Func _
 
