@@ -819,7 +819,7 @@ def Stage1_Download_w_Data( inputFile ,
         # [ ] else could not find raw file , empty the target dir and downoad again
         
         # DEBUG: DISABLE DOWNLOAD UNTIL CACHING IS IMPLEMENTED
-        #ydl.download( [ entry['url'] ] )  # This function MUST be passed a list!
+        ydl.download( [ entry['url'] ] )  # This function MUST be passed a list!
         
         enElapsed = dlTimer.elapsed()
         LOG.prnt( "Downloading and Processing:" , enElapsed , "seconds" )
@@ -843,12 +843,12 @@ def Stage1_Download_w_Data( inputFile ,
         # [ ] Verify that the downloaded file is as long as the original video
         enDur = parse_ISO8601_timestamp( extract_video_duration( enMeta ) ) 
         print "Duration:" , enDur
-        # [ ] Fetch Comment Data
+        # I. Fetch Comment Data
         enComment = fetch_comment_threads_by_yt_ID( entry['id'] )
-        # [ ] Get time and date for this file
+        # I. Get time and date for this file
         enTime = nowTimeStampFine()
         LOG.prnt( "Recorded Time:" , enTime )
-        # [ ] Add file data to a dictionary
+        # I. Add file data to a dictionary
         METADATA[ enID ] = {
             'ID' :        enID ,
             'RawPath' :   enRawDir ,
