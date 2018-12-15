@@ -119,6 +119,8 @@ def prepend_dir_to_path( pathName ): sys.path.insert( 0 , pathName ) # Might nee
 # ~~ Standard ~~
 from math import pi , sqrt
 import shutil
+from random import randrange
+from time import sleep
 try:
     from urllib2 import urlopen
 except:
@@ -127,7 +129,7 @@ except:
     except:
         print( "COULD NOT IMPORT ANY URL OPENER" )
         
-    # ~~ Special ~~
+# ~~ Special ~~
 import numpy as np
 import youtube_dl
 # https://medium.com/greyatom/youtube-data-in-python-6147160c5833
@@ -766,20 +768,27 @@ def list_all_files_w_EXT( searchPath , EXTlst ):
         if fEXT in EXTlst:
             rtnLst.append( item )
     return rtnLst
+
+def set_session_active( active = 1 ):
+    """ Set the session active flag """
+    global ACTIVE_SESSION
+    ACTIVE_SESSION = bool( active )
     
-def Stage1_Download_w_Data( inputFile ,
+def Stage_1_Download_w_Data( inputFile ,
                             minDelay_s = 20 , maxDelay_s = 180 ):
     """ Check environment for download , Fetch files and metadata , Save files and metadata """
     global LOG , METADATA
     LOG = LogMH()
     dlTimer = Stopwatch()
     # DEBUG
+    dbugLim = False
     limit = 1
     count = 0
     # 0. Indicate file
     LOG.prnt( "Processing" , inputFile , "..." )
     # 1. Load session
     session = load_session( SESSION_PATH )
+    set_session_active( True )
     if os.path.isfile( ACTIVE_PICKLE_PATH ):
         METADATA = unpickle_dict( ACTIVE_PICKLE_PATH ) 
         LOG.prnt( "Found cached metadata at" , ACTIVE_PICKLE_PATH , "with" , len( METADATA ) , "entries" )
@@ -794,22 +803,25 @@ def Stage1_Download_w_Data( inputFile ,
     # 3. Process input file
     entries = process_video_list( "input/url_sources.txt" )
     LOG.prnt( "Read input file with" , len( entries ) , "entries" )
+    inCount = len( entries )
     # 4. Init downloaded
     ydl = youtube_dl.YoutubeDL( YDL_OPTS )
     # 4. For each entry
     LOG.prnt( "## Media Files ##" )
-    for entry in entries:
+    for enDex , entry in enumerate( entries ):
+        # I. If the debug file limit exceeded, exit loop
+        if dbugLim and ( not count < limit ):
+            break        
+        LOG.prnt( '#\n# Entry' , enDex+1 , 'of' , inCount , '#' )
         enID = entry['id']
         cacheMod = False
+        # I. Attempt to fetch cached data for this entry
         if( enID in METADATA ):
             LOG.prnt( "Found cached data for" , enID )
             enCache = METADATA[ enID ]
         else:
             enCache = None
             cacheMod = True
-        # I. If the debug file limit exceeded, exit loop
-        if not count < limit:
-            break
         # 5. Create Dir
         enRawDir = os.path.join( RAW_FILE_DIR , enID )
         if not os.path.isdir( enRawDir ):
@@ -883,14 +895,22 @@ def Stage1_Download_w_Data( inputFile ,
             'Threads' :   enComment ,
             'Timestamp' : enTime if cacheMod else enCache['Timestamp']
         }
+        # I. Sleep
+        sleepDur = randrange( minDelay_s , maxDelay_s+1 )
+        LOG.prnt( "Sleeping for" , sleepDur , "seconds" )
+        sleep( sleepDur )
         # I. Increment counter
         count += 1
-        LOG.prnt( "# ~~~~~" )
+        LOG.prnt( "# ~~~~~" )        
     # I. Pickle all data
     struct_to_pkl( METADATA , ACTIVE_PICKLE_PATH )
     # I. Save session && output log data
     save_session( SESSION_PATH , session )
     LOG.out_and_clear( os.path.join( LOG_DIR , "YouTube-Music-Log_" + nowTimeStampFine() + ".txt" ) ) 
+
+def Stage_2_Separate_and_Tag():
+    """ Process each of the downloaded raw files: 1. Separate into songs , 2. Apply appropriate ID3 tags , 3. Save """
+    pass
 
 # _ End Func _
 
@@ -908,8 +928,8 @@ if __name__ == "__main__":
     open_all_APIs( GOOG_KEY_PATH , GRNT_KEY_PATH )
     
     # ~~~ Stage 1 ~~~
-    Stage1_Download_w_Data( "input/url_sources.txt" ,
-                            minDelay_s = 20 , maxDelay_s = 180 )
+    Stage_1_Download_w_Data( "input/url_sources.txt" ,
+                            minDelay_s = 30 , maxDelay_s = 60 )
     
     
 
