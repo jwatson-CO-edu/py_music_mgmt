@@ -964,8 +964,8 @@ class LogMH:
     def prnt( self , *args ):
         """ Print args and store them in a string """
         for arg in args:
-            self.totalStr += str( arg ) + " "
-            print str( arg ) ,
+            self.totalStr += ascii( arg ) + " "
+            print ascii( arg ) ,
         print
         self.totalStr += endl
 
@@ -980,7 +980,7 @@ class LogMH:
         """ Store 'args' in the accumulation string without printing """
         numArgs = len( args )
         for i , arg in enumerate( args ):
-            self.totalStr += str( arg ) + ( " " if i < numArgs-1 else "" )
+            self.totalStr += ascii( arg ) + ( " " if i < numArgs-1 else "" )
 
     def out_and_clear( self , outPath ):
         """ Write the contents of 'totalStr' to a file and clear """
@@ -1018,7 +1018,7 @@ def validate_dirs_writable( *dirList ):
 
 # == String Processing ==
 
-def ascii( strInput ): return str( strInput ).encode( 'ascii' , 'ignore' )
+def ascii( strInput ): return str( strInput.encode( 'ascii' , 'ignore' ) )
 
 def strip_after_first( pStr , char ): 
     """ Return a version of 'pStr' in which the first instance of 'char' and everything that follows is removed, if 'char' exists in 'pStr', otherwise return 'pStr' """
