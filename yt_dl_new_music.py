@@ -780,6 +780,7 @@ def Stage_1_Download_w_Data( inputFile ,
     global LOG , METADATA
     LOG = LogMH()
     dlTimer = Stopwatch()
+    doSleep = False # ffmpeg conversion seems to be a sufficient wait time, especially for large files 
     # DEBUG
     dbugLim = False
     limit = 1
@@ -814,6 +815,8 @@ def Stage_1_Download_w_Data( inputFile ,
             break        
         LOG.prnt( '#\n# Entry' , enDex+1 , 'of' , inCount , '#' )
         enID = entry['id']
+        # I. URL
+        enURL = entry['url']        
         cacheMod = False        
         try:
             # I. Attempt to fetch cached data for this entry
@@ -865,8 +868,6 @@ def Stage_1_Download_w_Data( inputFile ,
                 enDest      = None
                 enCpSuccess = True
                 enElapsed   = None
-            # I. URL
-            enURL = entry['url']
             # I. Fetch Description Data
             if not ( enCache and enCache['Metadata'] ):
                 cacheMod = True
@@ -897,14 +898,26 @@ def Stage_1_Download_w_Data( inputFile ,
                 'Timestamp' : enTime if cacheMod else enCache['Timestamp']
             }
             # I. Sleep
-            sleepDur = randrange( minDelay_s , maxDelay_s+1 )
-            LOG.prnt( "Sleeping for" , sleepDur , "seconds" )
-            sleep( sleepDur )
+            if doSleep:
+                sleepDur = randrange( minDelay_s , maxDelay_s+1 )
+                LOG.prnt( "Sleeping for" , sleepDur , "seconds" )
+                sleep( sleepDur )
             # I. Increment counter
             count += 1
             LOG.prnt( "# ~~~~~" )   
         # Need to catch errors here so that the data from the already processed files in not lost
         except Exception as err:
+            # I. Add file data to a dictionary
+            METADATA[ enID ] = {
+                'ID' :        enID ,
+                'RawPath' :   None ,
+                'fSuccess' :  False ,
+                'ProcTime' :  None ,
+                'URL' :       enURL ,
+                'Metadata' :  None ,
+                'Threads' :   None ,
+                'Timestamp' : nowTimeStampFine()
+            }            
             LOG.prnt( "ERROR: There was an error processing the item _ " , enID , "\n" , err )
     # I. Pickle all data
     struct_to_pkl( METADATA , ACTIVE_PICKLE_PATH )
