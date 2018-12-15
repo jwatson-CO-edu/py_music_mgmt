@@ -1018,7 +1018,12 @@ def validate_dirs_writable( *dirList ):
 
 # == String Processing ==
 
-def ascii( strInput ): return str( strInput.encode( 'ascii' , 'ignore' ) )
+def ascii( strInput ): 
+    """ Return an ASCII representation of the string or object, ignoring elements that do not have an ASCII representation """
+    if type( strInput ) in ( unicode , str ):
+        return str( strInput.encode( 'ascii' , 'ignore' ) )
+    else:
+        return str( strInput ).encode( 'ascii' , 'ignore' )
 
 def strip_after_first( pStr , char ): 
     """ Return a version of 'pStr' in which the first instance of 'char' and everything that follows is removed, if 'char' exists in 'pStr', otherwise return 'pStr' """
