@@ -814,94 +814,98 @@ def Stage_1_Download_w_Data( inputFile ,
             break        
         LOG.prnt( '#\n# Entry' , enDex+1 , 'of' , inCount , '#' )
         enID = entry['id']
-        cacheMod = False
-        # I. Attempt to fetch cached data for this entry
-        if( enID in METADATA ):
-            LOG.prnt( "Found cached data for" , enID )
-            enCache = METADATA[ enID ]
-        else:
-            enCache = None
-            cacheMod = True
-        # 5. Create Dir
-        enRawDir = os.path.join( RAW_FILE_DIR , enID )
-        if not os.path.isdir( enRawDir ):
-            try:  
-                os.mkdir( enRawDir )
-            except OSError:  
-                LOG.prnt(  "Creation of the directory %s failed" % enRawDir )
-            else:  
-                LOG.prnt(  "Successfully created the directory %s " % enRawDir )            
-        # 6. Download Raw MP3 File
-        # [ ] If this file does not have an entry, the raw file exists, and the file is ok, then download
-        if not ( enCache and enCache['fSuccess'] ):
-            cacheMod = True
-            LOG.prnt( "No file from" , entry['url'] , ", dowloading ..." )
-            dlTimer.start()
-            ydl.download( [ entry['url'] ] )  # This function MUST be passed a list!
-            enElapsed = dlTimer.elapsed()
-            LOG.prnt( "Downloading and Processing:" , enElapsed , "seconds" )
-            # I. Locate and move the raw file
-            fNames = list_all_files_w_EXT( SOURCEDIR , [ 'MP3' ] )
-            if len( fNames ) > 0:
-                # Assume that the first item is the newly-arrived file
-                fSaved = fNames[0]
-                # I. Raw File End Destination
-                enDest = os.path.join( enRawDir , fSaved )
-                enCpSuccess = False # I. File Success
-                try:
-                    shutil.move( fSaved , enDest )
-                    enCpSuccess = True
-                    LOG.prnt( "Move success!:" , fSaved , "--to->" , enDest )
-                except Exception:
-                    enCpSuccess = False
+        cacheMod = False        
+        try:
+            # I. Attempt to fetch cached data for this entry
+            if( enID in METADATA ):
+                LOG.prnt( "Found cached data for" , enID )
+                enCache = METADATA[ enID ]
             else:
-                LOG.prnt( "No downloaded MP3s detected!" )
-                enDest = None
-                enCpSuccess = False            
-        # [ ] else skip download
-        else:
-            LOG.prnt( "Raw file from" , entry['url'] , "was previously cached at" , enCache['Timestamp'] )
-            enDest      = None
-            enCpSuccess = True
-            enElapsed   = None
-        # I. URL
-        enURL = entry['url']
-        # I. Fetch Description Data
-        if not ( enCache and enCache['Metadata'] ):
-            cacheMod = True
-            enMeta = fetch_metadata_by_yt_video_ID( entry['id'] )
-        else:
-            enMeta = enCache['Metadata']
-        # [ ] Verify that the downloaded file is as long as the original video
-        enDur = parse_ISO8601_timestamp( extract_video_duration( enMeta ) ) 
-        print "Duration:" , enDur
-        # I. Fetch Comment Data
-        if not ( enCache and enCache['Threads'] ):
-            cacheMod = True
-            enComment = fetch_comment_threads_by_yt_ID( entry['id'] )
-        else:
-            enComment = enCache['Threads']
-        # I. Get time and date for this file
-        enTime = nowTimeStampFine()
-        LOG.prnt( "Recorded Time:" , enTime )
-        # I. Add file data to a dictionary
-        METADATA[ enID ] = {
-            'ID' :        enID ,
-            'RawPath' :   enDest if enDest else enCache['RawPath'] ,
-            'fSuccess' :  enCpSuccess ,
-            'ProcTime' :  enElapsed if enElapsed else enCache['ProcTime'] ,
-            'URL' :       enURL ,
-            'Metadata' :  enMeta ,
-            'Threads' :   enComment ,
-            'Timestamp' : enTime if cacheMod else enCache['Timestamp']
-        }
-        # I. Sleep
-        sleepDur = randrange( minDelay_s , maxDelay_s+1 )
-        LOG.prnt( "Sleeping for" , sleepDur , "seconds" )
-        sleep( sleepDur )
-        # I. Increment counter
-        count += 1
-        LOG.prnt( "# ~~~~~" )        
+                enCache = None
+                cacheMod = True
+            # 5. Create Dir
+            enRawDir = os.path.join( RAW_FILE_DIR , enID )
+            if not os.path.isdir( enRawDir ):
+                try:  
+                    os.mkdir( enRawDir )
+                except OSError:  
+                    LOG.prnt(  "Creation of the directory %s failed" % enRawDir )
+                else:  
+                    LOG.prnt(  "Successfully created the directory %s " % enRawDir )            
+            # 6. Download Raw MP3 File
+            # [ ] If this file does not have an entry, the raw file exists, and the file is ok, then download
+            if not ( enCache and enCache['fSuccess'] ):
+                cacheMod = True
+                LOG.prnt( "No file from" , entry['url'] , ", dowloading ..." )
+                dlTimer.start()
+                ydl.download( [ entry['url'] ] )  # This function MUST be passed a list!
+                enElapsed = dlTimer.elapsed()
+                LOG.prnt( "Downloading and Processing:" , enElapsed , "seconds" )
+                # I. Locate and move the raw file
+                fNames = list_all_files_w_EXT( SOURCEDIR , [ 'MP3' ] )
+                if len( fNames ) > 0:
+                    # Assume that the first item is the newly-arrived file
+                    fSaved = fNames[0]
+                    # I. Raw File End Destination
+                    enDest = os.path.join( enRawDir , fSaved )
+                    enCpSuccess = False # I. File Success
+                    try:
+                        shutil.move( fSaved , enDest )
+                        enCpSuccess = True
+                        LOG.prnt( "Move success!:" , fSaved , "--to->" , enDest )
+                    except Exception:
+                        enCpSuccess = False
+                else:
+                    LOG.prnt( "No downloaded MP3s detected!" )
+                    enDest = None
+                    enCpSuccess = False            
+            # [ ] else skip download
+            else:
+                LOG.prnt( "Raw file from" , entry['url'] , "was previously cached at" , enCache['Timestamp'] )
+                enDest      = None
+                enCpSuccess = True
+                enElapsed   = None
+            # I. URL
+            enURL = entry['url']
+            # I. Fetch Description Data
+            if not ( enCache and enCache['Metadata'] ):
+                cacheMod = True
+                enMeta = fetch_metadata_by_yt_video_ID( entry['id'] )
+            else:
+                enMeta = enCache['Metadata']
+            # [ ] Verify that the downloaded file is as long as the original video
+            enDur = parse_ISO8601_timestamp( extract_video_duration( enMeta ) ) 
+            print "Duration:" , enDur
+            # I. Fetch Comment Data
+            if not ( enCache and enCache['Threads'] ):
+                cacheMod = True
+                enComment = fetch_comment_threads_by_yt_ID( entry['id'] )
+            else:
+                enComment = enCache['Threads']
+            # I. Get time and date for this file
+            enTime = nowTimeStampFine()
+            LOG.prnt( "Recorded Time:" , enTime )
+            # I. Add file data to a dictionary
+            METADATA[ enID ] = {
+                'ID' :        enID ,
+                'RawPath' :   enDest if enDest else enCache['RawPath'] ,
+                'fSuccess' :  enCpSuccess ,
+                'ProcTime' :  enElapsed if enElapsed else enCache['ProcTime'] ,
+                'URL' :       enURL ,
+                'Metadata' :  enMeta ,
+                'Threads' :   enComment ,
+                'Timestamp' : enTime if cacheMod else enCache['Timestamp']
+            }
+            # I. Sleep
+            sleepDur = randrange( minDelay_s , maxDelay_s+1 )
+            LOG.prnt( "Sleeping for" , sleepDur , "seconds" )
+            sleep( sleepDur )
+            # I. Increment counter
+            count += 1
+            LOG.prnt( "# ~~~~~" )   
+        # Need to catch errors here so that the data from the already processed files in not lost
+        except Exception as err:
+            LOG.prnt( "ERROR: There was an error processing the item _ " , enID , "\n" , err )
     # I. Pickle all data
     struct_to_pkl( METADATA , ACTIVE_PICKLE_PATH )
     # I. Save session && output log data
