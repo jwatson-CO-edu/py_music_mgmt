@@ -64,21 +64,44 @@ def add_container_to_path( fName ):
     if containerDir not in sys.path:
         sys.path.append( containerDir )
 
+def first_valid_dir( dirList ):
+    """ Return the first valid directory in 'dirList', otherwise return False if no valid directories exist in the list """
+    rtnDir = False
+    for drctry in dirList:
+        if os.path.exists( drctry ):
+            rtnDir = drctry 
+            break
+    return rtnDir
+
+def add_first_valid_dir_to_path( dirList ):
+    """ Add the first valid directory in 'dirList' to the system path """
+    # In lieu of actually installing the library, just keep a list of all the places it could be in each environment
+    validDir = first_valid_dir(dirList)
+    print __file__ , "is attempting to load a path ...",
+    if validDir:
+        if validDir in sys.path:
+            print "Already in sys.path:", validDir
+        else:
+            sys.path.append( validDir )
+            print 'Loaded:', str( validDir )
+    else:
+        raise ImportError("None of the specified directories were loaded") # Assume that not having this loaded is a bad thing
+
 # __ End PATH __
 
 
 # == Helper Functions ==
 
-def sep( title = "" , width = 6 , char = '=' , strOut = False ): # <<< resenv
+def sep( title = "" , width = 6 , char = '=' , strOut = False ): 
     """ Print a separating title card for debug """
     LINE = width * char
     if strOut:
         return LINE + ' ' + title + ' ' + LINE
     else:
         print LINE + ' ' + title + ' ' + LINE
-    
+
 # __ End Helper __
-        
+
 
 
 # == Time Reporting and Formatting ==
@@ -102,10 +125,10 @@ elapsed_w_msg.lastTime = None
 elapsed_w_msg.s_in_hr = 60 * 60
 elapsed_w_msg.s_in_mn = 60
 
-nowTimeStamp = lambda: datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S') # http://stackoverflow.com/a/5215012/893511 # <<< resenv
+nowTimeStamp = lambda: datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S') # http://stackoverflow.com/a/5215012/893511
 """ Return a formatted timestamp string, useful for logging and debugging """
 
-nowTimeStampFine = lambda: datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S-%f') # http://stackoverflow.com/a/5215012/893511 # <<< resenv
+nowTimeStampFine = lambda: datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S-%f') # http://stackoverflow.com/a/5215012/893511
 """ Return a formatted timestamp string, useful for logging and debugging """
 
 def format_epoch_timestamp( sysTime ):
@@ -115,13 +138,13 @@ def format_epoch_timestamp( sysTime ):
 class Timer: 
     """ The simplest timer possible """
     startTime = 0 # init timer to zero so that 'Timer.elapsed' does not fail if 'Timer.begin' is not called first 
-    
+
     @staticmethod
     def begin():
         """ Begin / reset the timer and return the start time """
         Timer.startTime = time.time()
         return Timer.startTime
-        
+
     @staticmethod
     def elapsed():
         """ Return the number of seconds that have passed since the last time 'Timer.begin' was called """
@@ -137,7 +160,7 @@ def tick_progress( div = 1000 , reset = False ):
             tick_progress.ticks += 1
             print tick_progress.sequence[ tick_progress.ticks % ( len( tick_progress.sequence ) ) ] ,
 tick_progress.totalCalls = 0
-tick_progress.sequence = [ "'" , "-" , "," , "_" , "," , "-" , "'" , "`" , "`" ] # This makes a quite pleasant wave
+tick_progress.sequence = [ "'" , "-" , "," , "_" , "," , "-" , "'" , "`" , "`" ] # This makes quite a pleasant wave
 tick_progress.ticks = 0
 
 # __ End Time __
@@ -155,7 +178,7 @@ def elemw( iterable , i ):
         if revDex == 0:
             return iterable[ 0 ]
         return iterable[ seqLen - revDex ]
-                    
+
 def indexw( iterable , i ): 
     """ Return the 'i'th index of 'iterable', wrapping to index 0 at all integer multiples of 'len(iterable)' """
     seqLen = len( iterable )
@@ -166,7 +189,7 @@ def indexw( iterable , i ):
         if revDex == 0:
             return 0
         return seqLen - revDex
-    
+
 def same_contents_list( lst1 , lst2 ):
     """ Determine if every element in 'lst1' can be found in 'lst2' , and vice-versa , NOTE: This function assumes all elements are hashable """
     s1 = set( lst1 ) ; s2 = set( lst2 )
@@ -178,7 +201,11 @@ def lst( *args ):
 
 def tpl( *args ):
     """ Return a tuple composed of the arbitrary 'args' """
-    return tuple( args )     
+    return tuple( args ) 
+
+def prepend( pList , item ):
+    """ Prepend an item to the front of the list """
+    pList.insert( 0 , item )
 
 def sort_list_to_tuple( pList ):
     """ Return a tuple that contains the sorted elements of 'pList' """
@@ -230,11 +257,11 @@ def tandem_sorted_reverse( keyList , *otherLists ):
         for index , elem in enumerate( elemTuple ):
             rtnLists[ index ].append( elem ) # Send the element to the appropriate list
     return rtnLists
-    
+
 def index_max( pList ):
     """ Return the first index of 'pList' with the maximum numeric value """
     return pList.index( max( pList ) )
-    
+
 def index_min( pList ): 
     """ Return the first index of 'pList' with the maximum numeric value """
     return pList.index( min( pList ) )
@@ -269,7 +296,7 @@ def find_pop_safe( iterable , item ):
         return find_pop( iterable , item )
     except:
         return None
-    
+
 def insert_sublist( bigList , index , subList ): 
     """ Insert 'subList' into 'bigList' at 'index' and return resulting list """
     return bigList[ :index ] + subList + bigList[ index: ]
@@ -287,7 +314,7 @@ def iter_contains_None( listOrTuple ):
         return False
     else: # Base Case: Arg is single value
         return True if listOrTuple == None else False
-    
+
 def num_range_to_bins( minNum , maxNum , divs  ):
     """ Return a list of tuples that each represent the bounds of one of 'divs' bins from 'minNum' to 'maxNum' """
     borders = np.linspace( minNum , maxNum , divs + 1 )
@@ -324,7 +351,7 @@ def concat_arr( *arrays ):
         return rtnArr
     else: # else there was only one , return it
         return arrays[0] 
-    
+
 def build_sublists_by_cadence( flatList , cadence ): 
     """ Return a list in which each element is a list of consecutive 'flatList' elements of length 'cadence' elements if elements remain """
     rtnList = []
@@ -360,7 +387,7 @@ def flatten_nested_sequence( multiSeq ):
         # print "Got a list containing" , len( multiSeq ) , "elemets"
         # print "Returning a list of  " , len( masterList ) , "elements"
         return masterList
-    
+
 def double_all_elem_except( inList , exceptedIndices = [] ):
     """ Double all elements of a list except those indicated by 'exceptedIndices' """
     rtnList = []
@@ -370,29 +397,29 @@ def double_all_elem_except( inList , exceptedIndices = [] ):
         else:
             rtnList.extend( [ elem , elem ] )
     return rtnList    
-    
+
 # = Containers for Algorithms =
 
 class Stack(list): 
     """ LIFO container based on 'list' """    
-    
+
     def __init__( self , *args ):
         """ Normal 'list' init """
         list.__init__( self , *args )
-        
+
     def push( self , elem ):
         """ Push 'elem' onto the Stack """
         self.append( elem )
-        
+
     # 'Stack.pop' is inherited from 'list'
-        
+
     def is_empty(self):
         """ Returns true if the Stack has no elements """
         return len(self) == 0
-        
+
 class Queue(list): 
     """ FIFO container based on 'list' """ 
-    
+
     def __init__( self , *args ):
         """ Normal 'list' init """
         list.__init__( self , *args )
@@ -406,22 +433,22 @@ class Queue(list):
     def is_empty(self):
         """ Returns true if the Queue has no elements """
         return len(self) == 0
-        
+
     def item_list( self ):
         """ Return a copy of the Queue as a list """
         return self[:]
 
-class PriorityQueue(list): # Requires heapq 
+class PriorityQueue( list ): # Requires heapq 
     """ Implements a priority queue data structure. """ 
     # NOTE: PriorityQueue does not allow you to change the priority of an item. 
     #       You may insert the same item multiple times with different priorities. 
-        
+
     def __init__( self , *args ):
         """ Normal 'list' init """
         list.__init__( self , *args )   
         self.count = 0
         self.s = set([])    
-        
+
     def push( self , item , priority , hashable = None ):
         """ Push an item on the queue and automatically order by priority , optionally provide 'hashable' version of item for set testing """
         entry = ( priority , self.count , item )
@@ -429,7 +456,7 @@ class PriorityQueue(list): # Requires heapq
         self.count += 1
         if hashable:
             self.s.add( hashable ) 
-    
+
     def contains( self , hashable ): 
         ''' Test if 'node' is in the queue '''
         return hashable in self.s
@@ -438,12 +465,12 @@ class PriorityQueue(list): # Requires heapq
         """ Pop the lowest-priority item from the queue """
         priority , count , item = heapq.heappop( self )
         return item
-        
+
     def pop_with_priority( self ):
         """ Pop the item and the priority associated with it """
         priority , count , item = heapq.heappop( self )
         return item , priority
-        
+
     def pop_opposite( self ):
         """ Remove the item with the longest priority , opoosite of the usual pop """
         priority , count , item = self[-1]
@@ -453,9 +480,9 @@ class PriorityQueue(list): # Requires heapq
     def isEmpty(self):
         """ Return True if the queue has no items, otherwise return False """
         return len( self ) == 0
-        
+
     # __len__ is provided by 'list'
-        
+
     def unspool( self , N = infty , limit = infty ):
         """ Pop all items as two sorted lists, one of increasing priorities and the other of the corresponding items """
         vals = []
@@ -467,32 +494,32 @@ class PriorityQueue(list): # Requires heapq
             itms.append( item )
             count += 1
         return itms , vals
-        
+
     def peek( self ):
         """ Return the top priority item without popping it """
         priority , count , item = self[0]
         return item
-        
+
     def peek_opposite( self ):
         """ Return the bottom priority item without popping it """
         priority , count , item = self[-1]
         return item
-        
+
     def top_priority( self ):
         """ Return the value of the top priority """
         return self[0][0]
-        
+
     def btm_priority( self ):
         """ Return the value of the bottom priority """
         return self[-1][0]
-        
+
     def get_priority_and_index( self , item , eqFunc = pyEq ):
         """ Return the priority for 'item' and the index it was found at , using the secified 'eqFunc' , otherwise return None if 'item' DNE """
         for index , elem in enumerate( self ): # Implement a linear search
             if eqFunc( elem[-1] , item ): # Check the contents of each tuple for equality
                 return elem[0] , index # Return priority if a match
         return None , None # else search completed without match , return None
-        
+
     def reprioritize_at_index( self , index , priority ):
         """ Replace the priority of the element at 'index' with 'priority' """
         temp = list.pop( self , index ) # Remove the item at the former priority
@@ -500,26 +527,26 @@ class PriorityQueue(list): # Requires heapq
 
 class BPQ( PriorityQueue ):
     """ Bounded Priority Queue , does not keep more than N items in the queue """
-    
+
     def __init__( self , boundN , *args ):
         """ Create a priority queue with a specified bound """
         PriorityQueue.__init__( self , *args )
         self.bound = boundN
-    
+
     def push( self , item , priority , hashable=None ):
         """ Push an item onto the queue and discard largest priority items that are out of bounds """
         PriorityQueue.push( self , item , priority , hashable ) # The usual push
         while len( self ) > self.bound: # If we exceeded the bounds , then discard down to the limit
             self.pop_opposite()
-            
+
 class LPQ( PriorityQueue ):
     """ Limited Priority Queue , does not keep items with priorities longer than 'limit' """
-    
+
     def __init__( self , limitR , *args ):
         """ Create a priority queue with a specified bound """
         PriorityQueue.__init__( self , *args )
         self.limit = limitR
-    
+
     def push( self , item , priority , hashable=None ):
         """ Push an item onto the queue and discard largest priority items that are out of bounds """
         if priority <= self.limit:
@@ -529,20 +556,20 @@ class PQwR(list): # Requires heapq # TODO: UPDATE ASMENV
     """ Implements a priority queue data structure, replaces items with identical priorituies """ 
     # NOTE: PriorityQueue does not allow you to change the priority of an item. 
     #       You may insert the same item multiple times with different priorities. 
-        
+
     def __init__( self , *args ):
         """ Normal 'list' init """
         list.__init__( self , *args )   
         self.count = 0
         self.s = set([])    
-        
+
     def push( self , item , priority , hashable=None ):
         """ Push an item on the queue and automatically order by priority , optionally provide 'hashable' version of item for set testing """
         entry = ( priority , item )
         heapq.heappush( self , entry )
         if hashable:
             self.s.add( hashable ) 
-    
+
     def contains( self , hashable ): 
         ''' Test if 'node' is in the queue '''
         return hashable in self.s
@@ -551,12 +578,12 @@ class PQwR(list): # Requires heapq # TODO: UPDATE ASMENV
         """ Pop the lowest-priority item from the queue """
         priority , item = heapq.heappop( self )
         return item
-        
+
     def pop_with_priority( self ):
         """ Pop the item and the priority associated with it """
         priority , item = heapq.heappop( self )
         return item , priority
-        
+
     def pop_opposite( self ):
         """ Remove the item with the longest priority , opoosite of the usual pop """
         priority , item = self[-1]
@@ -566,9 +593,9 @@ class PQwR(list): # Requires heapq # TODO: UPDATE ASMENV
     def isEmpty(self):
         """ Return True if the queue has no items, otherwise return False """
         return len( self ) == 0
-        
+
     # __len__ is provided by 'list'
-        
+
     def unspool( self , N = infty , limit = infty ):
         """ Pop all items as two sorted lists, one of increasing priorities and the other of the corresponding items """
         vals = []
@@ -580,56 +607,56 @@ class PQwR(list): # Requires heapq # TODO: UPDATE ASMENV
             itms.append( item )
             count += 1
         return itms , vals
-        
+
     def peek( self ):
         """ Return the shortest priority item without popping it """
         priority , item = self[0]
         return item
-        
+
     def peek_opposite( self ):
         """ Return the longest priority item without popping it """
         priority , item = self[-1]
         return item
-        
+
     def top_priority( self ):
         """ Return the value of the top priority """
         return self[0][0]
-        
+
     def btm_priority( self ):
         """ Return the value of the bottom priority """
         return self[-1][0]
 
 class BPQwR( PQwR ): 
     """ Bounded Priority Queue , does not keep more than N items in the queue """
-    
+
     def __init__( self , boundN , *args ):
         """ Create a priority queue with a specified bound """
         PQwR.__init__( self , *args )
         self.bound = boundN
-    
+
     def push( self , item , priority , hashable=None ):
         """ Push an item onto the queue and discard largest priority items that are out of bounds """
         PQwR.push( self , item , priority , hashable ) # The usual push
         while len( self ) > self.bound: # If we exceeded the bounds , then discard down to the limit
             self.pop_opposite()
- 
+
 class LPQwR( PQwR ): 
     """ Limited Priority Queue , does not accept items with priorities longer than 'limit' """
-    
+
     def __init__( self , limitR , *args ):
         """ Create a priority queue with a specified bound """
         PQwR.__init__( self , *args )
         self.limit = limitR
-    
+
     def push( self , item , priority , hashable = None ):
         """ Push an item onto the queue if it is leq the limit """
         if priority <= self.limit:
             PQwR.push( self , item , priority , hashable ) # The usual push
-          
+
 class Counter( dict ): 
     """ The counter object acts as a dict, but sets previously unused keys to 0 , in the style of 6300 """
     # TODO: Add Berkeley / 6300 functionality
-    
+
     def __init__( self , *args , **kw ):
         """ Standard dict init """
         dict.__init__( self , *args , **kw )
@@ -637,25 +664,25 @@ class Counter( dict ):
             self.defaultReturn = kw['default']
         else:
             self.defaultReturn = 0
-        
+
     def set_default( self , val ):
         """ Set a new default value to return when there is no """
         self.defaultReturn = val
-        
+
     def __getitem__( self , a ):
         """ Get the val with key , otherwise return 0 if key DNE """
         if a in self: 
             return dict.__getitem__( self , a )
         return 0
-    
+
     # __setitem__ provided by 'dict'
-    
+
     def sorted_keyVals( self ):
         """ Return a list of sorted key-value tuples """
         sortedItems = self.items()
         sortedItems.sort( cmp = lambda keyVal1 , keyVal2 :  np.sign( keyVal2[1] - keyVal1[1] ) )
         return sortedItems
-    
+
     def sample_until_unique( self , sampleFromSeq , sampleLim = int( 1e6 ) ):
         """ Sample randomly from 'sampleFromSeq' with a uniform distribution until a new key is found or the trial limit is reached , return it """
         # NOTE: If 'sampleLim' is set to 'infty' , the result may be an infinite loop if the Counter has a key for each 'sampleFromSeq'
@@ -666,35 +693,35 @@ class Counter( dict ):
                 return testKey
             trial += 1
         return None
-    
+
 class RollingList( list ): 
     """ A rolling window based on 'list' """ 
-    
+
     def __init__( self , winLen , *args ):
         """ Normal 'list' init """
         list.__init__( self , [ 0 ] * winLen , *args )
-        
+
     def append( self , item ):
         """ Append an item to the back of the list """
         list.append( self , item )
         del self[0]
-        
+
     def prepend( self , item ):
         """ Prepend an item to the front of the list """
         self.insert( 0 , item )
         del self[-1]
-        
+
     def get_average( self ):
         """ Get the rolling average , NOTE: Calling this function after inserting non-numeric data will result in an error """
         return sum( self ) * 1.0 / len( self )
-        
+
     def item_list( self ):
         """ Return a copy of the RollingList as a list """
         return self[:]
 
 # _ End Algo Containers _
 
-def is_nonempty_list( obj ): return isinstance( obj , list ) and len( obj ) > 0 # Return true if 'obj' is a 'list' with length greater than 0  # <<< resenv
+def is_nonempty_list( obj ): return isinstance( obj , list , tuple ) and len( obj ) > 0 # Return true if 'obj' is a 'list' with length greater than 0  # <<< resenv
 
 # __ End Structures __
 
@@ -706,7 +733,7 @@ def enumerate_reverse( L ):
     # URL, Generator that is the reverse of 'enumerate': http://stackoverflow.com/a/529466/893511
     for index in reversed( xrange( len( L ) ) ):
         yield index, L[ index ]
-        
+
 def increment( reset = None ):
     """ Count from 0 , or user-specified 'reset' : Increments , and returns increased number when called without argument , arg resets """
     if reset == None:
@@ -727,30 +754,35 @@ def lists_as_columns_with_titles( titles , lists ):
     longestItem = 0
     prntLists = []
     pad = 4 * ' '
-    if len(titles) == len(lists):
+    rtnStr = ""
+    if len(titles) == len( lists ):
         for lst in lists:
-            if len(lst) > longestItem:
-                longestList = len(lst)
+            if len( lst ) > longestItem:
+                longestList = len( lst )
             prntLists.append( [] )
             for item in lst:
-                strItem = str(item)
+                strItem = str( item )
                 prntLists[-1].append( strItem )
-                if len(strItem) > longestItem:
-                    longestItem = len(strItem)
+                if len( strItem ) > longestItem:
+                    longestItem = len( strItem )
         line = ''
         for title in titles:
-            line += title[ : len(pad) + longestItem -1 ].rjust( len(pad) + longestItem , ' ' )
+            line += title[ : len(pad) + longestItem -1 ].rjust( len( pad ) + longestItem , ' ' )
         print line
-        for index in range(longestList):
+        rtnStr += line + endl
+        for index in range( longestList ):
             line = ''
             for lst in prntLists:
-                if index < len(lst):
-                    line += pad + lst[index].ljust(longestItem, ' ')
+                if index < len( lst ):
+                    line += pad + lst[ index ].ljust( longestItem , ' ' )
                 else:
                     line += pad + longestItem * ' '
             print line
+            rtnStr += line + endl
+        return rtnStr
     else:
-        print "Titles" , len(titles) , "and lists" , len(lists) , "of unequal length"
+        print "Titles" , len( titles ) , "and lists" , len( lists ) , "of unequal length"
+        return ''
 
 def print_list( pList ):
     """ Print a list that is composed of the '__str__' of each of the elements in the format "[ elem_0 , ... , elem_n ]" , 
@@ -762,7 +794,7 @@ def print_list( pList ):
         else:
             prnStr += str( elem ) + " ]"
     print prnStr
-    
+
 def str_args( *args , **kwargs ):
     """ Print a sequence that is composed of the '__str__' of each of the arguments in the format "elem_0 , ... , elem_n" , separated by commas & spaces """
     prnStr = ""
@@ -775,9 +807,9 @@ def str_args( *args , **kwargs ):
         print prnStr
     else:
         return prnStr
-    
+
 def pretty_print_dict( pDict ):
-    """ print a dictionary """
+    """ print a dictionary with uniform columns """
     longestRep = 0
     for key in pDict:
         longestRep = max( longestRep , len( str( key ) ) )
@@ -785,6 +817,10 @@ def pretty_print_dict( pDict ):
     for key in sorted( pDict ):
         print "\t" , str( key ).ljust( longestRep , ' ' ) , ":" , pDict[ key ]
     print "}"
+
+def yesno( pBool ):
+    """ Return YES if True, Otherwise return NO """
+    return ( "YES" if pBool else "NO" )
 
 # __ End Printing __
 
@@ -796,13 +832,13 @@ def ensure_dir( dirName ):
     if not os.path.exists( dirName ):
         os.makedirs( dirName )
 
-def struct_to_pkl( struct , pklPath ): # <<< resenv
+def struct_to_pkl( struct , pklPath ): 
     """ Serialize a 'struct' to 'pklPath' """
     f = open( pklPath , 'wb') # open a file for binary writing to receive pickled data
     cPickle.dump( struct , f ) # changed: pickle.dump --> cPickle.dump
     f.close()
-    
-def load_pkl_struct( pklPath ): # <<< resenv
+
+def load_pkl_struct( pklPath ): 
     """ Load a pickled object and return it, return None if error """
     fileLoaded = False
     rtnStruct = None
@@ -818,16 +854,30 @@ def load_pkl_struct( pklPath ): # <<< resenv
             print "load_pkl_struct: Could not unpickle file,",pklPath,",",err
         f.close()
     return rtnStruct
-    
-def process_txt_for_LaTeX( TXTpath ):  # <<< resenv
-    """ Add appropriate line breaks to a TXT file and return as TEX """
+
+def unpickle_dict( filename ):
+    """ Return the dictionary stored in the file , Otherwise return an empty dictionary if there were no items """
+    try:
+        infile = open( filename , 'rb' )
+        rtnDict = cPickle.load( infile )
+        if len( rtnDict ) > 0:
+            return rtnDict
+        else:
+            return {}
+    except FileNotFoundError:
+        return {}
+
+def process_txt_for_LaTeX( TXTpath , ltxPath = None ):  
+    """ Add appropriate line breaks to a TXT file and return as TEX file handle """
+    # NOTE: This function writes a TEX file and returns the handle
     if os.path.isfile( TXTpath ):
         drctry , txtName = os.path.split( TXTpath )
         ltxName = txtName[:-4] + ".tex"
         txtFile = file( TXTpath , 'r' )
         txtLines = txtFile.readlines()
         txtFile.close()
-        ltxPath = os.path.join( drctry , ltxName )
+        if ltxPath == None:
+            ltxPath = os.path.join( drctry , ltxName )
         ltxFile = file( ltxPath , 'w' )
         for line in txtLines:
             # print "Line is:", line
@@ -836,67 +886,114 @@ def process_txt_for_LaTeX( TXTpath ):  # <<< resenv
             else:
                 ltxFile.write( " $\\ $ \\\\ " + endl ) 
         ltxFile.close()
+        return ltxFile
     else:
-        raise IOError( "process_txt_for_LaTeX: " +str(TXTpath)+ " did not point to a file!" )
-        
-def lines_from_file( fPath ): # Added , 2016-09-27 # <<< resenv
+        raise IOError( "process_txt_for_LaTeX: " + str( TXTpath ) + " did not point to a file!" )
+
+def lines_from_file( fPath ): 
     """ Open the file at 'fPath' , and return lines as a list of strings """
     f = file( fPath , 'r' )
     lines = f.readlines()
     f.close()
     return lines
-    
-def string_from_file( fPath ): # <<< resenv
+
+def string_from_file( fPath ):
     """ Open the file at 'fPath' , and return the entire file as a single string """
     f = file( fPath , 'r' )
     fStr = f.read() # https://docs.python.org/2/tutorial/inputoutput.html#methods-of-file-objects
     f.close()
     return fStr
-    
-def txt_file_for_w( fPath ): return file( fPath , 'w' )  # <<< resenv
+
+def txt_file_for_w( fPath ): return file( fPath , 'w' )
+
+def strip_endlines_from_lines( lines ):
+    """ Remove the endlines from a list of lines read from a file """
+    rtnLines = []
+    for line in lines:
+        currLine = ''
+        for char in line:
+            if char != '\n' and char != '\r':
+                currLine += char
+        rtnLines.append( currLine )
+    return rtnLines
+
+def strip_comments_from_lines( lines ):
+    """ Remove everything after each # """
+    # NOTE: This function does not take into account a '#' within a string
+    rtnLines = []
+    for line in lines:
+        rtnLines.append( str( line.split( '#' , 1 )[0] ) )
+    return rtnLines
+
+def purge_empty_lines( lines ):
+    """ Given a list of lines , Remove all lines that are only whitespace """
+    rtnLines = []
+    for line in lines:
+        if ( not line.isspace() ) and ( len( line ) > 0 ):
+            rtnLines.append( line )
+    return rtnLines
+
+def parse_lines( fPath , parseFunc ):
+    """ Parse lines with 'parseFunc' while ignoring Python-style # comments """
+    # NOTE: This function does not take into account a '#' within a string
+    rtnExprs = []
+    # 1. Fetch all the lines
+    lines = lines_from_file( fPath )
+    # 2. Scrub comments from lines
+    lines = strip_comments_from_lines( lines )
+    # 3. Purge empty lines
+    lines = purge_empty_lines( lines )
+    # 3.5. Remove newlines
+    lines = strip_endlines_from_lines( lines )
+    # 4. For each of the remaining lines , Run the parse function and save the results
+    for line in lines:
+        rtnExprs.append( parseFunc( line ) )
+    # 5. Return expressions that are the results of processing the lines
+    return rtnExprs
 
 
-# = class accum =
-    
-class accum:
-    """ Singleton text buffer object to hold script output, with facilities to write contents """
-    
-    totalStr = ""
+# = class LogMH =
 
-    @staticmethod
-    def prnt( *args ):
+class LogMH:
+    """ Text buffer object to hold script output, with facilities to write contents """
+
+    def __init__( self ):
+        """ String to store logs """
+        self.totalStr = ""
+
+    def prnt( self , *args ):
         """ Print args and store them in a string """
         for arg in args:
-            accum.totalStr += str(arg) + " "
-            print str(arg),
+            self.totalStr += ascii( arg ) + " "
+            print ascii( arg ) ,
         print
-        accum.totalStr += endl
+        self.totalStr += endl
 
-    @staticmethod
-    def accum_sep( title = "" , char = '=' , width = 6 , strOut = False ):
+    def sep( self , title = "" , width = 6 , char = '=' , strOut = False ):
         """ Print a separating title card for debug """
         LINE = width * char
+        self.prnt( LINE + ' ' + title + ' ' + LINE )
         if strOut:
             return LINE + ' ' + title + ' ' + LINE
-        else:
-            accum.prnt( LINE + ' ' + title + ' ' + LINE )
-        
-    @staticmethod
-    def write( *args ):
+
+    def write( self , *args ):
         """ Store 'args' in the accumulation string without printing """
-        for arg in args:
-            accum.totalStr += str(arg) + " "
-        accum.totalStr += endl
+        numArgs = len( args )
+        for i , arg in enumerate( args ):
+            self.totalStr += ascii( arg ) + ( " " if i < numArgs-1 else "" )
 
-    @staticmethod
-    def out_and_clear( outPath ):
-        """ Write the contents of 'accum.totalStr' to a file and clear """
+    def out_and_clear( self , outPath ):
+        """ Write the contents of 'totalStr' to a file and clear """
         outFile = file( outPath , 'w' )
-        outFile.write( accum.totalStr )
+        outFile.write( self.totalStr )
         outFile.close()
-        accum.totalStr = ""
+        self.clear()
 
-# _ End accum _
+    def clear( self ):
+        """ Clear the contents of 'accum.totalStr' """
+        self.totalStr = ""
+
+# _ End LogMH _
 
 # __ End File __
 
@@ -908,11 +1005,11 @@ def validate_dirs_writable( *dirList ):
     # NOTE: This function exits on the first failed check and does not provide info for any subsequent element of 'dirList'
     # NOTE: Assume that a writable directory is readable
     for directory in dirList:
-        if not os.path.isdir(directory):
-            print "Directory",directory,"does not exist!"
+        if not os.path.isdir( directory ):
+            print "Directory" , directory , "does not exist!"
             return False
-        if not os.access(directory, os.W_OK): # URL, Check write permission: http://stackoverflow.com/a/2113511/893511
-            print "System does not have write permission for",directory,"!"
+        if not os.access( directory , os.W_OK ): # URL, Check write permission: http://stackoverflow.com/a/2113511/893511
+            print "System does not have write permission for" , directory , "!"
             return False
     return True # All checks finished OK, return true
 
@@ -921,18 +1018,46 @@ def validate_dirs_writable( *dirList ):
 
 # == String Processing ==
 
-def strip_after_first( pStr , char ): # <<< resenv
+def ascii( strInput ): 
+    """ Return an ASCII representation of the string or object, ignoring elements that do not have an ASCII representation """
+    if type( strInput ) in ( unicode , str ):
+        return str( strInput.encode( 'ascii' , 'ignore' ) )
+    else:
+        return str( strInput ).encode( 'ascii' , 'ignore' )
+
+def strip_after_first( pStr , char ): 
     """ Return a version of 'pStr' in which the first instance of 'char' and everything that follows is removed, if 'char' exists in 'pStr', otherwise return 'pStr' """
     firstDex = pStr.find( char )
     if firstDex > -1:
         return pStr[:firstDex]
     return pStr
-    
+
 def tokenize_with_wspace( rawStr , evalFunc = str ): 
     """ Return a list of tokens taken from 'rawStr' that is partitioned with whitespace, transforming each token with 'evalFunc' """
     return [ evalFunc( rawToken ) for rawToken in rawStr.split() ]
-    
-def format_dec_list( numList , places = 2 ): # <<< resenv
+
+def tokenize_with_char( rawStr , separator = ',' ,  evalFunc = str ): 
+    """ Return a list of tokens taken from 'rawStr' that is partitioned with a separating character, transforming each token with 'evalFunc' """
+    return [ evalFunc( rawToken ) for rawToken in rawStr.split( separator ) ]
+
+def tokenize_with_separator( rawStr , separator , evalFunc = str ):
+    """ Return a list of tokens taken from 'rawStr' that is partitioned with 'separator', transforming each token with 'evalFunc' """
+    # TODO: Maybe this could be done with brevity using regex?
+    tokens = [] # list of tokens to return
+    currToken = '' # the current token, built a character at a time
+    for char in rawStr: # for each character of the input string
+        if not char.isspace(): # if the current char is not whitespace, process
+            if not char == separator: # if the character is not a separator, then
+                currToken += char # accumulate the char onto the current token
+            else: # else the character is a separator, process the previous token
+                tokens.append( evalFunc( currToken ) ) # transform token and append to the token list
+                currToken = '' # reset the current token
+        # else is whitespace, ignore
+    if currToken: # If there is data in 'currToken', process it
+        tokens.append( evalFunc( currToken ) ) # transform token and append to the token list
+    return tokens
+
+def format_dec_list( numList , places = 2 ): 
     """ Return a string representing a list of decimal numbers limited to 'places' """
     rtnStr = "[ "
     for nDex , num in enumerate( numList ):
@@ -946,8 +1071,16 @@ def format_dec_list( numList , places = 2 ): # <<< resenv
             rtnStr += ('{0:.' + str( places ) + 'g}').format( scalar )
     rtnStr += " ]"
     return rtnStr
-    
+
+def string_contains_any( bigStr , subsList ):
+    """ Return True if 'bigStr' contains any of the substrings in 'subsList' , Otherwise return False """
+    for sub in subsList:
+        if sub in bigStr:
+            return True
+    return False
+
 # __ End Strings __
+
 
 # == Timing / Benchmarking ==
 
@@ -963,40 +1096,43 @@ class HeartRate: # NOTE: This fulfills a purpose similar to the rospy rate
         if elapsed < self.period:
             time.sleep( self.period - elapsed )
         self.last = time.time()
-        
+
 class Stopwatch( object ):
-    """ Singleton object for benchmarking """
-    strtTime = 0
-    stopTime = 0
-    
-    @staticmethod
-    def start():
-        Stopwatch.strtTime = time.time()
-        
-    @staticmethod
-    def stop():
-        Stopwatch.stopTime = time.time()
-        
-    @staticmethod
-    def elapsed():
-        return Stopwatch.stopTime - Stopwatch.strtTime
+    """ Timer for benchmarking """
+
+    def __init__( self ):
+        """ Init with watch started """
+        self.strtTime = time.time()
+        self.stopTime = infty
+
+    def start( self ):
+        self.strtTime = time.time()
+
+    def stop( self ):
+        self.stopTime = time.time()
+
+    def duration( self ):
+        return self.stopTime - self.strtTime
+
+    def elapsed( self ):
+        return time.time() - self.strtTime    
 
 # __ End Timing __
-        
-    
+
+
 # === Reporting ===
 
 # == class Response ==
-        
+
 class Response:
     """ Container class to hold the result of a search or an error """
     def __init__( self , result = False , errCode = {} , data = [] ): # NOTE: Error codes are dict entries to make lookup easier
         self.result     = result
         self.errorCodes = errCode
         self.data       = data
-    
+
 # __ End Response __
-    
+
 # ___ End Reporting ___
 
 

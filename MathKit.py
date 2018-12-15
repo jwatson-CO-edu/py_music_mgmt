@@ -80,6 +80,14 @@ def index_eq( pList , num , margin = EPSILON ):
             return index
     return None
 
+def product( iterable ):
+    """ Return the product of all the elements in 'iterable' """
+    # NOTE: This function assumes that 'iterable' has at least one element
+    rtnVal = iterable[0]
+    for i in xrange( 1 , len( iterable ) ):
+        rtnVal *= iterable[i]
+    return rtnVal
+
 # _ End Equality _
 
 def wrap_normalize( wrapBounds , number ):
@@ -247,6 +255,10 @@ def percent_change( oldVal , newVal ):
     return ( newVal - oldVal ) / oldVal * 100.0
 
 # = Dice Rolls =
+
+def flip_weighted( truProb ):
+    """ Return True with probability 'truProb' , Otherwise return False """
+    return random() <= truProb
 
 def normalize_die( distribution ): 
     """ Given relative odds, return partitions of a distribution on a number line from 0 to 1 """

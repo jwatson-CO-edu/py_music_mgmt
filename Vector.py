@@ -81,7 +81,8 @@ def vec_round_small( vec ):
 
 def vec_unit( vec ): 
     """ Return a unit vector in the direction of 'vec', using numpy """
-    return np.divide( vec , np.linalg.norm( vec ) )
+    mag = np.linalg.norm( vec )
+    return np.divide( vec , 1 if eq( mag , 0 ) else mag )
 
 def vec_proj( a , b ): 
     """ a projected onto b, a scalar length, using numpy """
@@ -96,6 +97,8 @@ def vec_angle_between( v1 , v2 ):
         # URL, angle between two vectors: http://stackoverflow.com/a/13849249/893511
     v1_u = vec_unit( v1 )
     v2_u = vec_unit( v2 )
+    if eq( vec_mag( v1_u ) , 0 ) or eq( vec_mag( v2_u ) , 0 ):
+        return float('nan')
     angle = np.arccos( np.dot( v1_u , v2_u) )
     if np.isnan( angle ):
         if ( v1_u == v2_u ).all():
@@ -141,7 +144,7 @@ def vec_sum_chain(vecList): # <<< resenv
         ptsList.append( np.add( ptsList[-1] , vecList[i] ) )
     return ptsList
 
-def vec_eq( vec1 , vec2 , margin = EPSILON ): # <<< resenv
+def vec_eq( vec1 , vec2 , margin = EPSILON ):
     """ Return true if two vectors are equal enough, otherwise false """
     if len(vec1) == len(vec2):
         for i in range(len(vec1)):
@@ -189,7 +192,7 @@ def vec_avg( *vectors ):
     vecSum = np_add( *vectors ) # NOTE: This function assumes that all vectors are the same dimensionality
     return np.divide( vecSum , len( vectors ) * 1.0 )
 
-def is_vector( vec ): # <<< resenv
+def is_vector( vec ): 
     """ Return true if 'vec' is any of { list , numpy array } and thus may particpate in vector operations """
     return isinstance( vec , ( list , np.ndarray ) )
 
@@ -218,7 +221,7 @@ def vec_random( dim ): # <<< resenv
         rtnVec.append( random() )
     return rtnVec
 
-def vec_random_range( dim , limLo , limHi ): # <<< resenv
+def vec_random_range( dim , limLo , limHi ): 
     """ Return a vector in which each element takes on a random value between 'limLo' and 'limHi' with a uniform distribution """
     rtnVec = []
     randVec = vec_random( dim )
@@ -234,7 +237,7 @@ def vec_rand_range_lst( dim , limLo , limHi , N ):
         rtnList.append( vec_random_range( dim , limLo , limHi ) )
     return rtnList
 
-def vec_random_limits( dim , limits ): # <<< resenv
+def vec_random_limits( dim , limits ): 
     """ Return a vector in which each element takes on a random value between 'limits[i][0]' and 'limits[i][1]' with a uniform distribution """
     rtnVec = []
     randVec = vec_random( dim )
@@ -339,6 +342,18 @@ def bbox_from_points( ptsList ):
             bbox[0][i] = min( bbox[0][i] , point[i] ) # Compare the component of the point to the min of the dimension
             bbox[1][i] = max( bbox[1][i] , point[i] ) # Compare the component of the point to the max of the dimension
     return bbox
+
+def AABB( ptsList ):
+    """ Axis-Aligned Bounding Box, Alias for 'bbox_from_points' """
+    return bbox_from_points( ptsList )
+
+def AABB_span( ptsList ):
+    """ Return the span of each dimension covered by the AABB of 'ptsList' """
+    bbox = bbox_from_points( ptsList )
+    span = [ 0 for i in xrange( len( bbox[0] ) ) ]
+    for i in xrange( len( bbox[0] ) ):
+        span[i] = abs( bbox[1][i] - bbox[0][i] )
+    return span
 
 # == Plotting Helpers ==
 
