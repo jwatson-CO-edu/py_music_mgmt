@@ -39,6 +39,11 @@ Built on Wing 101 IDE for Python 2.7
             { } MusicBrainz - Open Access Database
             { } Google , Wikipedia?
 [ ] Split songs by track
+    [ ] If no tracklist is found in description or toplevel comments, then Download video comment threads
+    [ ] Assign most likely artist and track names
+    [ ] Hash of known artist names
+    [ ] Handle one-artist albums
+    [ ] Handle one-song videos
     [ ] Find example of how to split songs by track
         [ ] URL , Split songs with multiprocess: https://codereview.stackexchange.com/q/166158
         [ ] Test with dummy times
@@ -49,52 +54,51 @@ Built on Wing 101 IDE for Python 2.7
         [ ] Album
         [ ] Album Art (Or YT thumbnail) , Can this be obtained from GN?
         [ ] Additional GN data
-[ ] Build a list of music to listen to
-    [ ] Study Jams
+[Y] Build a list of music to listen to
+    [Y] Study Jams
     [Y] Establish a input playlist format - COMPLETE:
         # Comment
         <URL>,<SEQNUM>
     [Y] Parse a file - COMPLETE , made sure that strings are ASCII
-    [ ] Review list
-    [ ] Artists to try
+    [Y] Review list
+    [Y] Artists to try
 [Y] Make API connection functions persistent functors - Not possible, just run connections once per script
     [Y] Write an IDE object persistence test - Objects in the script cannot persist between runs of the script, console is erased each run
-[ ] Adjust program behavior
-    [ ] Limit download speed with random spacing between requests
-    [ ] Change user agent to FF browser
+[N] Adjust program behavior
+    [N] Limit download speed with random spacing between requests - ffmpeg conversion takes a considerable time
+    [N] Change user agent to FF browser - Does not seem to be necessary at this point given infrequency of use
 [ ] Cache scraped data && Pickle
-    [ ] URL
-    [ ] HTML
-    [ ] JSON objects
-        [ ] Metadata
-        [ ] Comment info
+    [Y] URL
+    [N] HTML
+    [Y] API objects
+        [Y] Metadata
+        [Y] Comment info
     [ ] Identified categories
         [ ] Timestamps
-    [ ] Locations of raw files
-        [ ] Check if exist && flag
-    [ ] Unpickle on startup
-    [ ] Cache flag
-    [ ] WARN: Switch to database at 10k entries
-[ ] Store raw files
-[ ] If no tracklist is found, then Download video comments
-[ ] Remove log files from repo
+    [Y] Locations of raw files
+        [Y] Check if exist && flag
+    [Y] Unpickle on startup of each stage
+    [Y] Cache flag
+    { } WARN: Switch to database at 10k entries
+[Y] Store raw files
+[Y] Remove log files from repo
 { } Bandcamp Scraper
 
 ~~~ Test Plan ~~~
 NOTE: This utility must be run in Linux
-[ ] 1. Download and Store
-    [ ] Open API
-    [ ] Check Write location
-    [ ] Create Dir for each video
-    [ ] Raw File
-    [ ] Raw File Location
-    [ ] File Success
-    [ ] URL
-    [ ] Description Data
-    [ ] Comment Data
-    [ ] LOG
-    [ ] Pickle all data
-    [ ] Close API
+[Y] 1. Download and Store - STAGE 1 COMPLETE!
+    [Y] Open API
+    [Y] Check Write location
+    [Y] Create Dir for each video
+    [Y] Raw File
+    [Y] Raw File Location
+    [Y] File Success
+    [Y] URL
+    [Y] Description Data
+    [Y] Comment Data
+    [Y] LOG
+    [Y] Pickle all data
+    [N] Close API - There is no close function
 [ ] 2. Process and Split
     [ ] Restore Pickle
     [ ] Tracklist Success
@@ -164,8 +168,6 @@ def __prog_signature__(): return __progname__ + " , Version " + __version__ # Re
 
 # ___ End Init _____________________________________________________________________________________________________________________________
 
-
-# === Main Application =====================================================================================================================
 
 # = youtube-dl Logging =
 
@@ -616,26 +618,6 @@ def GN_most_likely_artist_and_track( GN_client , GN_user , components ):
         print "Score for this result:" , score12
         
     return rtnScores
-    
-    # FIXME : START HERE
-    # FIXME : GRACENOTE SEARCH (1,2) AND (2,1) , Assign Score
-    
-    # ~ Dev Plan ~
-    # [Y] Try a GN search with each and review the results
-    # [y] Determine failure mode of the results - Search returns whatever the closest hit is, there is no failure mode
-    #     [N] Introduce a small, intentional error into a good search to see how GN handles it
-    # [y] Assign scores
-    # [Y] Return a structure with scores
-    
-# FIXME : ASSIGN MOST LIKELY ARTIST AND TRACK NAMES
-# FIXME : HASH OF KNOWN ARTIST NAMES    
-    
-
-    
-# FIXME : WHAT TO DO ABOUT ONE-ARTIST ALBUMS?
-# FIXME : WHAT TO DO ABOUT ONE-SONG VIDEOS?
-
-# ~~~ MAIN EXECUTION ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # == Program Vars ==
 
@@ -769,6 +751,9 @@ def list_all_files_w_EXT( searchPath , EXTlst ):
             rtnLst.append( item )
     return rtnLst
 
+
+# ===== STAGE 1 ============================================================================================================================
+
 def set_session_active( active = 1 ):
     """ Set the session active flag """
     global ACTIVE_SESSION
@@ -777,6 +762,7 @@ def set_session_active( active = 1 ):
 def Stage_1_Download_w_Data( inputFile ,
                             minDelay_s = 20 , maxDelay_s = 180 ):
     """ Check environment for download , Fetch files and metadata , Save files and metadata """
+    # NOTE: You may have to run this function several times, especially for long lists of URLs
     global LOG , METADATA
     LOG = LogMH()
     dlTimer = Stopwatch()
@@ -785,48 +771,49 @@ def Stage_1_Download_w_Data( inputFile ,
     dbugLim = False
     limit = 1
     count = 0
-    # 0. Indicate file
+    #  0. Indicate file
     LOG.prnt( "Processing" , inputFile , "..." )
-    # 1. Load session
+    #  1. Load session
     session = load_session( SESSION_PATH )
     set_session_active( True )
     if os.path.isfile( ACTIVE_PICKLE_PATH ):
         METADATA = unpickle_dict( ACTIVE_PICKLE_PATH ) 
         LOG.prnt( "Found cached metadata at" , ACTIVE_PICKLE_PATH , "with" , len( METADATA ) , "entries" )
     else:
+        LOG.prnt( "NO cached metadata at" , ACTIVE_PICKLE_PATH , ", Empty dict" )
         METADATA = {}
-    # 1.1. Activate session
+    #  1.1. Activate session
     ACTIVE_SESSION = True
-    # 2. Check Write locations
+    #  2. Check Write locations
     dirsWritable = verify_session_writable( session )
     if not dirsWritable:
         return False
-    # 3. Process input file
+    #  3. Process input file
     entries = process_video_list( "input/url_sources.txt" )
     LOG.prnt( "Read input file with" , len( entries ) , "entries" )
     inCount = len( entries )
-    # 4. Init downloaded
+    #  4. Init downloaded
     ydl = youtube_dl.YoutubeDL( YDL_OPTS )
-    # 4. For each entry
+    #  5. For each entry
     LOG.prnt( "## Media Files ##" )
     for enDex , entry in enumerate( entries ):
-        # I. If the debug file limit exceeded, exit loop
+        #  6. If the debug file limit exceeded, exit loop
         if dbugLim and ( not count < limit ):
             break        
         LOG.prnt( '#\n# Entry' , enDex+1 , 'of' , inCount , '#' )
         enID = entry['id']
-        # I. URL
+        #  7. URL
         enURL = entry['url']        
         cacheMod = False        
         try:
-            # I. Attempt to fetch cached data for this entry
+            #  8. Attempt to fetch cached data for this entry
             if( enID in METADATA ):
                 LOG.prnt( "Found cached data for" , enID )
                 enCache = METADATA[ enID ]
             else:
                 enCache = None
                 cacheMod = True
-            # 5. Create Dir
+            #  9. Create Dir
             enRawDir = os.path.join( RAW_FILE_DIR , enID )
             if not os.path.isdir( enRawDir ):
                 try:  
@@ -835,8 +822,8 @@ def Stage_1_Download_w_Data( inputFile ,
                     LOG.prnt(  "Creation of the directory %s failed" % enRawDir )
                 else:  
                     LOG.prnt(  "Successfully created the directory %s " % enRawDir )            
-            # 6. Download Raw MP3 File
-            # [ ] If this file does not have an entry, the raw file exists, and the file is ok, then download
+            # 10. Download Raw MP3 File
+            # 11. If this file does not have an entry, the raw file exists, and the file is ok, then download
             if not ( enCache and enCache['fSuccess'] ):
                 cacheMod = True
                 LOG.prnt( "No file from" , entry['url'] , ", dowloading ..." )
@@ -844,12 +831,12 @@ def Stage_1_Download_w_Data( inputFile ,
                 ydl.download( [ entry['url'] ] )  # This function MUST be passed a list!
                 enElapsed = dlTimer.elapsed()
                 LOG.prnt( "Downloading and Processing:" , enElapsed , "seconds" )
-                # I. Locate and move the raw file
+                # 12. Locate and move the raw file
                 fNames = list_all_files_w_EXT( SOURCEDIR , [ 'MP3' ] )
                 if len( fNames ) > 0:
                     # Assume that the first item is the newly-arrived file
                     fSaved = fNames[0]
-                    # I. Raw File End Destination
+                    # 13. Raw File End Destination
                     enDest = os.path.join( enRawDir , fSaved )
                     enCpSuccess = False # I. File Success
                     try:
@@ -862,31 +849,31 @@ def Stage_1_Download_w_Data( inputFile ,
                     LOG.prnt( "No downloaded MP3s detected!" )
                     enDest = None
                     enCpSuccess = False            
-            # [ ] else skip download
+            # 14. else skip download
             else:
                 LOG.prnt( "Raw file from" , entry['url'] , "was previously cached at" , enCache['Timestamp'] )
                 enDest      = None
                 enCpSuccess = True
                 enElapsed   = None
-            # I. Fetch Description Data
+            # 15. Fetch Description Data
             if not ( enCache and enCache['Metadata'] ):
                 cacheMod = True
                 enMeta = fetch_metadata_by_yt_video_ID( entry['id'] )
             else:
                 enMeta = enCache['Metadata']
-            # [ ] Verify that the downloaded file is as long as the original video
+            # 16. Verify that the downloaded file is as long as the original video
             enDur = parse_ISO8601_timestamp( extract_video_duration( enMeta ) ) 
             print "Duration:" , enDur
-            # I. Fetch Comment Data
+            # 17. Fetch Comment Data
             if not ( enCache and enCache['Threads'] ):
                 cacheMod = True
                 enComment = fetch_comment_threads_by_yt_ID( entry['id'] )
             else:
                 enComment = enCache['Threads']
-            # I. Get time and date for this file
+            # 18. Get time and date for this file
             enTime = nowTimeStampFine()
             LOG.prnt( "Recorded Time:" , enTime )
-            # I. Add file data to a dictionary
+            # 19. Add file data to a dictionary
             METADATA[ enID ] = {
                 'ID' :        enID ,
                 'RawPath' :   enDest if enDest else enCache['RawPath'] ,
@@ -897,17 +884,17 @@ def Stage_1_Download_w_Data( inputFile ,
                 'Threads' :   enComment ,
                 'Timestamp' : enTime if cacheMod else enCache['Timestamp']
             }
-            # I. Sleep
+            # 20. Sleep (if requested)
             if doSleep:
                 sleepDur = randrange( minDelay_s , maxDelay_s+1 )
                 LOG.prnt( "Sleeping for" , sleepDur , "seconds" )
                 sleep( sleepDur )
-            # I. Increment counter
+            # 21. Increment counter
             count += 1
             LOG.prnt( "# ~~~~~" )   
         # Need to catch errors here so that the data from the already processed files in not lost
         except Exception as err:
-            # I. Add file data to a dictionary
+            # 22. Add file data to a dictionary
             METADATA[ enID ] = {
                 'ID' :        enID ,
                 'RawPath' :   None ,
@@ -919,35 +906,94 @@ def Stage_1_Download_w_Data( inputFile ,
                 'Timestamp' : nowTimeStampFine()
             }            
             LOG.prnt( "ERROR: There was an error processing the item _ " , enID , "\n" , err )
-    # I. Pickle all data
+    # 23. Pickle all data
     struct_to_pkl( METADATA , ACTIVE_PICKLE_PATH )
-    # I. Save session && output log data
+    # 24. Save session && output log data
     save_session( SESSION_PATH , session )
     LOG.out_and_clear( os.path.join( LOG_DIR , "YouTube-Music-Log_" + nowTimeStampFine() + ".txt" ) ) 
 
+# _____ END STAGE 1 ________________________________________________________________________________________________________________________
+
+
+# ===== STAGE 2 ============================================================================================================================
+
+def timestamps_from_cached_item( itemCacheDict ):
+    """ Recover timestamps from either the description or the comments """
+    
+    # FIXME: START HERE!
+    
+    # 1. Attempt to scrape from the description
+    # 2. Attempt to scrape from the comments
+
 def Stage_2_Separate_and_Tag():
     """ Process each of the downloaded raw files: 1. Separate into songs , 2. Apply appropriate ID3 tags , 3. Save """
-    pass
+    # 0. Setup debug vars
+    global LOG , METADATA
+    LOG = LogMH()
+    dlTimer = Stopwatch()
+    dbugLim = False
+    limit = 1
+    count = 0
+    stampCount = 0
+    # 1. Retreive session vars and cached metadata
+    session = load_session( SESSION_PATH )
+    set_session_active( True )
+    if os.path.isfile( ACTIVE_PICKLE_PATH ):
+        METADATA = unpickle_dict( ACTIVE_PICKLE_PATH ) 
+        LOG.prnt( "Found cached metadata at" , ACTIVE_PICKLE_PATH , "with" , len( METADATA ) , "entries" )
+        numEntry = len( METADATA )
+    else:
+        LOG.prnt( "NO cached metadata at" , ACTIVE_PICKLE_PATH , ", Empty dict" )
+        METADATA = {}
+        numEntry = 0
+    # 1.1. Activate session
+    ACTIVE_SESSION = True
+    # 2. Check Write locations
+    dirsWritable = verify_session_writable( session )
+    if not dirsWritable:
+        return False    
+    # 3. For every cached entry
+    for enID , enCache in METADATA.iteritems():
+        # 4. Check if the download was a success
+        if enCache['fSuccess']:
+            LOG.prnt( "Raw file from" , enCache['URL'] , "was previously cached at" , enCache['Timestamp'] )
+            # 5. Check for a tracklist  &&  Mark if found
+            stamps = scrape_and_check_timestamps( enCache['Metadata'] )
+            numStamp = len( stamps )
+            LOG.prnt( "Found" , numStamp , "stamps for" , enID )
+            if numStamp > 1:
+                enCache['stampsFound'] = True
+                stampCount += 1
+            else:
+                enCache['stampsFound'] = False
+        # I. else skip
+        else:
+            LOG.prnt( "Raw file from" , enCache['URL'] , ", Retrieval failed!" )
+    # I. Write log file
+    LOG.prnt( "Found stamps for" , stampCount , "of" , numEntry , "cached items" )
+    # I. Pickle with new metadata
+    # I. Write session vars
+    
+# _____ END STAGE 2 ________________________________________________________________________________________________________________________
 
-# _ End Func _
 
-# = Program Vars =
-
-
-
-# _ End Vars _
+# === Main Application =====================================================================================================================
 
 if __name__ == "__main__":
     print( __prog_signature__() )
     termArgs = sys.argv[1:] # Terminal arguments , if they exist
     
-    # 1. Open API connections
-    open_all_APIs( GOOG_KEY_PATH , GRNT_KEY_PATH )
+    # 1. Open API connections ()
+    if 1:
+        open_all_APIs( GOOG_KEY_PATH , GRNT_KEY_PATH )
     
     # ~~~ Stage 1 ~~~
-    Stage_1_Download_w_Data( "input/url_sources.txt" ,
-                            minDelay_s = 30 , maxDelay_s = 60 )
+    if 0:
+        Stage_1_Download_w_Data( "input/url_sources.txt" ,
+                                minDelay_s = 30 , maxDelay_s = 60 )
     
+    # ~~~ Stage 2 ~~~
+    Stage_2_Separate_and_Tag()
     
 
 # ___ End Main _____________________________________________________________________________________________________________________________
@@ -1034,18 +1080,6 @@ if __name__ == "__main__":
     ## Download file
     #with youtube_dl.YoutubeDL( ydl_opts ) as ydl:
         #ydl.download( [ 'https://www.youtube.com/watch?v=BaW_jenozKc' ] )  
-
-#def get_timelinks_from_HTML( ytHTML ):
-    #""" Attempt to scrape times links from page HTML """
-    ## NOTE: This function assumes that the link can be found on a single line, beginning with "&t="
-    #lines = ytHTML.splitlines()
-    #linkToken = "&t="
-    #rtnStamps = []
-    #for line in lines:
-        #if linkToken in line:
-            ## FIXME: ATTEMPT TO GET THE NUMBER THAT PRECEEDS EACH TIME DIVISION
-            ## FIXME: WHAT TO DO ABOUT TIME LINKS IN THE COMMENTS THAT ARE NOT TRACK LISTS?
-            #pass
             
 #def get_tracklist_from_lines( lines ):
     #""" Return candidate tracklist or 'None' """
