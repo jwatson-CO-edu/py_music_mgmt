@@ -917,13 +917,25 @@ def Stage_1_Download_w_Data( inputFile ,
 
 # ===== STAGE 2 ============================================================================================================================
 
+def scrape_and_check_desc_stamps( cmntThreads ):
+    """ Look for timestamps in the description """
+    # FIXME: START HERE
+    
+    
+
 def timestamps_from_cached_item( itemCacheDict ):
     """ Recover timestamps from either the description or the comments """
     
-    # FIXME: START HERE!
+    # FIXME: NEED TO SEARCH BOTH THE DESCRIPTION AND COMMENTS FOR TIMESTAMPS
+    wasInDesc = False
+    wasInCmnt = False
     
     # 1. Attempt to scrape from the description
-    # 2. Attempt to scrape from the comments
+    stamps = scrape_and_check_timestamps( itemCacheDict['Metadata'] )
+    # 2. If there were no stamps in the desc, then Attempt to scrape from the comments
+    if len( stamps ) < 2:
+        pass
+    
 
 def Stage_2_Separate_and_Tag():
     """ Process each of the downloaded raw files: 1. Separate into songs , 2. Apply appropriate ID3 tags , 3. Save """
@@ -958,7 +970,7 @@ def Stage_2_Separate_and_Tag():
         if enCache['fSuccess']:
             LOG.prnt( "Raw file from" , enCache['URL'] , "was previously cached at" , enCache['Timestamp'] )
             # 5. Check for a tracklist  &&  Mark if found
-            stamps = scrape_and_check_timestamps( enCache['Metadata'] )
+            
             numStamp = len( stamps )
             LOG.prnt( "Found" , numStamp , "stamps for" , enID )
             if numStamp > 1:
