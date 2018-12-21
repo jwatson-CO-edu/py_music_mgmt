@@ -252,9 +252,15 @@ def videos_list_by_id( client , **kwargs ):
     return print_response( response )
 
 def comment_threads_list_by_video_id( client , **kwargs ):
-    # See full sample for function
-    kwargs   = remove_empty_kwargs(**kwargs)
+    """ Fetch the comment thread IDs from the specified video info """
+    kwargs   = remove_empty_kwargs( **kwargs )
     response = client.commentThreads().list( **kwargs ).execute()
+    return print_response( response )
+
+def comment_thread_by_thread_id( client , **kwargs ):
+    """ Fetch the comments from the specified thread """
+    kwargs   = remove_empty_kwargs( **kwargs ) 
+    response = client.comments().list( **kwargs ).execute()
     return print_response( response )
 
 def extract_description_lines( metadata ):
@@ -421,18 +427,11 @@ def remove_leading_digits_from_line( line ):
             break
     return line[bgnDex:]
             
-def scrape_and_check_timestamps( reponseObj ):
-    """ Attempt to get the tracklist from the response object and return it , Return if all the stamps are lesser than the duration """
-    # NOTE: This function assumes that a playlist can be found in the decription
-    # NOTE: This function assumes that if there is a number representing a songs's place in the sequence, then it is the first digits in a line
-    
-    # 1. Get the description from the response object
-    descLines = extract_description_lines( reponseObj )
-    # 2. Get the video length from the response object
-    duration  = parse_ISO8601_timestamp( extract_video_duration( reponseObj ) )
+def get_timestamps_from_lines( lines , duration ):
+    """ Attempt to get the tracklist from the list of 'lines' and return it , but only Return if all stamps are lesser than 'duration' """
     # 3. Get candidate tracklist from the description 
     trkLstFltrd = []
-    for line in descLines:
+    for line in lines:
         stamp = get_timestamp_from_line( line )
         if len( stamp ) > 0:
             stamp = parse_list_timestamp( stamp )
@@ -451,7 +450,23 @@ def scrape_and_check_timestamps( reponseObj ):
                       ascii( 'line' ) :      line   } # Full text of the scraped line 
                 )
     # N. Return tracklist
-    return trkLstFltrd
+    return trkLstFltrd    
+            
+def duration_from_yt_response( reponseObj ):
+    """ Get the timestamp from the YouTube search result """
+    return parse_ISO8601_timestamp( extract_video_duration( reponseObj ) )
+            
+def scrape_and_check_timestamps_desc( reponseObj ):
+    """ Attempt to get the tracklist from the response object and return it , Return if all the stamps are lesser than the duration """
+    # NOTE: This function assumes that a playlist can be found in the decription
+    # NOTE: This function assumes that if there is a number representing a songs's place in the sequence, then it is the first digits in a line
+    
+    # 1. Get the description from the response object
+    descLines = extract_description_lines( reponseObj )
+    # 2. Get the video length from the response object
+    duration  = duration_from_yt_response( reponseObj )
+    # 3. Scrape lines from the description
+    return get_timestamps_from_lines( descLines , duration )
 
 def extract_candidate_artist_and_track( inputStr ):
     """ Given the balance of the timestamp-sequence extraction , Attempt to infer the artist and track names """
@@ -629,7 +644,8 @@ YOUTUBE_API_SERVICE_NAME = "youtube"
 YOUTUBE_API_VERSION      = "v3"
 METADATA_SPEC            = 'snippet,contentDetails,statistics'
 #METADATA_SPEC            = 'id,snippet,contentDetails,statistics'
-COMMENT_THREAD_SPEC      = 'replies'
+COMMENT_THREAD_SPEC      = 'id,snippet,replies'
+COMMENT_LIST_SPEC        = 'snippet'
 
 # ~ Authentication Vars ~
 authDict = {}
@@ -691,12 +707,24 @@ def fetch_metadata_by_yt_video_ID( ytVideoID ):
     )  
 
 def fetch_comment_threads_by_yt_ID( ytVideoID ): 
-    """ Fetch and return comment thread data that results from a YouTube API search for 'ytVideoID' """
+    """ Fetch and return comment thread metadata that results from a YouTube API search for 'ytVideoID' """
     global youtube , COMMENT_THREAD_SPEC
     return comment_threads_list_by_video_id(
         youtube ,
-        part    = COMMENT_THREAD_SPEC,
-        videoId = ytVideoID 
+        part       = COMMENT_THREAD_SPEC ,
+        videoId    = ytVideoID ,
+        textFormat = "plainText",
+        maxResults = 100       
+    )
+
+def fetch_comments_by_thread_id( ytThreadID ):
+    """ Fetch and return thread comments that results from a YouTube API search for 'ytThreadID' """
+    global youtube , COMMENT_LIST_SPEC
+    return comment_thread_by_thread_id(
+        youtube ,
+        part       = COMMENT_LIST_SPEC ,
+        parentId   = ytThreadID ,
+        textFormat = "plainText"
     )
 
 def load_session( sessionPath ):
@@ -917,11 +945,28 @@ def Stage_1_Download_w_Data( inputFile ,
 
 # ===== STAGE 2 ============================================================================================================================
 
-def scrape_and_check_desc_stamps( cmntThreads ):
-    """ Look for timestamps in the description """
-    # FIXME: START HERE
-    
-    
+def comments_from_item_cache( itemCache ):
+    """ Fetch the best comments from the item cache , and cache the comments in each item """
+    # FIXME : START HERE
+    pass
+
+def scrape_and_check_timestamps_cmnts( cmntThreads ):
+    """ Look for timestamps in the comments """
+    # 1. Get list of comments
+    #print len( vidMeta )     , ',' , vidMeta
+    #for key in vidMeta:
+        #print '\t' , key
+    #print len( cmntThreads ) , ',' , cmntThreads
+    #for key in cmntThreads:
+        #print '\t' , key
+    print len( cmntThreads['items'] )
+    for item in cmntThreads['items']:
+        print "item:" , item 
+        #threadList = fetch_comments_by_thread_id( item['etag'] )
+        #print "threadList:" , len( threadList['items'] ) 
+        print 'textDisplay: ' , item['snippet']['topLevelComment']['snippet']['textDisplay']
+        print 'textOriginal:' , item['snippet']['topLevelComment']['snippet']['textOriginal']
+        break
 
 def timestamps_from_cached_item( itemCacheDict ):
     """ Recover timestamps from either the description or the comments """
@@ -931,11 +976,16 @@ def timestamps_from_cached_item( itemCacheDict ):
     wasInCmnt = False
     
     # 1. Attempt to scrape from the description
-    stamps = scrape_and_check_timestamps( itemCacheDict['Metadata'] )
+    stamps = scrape_and_check_timestamps_desc( itemCacheDict['Metadata'] )
     # 2. If there were no stamps in the desc, then Attempt to scrape from the comments
     if len( stamps ) < 2:
         pass
     
+def repopulate_comments( cacheDict ):
+    """ Fetch comments for each of the cached items , Replacing old """
+    for enID , enCache in cacheDict.iteritems():
+        enComment = fetch_comment_threads_by_yt_ID( enID )
+        enCache['Threads'] = enComment
 
 def Stage_2_Separate_and_Tag():
     """ Process each of the downloaded raw files: 1. Separate into songs , 2. Apply appropriate ID3 tags , 3. Save """
@@ -998,14 +1048,32 @@ if __name__ == "__main__":
     # 1. Open API connections ()
     if 1:
         open_all_APIs( GOOG_KEY_PATH , GRNT_KEY_PATH )
+        
+    # ~~~ Stage 0: Testing ~~~
+    session = load_session( SESSION_PATH )
+    set_session_active( True )
+    if os.path.isfile( ACTIVE_PICKLE_PATH ):
+        METADATA = unpickle_dict( ACTIVE_PICKLE_PATH ) 
+        print "Found cached metadata at" , ACTIVE_PICKLE_PATH , "with" , len( METADATA ) , "entries" 
+        numEntry = len( METADATA )
+    else:
+        print "NO cached metadata at" , ACTIVE_PICKLE_PATH , ", Empty dict" 
+        METADATA = {} 
+    if METADATA:
+        for enID , entry in METADATA.iteritems():
+            scrape_and_check_timestamps_cmnts( entry['Threads'] )
+            break
+        #repopulate_comments( METADATA )
+        #struct_to_pkl( METADATA , ACTIVE_PICKLE_PATH )
     
-    # ~~~ Stage 1 ~~~
+    # ~~~ Stage 1: Downloading ~~~
     if 0:
         Stage_1_Download_w_Data( "input/url_sources.txt" ,
                                 minDelay_s = 30 , maxDelay_s = 60 )
     
-    # ~~~ Stage 2 ~~~
-    Stage_2_Separate_and_Tag()
+    # ~~~ Stage 2: Processing ~~~
+    if 0:
+        Stage_2_Separate_and_Tag()
     
 
 # ___ End Main _____________________________________________________________________________________________________________________________
