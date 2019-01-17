@@ -18,6 +18,7 @@ Helper functions
 import sys , os , datetime , cPickle , heapq , time , operator
 from math import trunc , pi  
 from random import choice
+from warnings import warn
 import numpy as np
 ## ~ Cleanup ~
 #plt.close('all') # clear any figures we may have created before 
@@ -831,6 +832,19 @@ def ensure_dir( dirName ):
     """ Create the directory if it does not exist """
     if not os.path.exists( dirName ):
         os.makedirs( dirName )
+        
+def is_container_too_big( container , mxSize = int(1e4) ):
+    """ Check the length of the container and warn if we should be using a database """
+    conLen = len( container ) 
+    wrnMsg = "Container has " + str( conLen ) + " elements with max " + str( mxSize ) + ", Consider a database!"
+    try:
+        if conLen <= mxSize:
+            return False
+        else:
+            warn( wrnMsg , RuntimeWarning )
+            print wrnMsg
+    except Exception:
+        return False
 
 def struct_to_pkl( struct , pklPath ): 
     """ Serialize a 'struct' to 'pklPath' """
@@ -860,11 +874,12 @@ def unpickle_dict( filename ):
     try:
         infile = open( filename , 'rb' )
         rtnDict = cPickle.load( infile )
+        is_container_too_big( rtnDict )
         if len( rtnDict ) > 0:
             return rtnDict
         else:
             return {}
-    except FileNotFoundError:
+    except IOError:
         return {}
 
 def process_txt_for_LaTeX( TXTpath , ltxPath = None ):  
