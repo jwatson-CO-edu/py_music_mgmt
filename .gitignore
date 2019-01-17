@@ -8,3 +8,4 @@ example/pygn/__init__.py
 output/session.pkl
 logs/
 session.txt
+output/

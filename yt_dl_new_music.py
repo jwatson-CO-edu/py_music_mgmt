@@ -822,7 +822,7 @@ def begin_session():
     dirsWritable = verify_session_writable( session )
     return session , dirsWritable , dlTimer
     
-def close_session():
+def close_session( session ):
     """ Cache data and write logs """
     # 23. Pickle all data
     struct_to_pkl( METADATA , ACTIVE_PICKLE_PATH )
@@ -969,7 +969,7 @@ def Stage_1_Download_w_Data( inputFile ,
             }            
             LOG.prnt( "ERROR: There was an error processing the item _ " , enID , "\n" , err )
     # Pickle data and write files
-    close_session()
+    close_session( session )
 
 # _____ END STAGE 1 ________________________________________________________________________________________________________________________
 
@@ -1136,38 +1136,35 @@ def Stage_2_Separate_and_Tag():
         # 5. Check if the download was a success
         if enCache['fSuccess']:
             if not dbSuppressLog: LOG.prnt( "Raw file from" , enCache['URL'] , "was previously cached at" , enCache['Timestamp'] )
-            # 6. Check for a tracklist  &&  Mark if found
-            stamps = timestamps_from_cached_item( enCache )
-            numStamp = len( stamps )
-            if not dbSuppressLog: LOG.prnt( "Found" , numStamp , "stamps for" , enID )
-            if numStamp > 1:
-                enCache['stampsFound'] = True
-                stampCount += 1
-                enCache['Tracklist'] = stamps
-                
-                # TODO: PROCESS STAMPS IF NOT TRACKLIST COMPLETE
-                if ( 'TrackSuccess' not in enCache ) or ( not enCache['TrackSuccess'] ):
-                    for stamp in stamps:
-                        print stamp
-                
-            else:
-                enCache['stampsFound'] = False
-                enCache['Tracklist']   = [] 
-                # 7. Check if it is a short video
-                if timestamp_leq( enCache['Duration'] , timestamp_dict( 0 , 15 , 0 ) ):
-                    shortCount += 1
-                    components = extract_candidate_artist_and_track( enTitle )
-                    if 0:
-                        trackMeasr = GN_most_likely_artist_and_track( gnClient , gnUser , components )
-                        print trackMeasr
-                    
-                    # TODO: PROCESS STAMPS IF NOT TRACKLIST COMPLETE
-                    
-                    
+            # If there was not a previously cached tracklist
+            if ( 'TrackSuccess' not in enCache ) or ( not enCache['TrackSuccess'] ):
+                # 6. Check for a tracklist  &&  Mark if found
+                stamps = timestamps_from_cached_item( enCache )
+                numStamp = len( stamps )
+                if not dbSuppressLog: LOG.prnt( "Found" , numStamp , "stamps for" , enID )
+                if numStamp > 1:
+                    enCache['stampsFound']  = True
+                    enCache['TrackSuccess'] = True
+                    stampCount += 1
+                    enCache['Tracklist'] = stamps                    
                 else:
-                    print "Long and unlabeled:" , enTitle
+                    enCache['stampsFound'] = False
+                    enCache['Tracklist']   = [] 
+                    # 7. Check if it is a short video
+                    if timestamp_leq( enCache['Duration'] , timestamp_dict( 0 , 15 , 0 ) ):
+                        shortCount += 1
+                        components = extract_candidate_artist_and_track( enTitle )
+                        if 0:
+                            trackMeasr = GN_most_likely_artist_and_track( gnClient , gnUser , components )
+                            print trackMeasr
+                        
+                        # TODO: PROCESS STAMPS IF NOT TRACKLIST COMPLETE
                     
-                    # TODO: HANDLE LONG VIDEOS WITH NO TRACK DATA
+                    
+                    else:
+                        print "Long and unlabeled:" , enTitle
+                        
+                        # TODO: HANDLE LONG VIDEOS WITH NO TRACK DATA
                 
         # I. else skip
         else:
@@ -1180,6 +1177,7 @@ def Stage_2_Separate_and_Tag():
               ( numEntry - ( stampCount + shortCount ) ) / numEntry * 100.0 , "%" )
     # I. Pickle with new metadata
     # I. Write session vars
+    close_session( session )
     
 # _____ END STAGE 2 ________________________________________________________________________________________________________________________
 
