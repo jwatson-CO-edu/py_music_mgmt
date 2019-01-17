@@ -84,11 +84,11 @@ def vec_unit( vec ):
     mag = np.linalg.norm( vec )
     return np.divide( vec , 1 if eq( mag , 0 ) else mag )
 
-def vec_proj( a , b ): # <<< resenv
+def vec_proj( a , b ): 
     """ a projected onto b, a scalar length, using numpy """
     return np.dot(a,b) / np.linalg.norm(b) # Note that the result will be negative if the angle between a and b is > pi/2
 
-def vec_proj_onto( a , b ): # <<< resenv
+def vec_proj_onto( a , b ): 
     """ a projected onto b,  vector in the direction of b """
     return np.multiply( vec_unit( b ) , vec_proj( a , b ) )
 
