@@ -125,6 +125,8 @@ from math import pi , sqrt
 import shutil
 from random import randrange
 from time import sleep
+from warnings import warn
+
 try:
     from urllib2 import urlopen
 except:
@@ -361,6 +363,10 @@ def parse_ISO8601_timestamp( PT_H_M_S ):
             currStr = ''
     return rtnStamp
 
+def timestamp_dict( hr = 0 , mn = 0 , sc = 0 ):
+    """ Given hours, minutes, and seconds, return a timestamp of the type used by this program """
+    return { 'H' : hr , 'M' : mn , 'S' : sc }
+
 def parse_list_timestamp( compList ):
     """ Standardise the list of timestamp components into a standard dictionary """
     # NOTE: This function assumes that 'compList' will have no more than 3 elements , If it does then only the last 3 will be parsed
@@ -476,7 +482,7 @@ def extract_candidate_artist_and_track( inputStr ):
     components = [ comp.strip() for comp in components ]
     # 3. Retain nonempty strings
     components = [ comp for comp in components if len( comp ) ]
-    print components
+    #print components
     numComp    = len( components )
     if numComp > 2:
         # If there are more than 2 components, then only take the longest 2
@@ -662,8 +668,10 @@ ACTIVE_PICKLE_PATH = ""
 LOG_DIR            = ""
 ACTIVE_SESSION     = False
 SESSION_PATH       = "session.txt"
+ARTIST_PICKLE_PATH = ""
 LOG                = None
 METADATA           = {} 
+ARTISTS            = {}
 
 # ~ Processing Vars ~
 # Options for youtube-dl
@@ -729,7 +737,7 @@ def fetch_comments_by_thread_id( ytThreadID ):
 
 def load_session( sessionPath ):
     """ Read session file and populate session vars """
-    global RAW_FILE_DIR , CHOPPED_SONG_DIR , PICKLE_DIR , ACTIVE_PICKLE_PATH , LOG_DIR , ACTIVE_SESSION
+    global RAW_FILE_DIR , CHOPPED_SONG_DIR , PICKLE_DIR , ACTIVE_PICKLE_PATH , LOG_DIR , ACTIVE_SESSION , ARTIST_PICKLE_PATH
     sesnDict = comma_sep_key_val_from_file( sessionPath );              print "Loaded session file:" , sessionPath
     RAW_FILE_DIR       = sesnDict['RAW_FILE_DIR'];                      print "RAW_FILE_DIR:" , RAW_FILE_DIR
     CHOPPED_SONG_DIR   = sesnDict['CHOPPED_SONG_DIR'];                  print "CHOPPED_SONG_DIR:" , CHOPPED_SONG_DIR
@@ -737,6 +745,7 @@ def load_session( sessionPath ):
     ACTIVE_PICKLE_PATH = sesnDict['ACTIVE_PICKLE_PATH'];                print "ACTIVE_PICKLE_PATH:" , ACTIVE_PICKLE_PATH
     LOG_DIR            = sesnDict['LOG_DIR'];                           print "LOG_DIR" , LOG_DIR
     ACTIVE_SESSION     = bool( int( sesnDict['ACTIVE_SESSION'] ) );     print "ACTIVE_SESSION:" , yesno( ACTIVE_SESSION )
+    ARTIST_PICKLE_PATH = sesnDict['ARTIST_PICKLE_PATH'];                print "ARTIST_PICKLE_PATH:" , ARTIST_PICKLE_PATH
     return sesnDict
     
 def save_session( sessionPath , sesnDict ):
@@ -753,6 +762,7 @@ def save_session( sessionPath , sesnDict ):
     f.write( 'ACTIVE_PICKLE_PATH' + ',' + str( sesnDict['ACTIVE_PICKLE_PATH'] )    + '\n' )
     f.write( 'LOG_DIR'            + ',' + str( sesnDict['LOG_DIR'] )               + '\n' )
     f.write( 'ACTIVE_SESSION'     + ',' + str( int( sesnDict['ACTIVE_SESSION'] ) ) + '\n' )
+    f.write( 'ARTIST_PICKLE_PATH' + ',' + str( sesnDict['ARTIST_PICKLE_PATH'] )    + '\n' )
   
 def verify_session_writable( sesnDict ):
     """ Make sure that we can write to the relevant directories """
@@ -787,13 +797,45 @@ def set_session_active( active = 1 ):
     global ACTIVE_SESSION
     ACTIVE_SESSION = bool( active )
     
+def begin_session():
+    """ Set all vars that we will need to run a session """
+    global LOG , METADATA , ARTISTS
+    LOG = LogMH()
+    dlTimer = Stopwatch()    
+    session = load_session( SESSION_PATH )
+    set_session_active( True )
+    # Unpickle session metadata
+    METADATA = unpickle_dict( ACTIVE_PICKLE_PATH ) 
+    if METADATA:
+        LOG.prnt( "Found cached metadata at" , ACTIVE_PICKLE_PATH , "with" , len( METADATA ) , "entries" )
+    else:
+        LOG.prnt( "NO cached metadata at" , ACTIVE_PICKLE_PATH )
+    # Unpickle artist set
+    ARTISTS = unpickle_dict( ARTIST_PICKLE_PATH ) 
+    if ARTISTS:
+        LOG.prnt( "Found cached artist set at" , ARTIST_PICKLE_PATH , "with" , len( ARTISTS ) , "entries" )
+    else:
+        LOG.prnt( "NO cached artist set at" , ARTIST_PICKLE_PATH )
+    #  1.1. Activate session
+    ACTIVE_SESSION = True
+    #  2. Check Write locations
+    dirsWritable = verify_session_writable( session )
+    return session , dirsWritable , dlTimer
+    
+def close_session():
+    """ Cache data and write logs """
+    # 23. Pickle all data
+    struct_to_pkl( METADATA , ACTIVE_PICKLE_PATH )
+    struct_to_pkl( ARTISTS  , ARTIST_PICKLE_PATH )
+    # 24. Save session && output log data
+    save_session( SESSION_PATH , session )
+    LOG.out_and_clear( os.path.join( LOG_DIR , "YouTube-Music-Log_" + nowTimeStampFine() + ".txt" ) )     
+    
 def Stage_1_Download_w_Data( inputFile ,
                             minDelay_s = 20 , maxDelay_s = 180 ):
     """ Check environment for download , Fetch files and metadata , Save files and metadata """
     # NOTE: You may have to run this function several times, especially for long lists of URLs
     global LOG , METADATA
-    LOG = LogMH()
-    dlTimer = Stopwatch()
     doSleep = False # ffmpeg conversion seems to be a sufficient wait time, especially for large files 
     # DEBUG
     dbugLim = False
@@ -802,18 +844,8 @@ def Stage_1_Download_w_Data( inputFile ,
     #  0. Indicate file
     LOG.prnt( "Processing" , inputFile , "..." )
     #  1. Load session
-    session = load_session( SESSION_PATH )
-    set_session_active( True )
-    if os.path.isfile( ACTIVE_PICKLE_PATH ):
-        METADATA = unpickle_dict( ACTIVE_PICKLE_PATH ) 
-        LOG.prnt( "Found cached metadata at" , ACTIVE_PICKLE_PATH , "with" , len( METADATA ) , "entries" )
-    else:
-        LOG.prnt( "NO cached metadata at" , ACTIVE_PICKLE_PATH , ", Empty dict" )
-        METADATA = {}
-    #  1.1. Activate session
-    ACTIVE_SESSION = True
-    #  2. Check Write locations
-    dirsWritable = verify_session_writable( session )
+    session , dirsWritable , dlTimer = begin_session()
+    numEntry = len( METADATA )
     if not dirsWritable:
         return False
     #  3. Process input file
@@ -910,7 +942,8 @@ def Stage_1_Download_w_Data( inputFile ,
                 'URL' :       enURL ,
                 'Metadata' :  enMeta ,
                 'Threads' :   enComment ,
-                'Timestamp' : enTime if cacheMod else enCache['Timestamp']
+                'Timestamp' : enTime if cacheMod else enCache['Timestamp'] , 
+                'Duration' :  enDur
             }
             # 20. Sleep (if requested)
             if doSleep:
@@ -931,61 +964,141 @@ def Stage_1_Download_w_Data( inputFile ,
                 'URL' :       enURL ,
                 'Metadata' :  None ,
                 'Threads' :   None ,
-                'Timestamp' : nowTimeStampFine()
+                'Timestamp' : nowTimeStampFine() , 
+                'Duration' :  timestamp_dict( 0,0,0 )
             }            
             LOG.prnt( "ERROR: There was an error processing the item _ " , enID , "\n" , err )
-    # 23. Pickle all data
-    struct_to_pkl( METADATA , ACTIVE_PICKLE_PATH )
-    # 24. Save session && output log data
-    save_session( SESSION_PATH , session )
-    LOG.out_and_clear( os.path.join( LOG_DIR , "YouTube-Music-Log_" + nowTimeStampFine() + ".txt" ) ) 
+    # Pickle data and write files
+    close_session()
 
 # _____ END STAGE 1 ________________________________________________________________________________________________________________________
 
 
 # ===== STAGE 2 ============================================================================================================================
 
-def comments_from_item_cache( itemCache ):
-    """ Fetch the best comments from the item cache , and cache the comments in each item """
-    # FIXME : START HERE
-    pass
+"""
+~~~ DEV PLAN ~~~
+[ ] Artist Store: set <--> pkl
+[ ] Artist Lookup
+[ ] Track Edit Menu
+[ ] Tracklist Complete Flag
+"""
 
-def scrape_and_check_timestamps_cmnts( cmntThreads ):
+ARTIST_SET = set([])
+
+def comments_from_thread_cache( cmntThreads ):
+    """ Fetch the best comment text from the item cache , and cache the comments in each item """
+    commentList = []
+    for item in cmntThreads['items']:
+        textDisplay  = item['snippet']['topLevelComment']['snippet']['textDisplay']
+        textOriginal = item['snippet']['topLevelComment']['snippet']['textOriginal']
+        if len( textOriginal ) > len( textDisplay ):
+            commentList.append( textOriginal )
+        else:
+            commentList.append( textDisplay )
+    return commentList
+
+def scrape_and_check_timestamps_cmnts( reponseObj , cmntThreads ):
     """ Look for timestamps in the comments """
     # 1. Get list of comments
-    #print len( vidMeta )     , ',' , vidMeta
-    #for key in vidMeta:
-        #print '\t' , key
-    #print len( cmntThreads ) , ',' , cmntThreads
-    #for key in cmntThreads:
-        #print '\t' , key
-    print len( cmntThreads['items'] )
-    for item in cmntThreads['items']:
-        print "item:" , item 
-        #threadList = fetch_comments_by_thread_id( item['etag'] )
-        #print "threadList:" , len( threadList['items'] ) 
-        print 'textDisplay: ' , item['snippet']['topLevelComment']['snippet']['textDisplay']
-        print 'textOriginal:' , item['snippet']['topLevelComment']['snippet']['textOriginal']
-        break
+    cmntList  = comments_from_thread_cache( cmntThreads )
+    duration  = duration_from_yt_response( reponseObj )
+    longest   = 0
+    rtnStamps = []
+    for comment in cmntList:
+        cmntLines = comment.splitlines()
+        stamps = get_timestamps_from_lines( cmntLines , duration )      
+        if len( stamps ) > longest:
+            rtnStamps = stamps
+    return rtnStamps
 
 def timestamps_from_cached_item( itemCacheDict ):
     """ Recover timestamps from either the description or the comments """
-    
-    # FIXME: NEED TO SEARCH BOTH THE DESCRIPTION AND COMMENTS FOR TIMESTAMPS
     wasInDesc = False
     wasInCmnt = False
-    
+    enMeta    = itemCacheDict['Metadata']
+    enThreads = itemCacheDict['Threads']
     # 1. Attempt to scrape from the description
-    stamps = scrape_and_check_timestamps_desc( itemCacheDict['Metadata'] )
-    # 2. If there were no stamps in the desc, then Attempt to scrape from the comments
-    if len( stamps ) < 2:
-        pass
+    descStamps = scrape_and_check_timestamps_desc( enMeta )
+    # 2. Attempt to scrape from the comments
+    cmntStamps = scrape_and_check_timestamps_cmnts( enMeta , enThreads )
+    # 3. Choose the list of comments with the most entries
+    if len( descStamps ) > len( cmntStamps ):
+        return descStamps
+    else:
+        return cmntStamps
     
 def repopulate_comments( cacheDict ):
     """ Fetch comments for each of the cached items , Replacing old """
     for enID , enCache in cacheDict.iteritems():
         enComment = fetch_comment_threads_by_yt_ID( enID )
         enCache['Threads'] = enComment
+        
+def repopulate_duration( cacheDict ):
+    """ Fetch duration for each of the cached items , Adding a new category """
+    for enID , enCache in cacheDict.iteritems():
+        enCache['Duration'] = parse_ISO8601_timestamp( extract_video_duration( enCache['Metadata'] ) )
+
+def get_video_title( ytCacheItem ):
+    """ Get the video title from the cached data item """
+    return ytCacheItem['items'][0]['snippet']['title']
+
+def levenshteinDistance( str1 , str2 ):
+    """ Compute the edit distance between strings , Return:
+        'ldist': Number of edits between the strings 
+        'ratio': Number of edits over the sum of the lengths of 'str1' and 'str2' """
+    # URL , Levenshtein Distance: https://rosettacode.org/wiki/Levenshtein_distance#Python
+    m = len( str1 )
+    n = len( str2 )
+    lensum = float( m + n )
+    d = []           
+    for i in range( m + 1 ):
+        d.append( [i] )        
+    del d[0][0]    
+    for j in range( n + 1 ):
+        d[0].append(j)       
+    for j in range( 1 , n+1 ):
+        for i in range( 1 , m+1 ):
+            if str1[ i-1 ] == str2[ j-1 ]:
+                d[i].insert( j , d[ i-1 ][ j-1 ] )           
+            else:
+                minimum = min( d[ i-1 ][ j ] + 1   , 
+                               d[ i ][ j-1 ] + 1   , 
+                               d[ i-1 ][ j-1 ] + 2 )
+                d[i].insert( j , minimum )
+    ldist = d[-1][-1] 
+    ratio = ( lensum - ldist ) / lensum
+    return { 'distance' : ldist , 'ratio' : ratio }
+
+def similarity_to_artists( candidateArtist , mxRtn = 10 ):
+    """ Return a list of increasing distance up to 'mxRtn' """
+    limRtn = False
+    if mxRtn:
+        limRtn = True
+    pQ = PriorityQueue()
+    if len( ARTISTS ):
+        for artist in ARTISTS:
+            pQ.push( artist , levenshteinDistance( artist , candidateArtist )['distance'] , hashable = artist )
+        itms , vals = pQ.unspool()
+        if len( itms ) > mxRtn:
+            return itms[:mxRtn]
+        else:
+            return itms
+    else:
+        return []
+
+def process_entry_tracklist( enCache ):
+    """ Ask the user for help with assigning song and artist to the track """
+    
+    def resolve_track( trackData ):
+        """ Propmt user for resolution on this track """
+    
+    enID     = enCache['ID']
+    enTracks = enCache['Timestamp']
+    print "Processing tracklist for" , enID , "..."
+    # 1. How many tracks did the initial pass find?
+    # 2. If this is a short recording without a tracklist
+    # 3. Else this is a multi-track recording
 
 def Stage_2_Separate_and_Tag():
     """ Process each of the downloaded raw files: 1. Separate into songs , 2. Apply appropriate ID3 tags , 3. Save """
@@ -994,45 +1107,77 @@ def Stage_2_Separate_and_Tag():
     LOG = LogMH()
     dlTimer = Stopwatch()
     dbugLim = False
+    dbSuppressLog = False
     limit = 1
     count = 0
     stampCount = 0
-    # 1. Retreive session vars and cached metadata
-    session = load_session( SESSION_PATH )
+    # 1. Setup diagnostic vars <-- Pickle these so that we can come back for addition
+    FAILED_DL_ID    = []
+    FAILED_TRACK_ID = []
+    FAILED_SEP_ID   = []
+    FULL_SUCCESS_ID = []
+    # 2. Retreive session vars and cached metadata
+    # 2.1. Activate session
+    ACTIVE_SESSION = True    
     set_session_active( True )
-    if os.path.isfile( ACTIVE_PICKLE_PATH ):
-        METADATA = unpickle_dict( ACTIVE_PICKLE_PATH ) 
-        LOG.prnt( "Found cached metadata at" , ACTIVE_PICKLE_PATH , "with" , len( METADATA ) , "entries" )
-        numEntry = len( METADATA )
-    else:
-        LOG.prnt( "NO cached metadata at" , ACTIVE_PICKLE_PATH , ", Empty dict" )
-        METADATA = {}
-        numEntry = 0
-    # 1.1. Activate session
-    ACTIVE_SESSION = True
-    # 2. Check Write locations
-    dirsWritable = verify_session_writable( session )
+    #  1. Load session
+    session , dirsWritable , dlTimer = begin_session()
+    numEntry = len( METADATA )
     if not dirsWritable:
-        return False    
-    # 3. For every cached entry
+        return False
+    # 4. For every cached entry
+    shortCount = 0
+    LOG.prnt( "~~~" )
     for enID , enCache in METADATA.iteritems():
-        # 4. Check if the download was a success
+        if not dbSuppressLog: LOG.prnt( "Processing" , enID , "..." )
+        enMeta  = enCache['Metadata']
+        enTitle = get_video_title( enMeta )
+        enCache['Title'] = enTitle
+        # 5. Check if the download was a success
         if enCache['fSuccess']:
-            LOG.prnt( "Raw file from" , enCache['URL'] , "was previously cached at" , enCache['Timestamp'] )
-            # 5. Check for a tracklist  &&  Mark if found
-            
+            if not dbSuppressLog: LOG.prnt( "Raw file from" , enCache['URL'] , "was previously cached at" , enCache['Timestamp'] )
+            # 6. Check for a tracklist  &&  Mark if found
+            stamps = timestamps_from_cached_item( enCache )
             numStamp = len( stamps )
-            LOG.prnt( "Found" , numStamp , "stamps for" , enID )
+            if not dbSuppressLog: LOG.prnt( "Found" , numStamp , "stamps for" , enID )
             if numStamp > 1:
                 enCache['stampsFound'] = True
                 stampCount += 1
+                enCache['Tracklist'] = stamps
+                
+                # TODO: PROCESS STAMPS IF NOT TRACKLIST COMPLETE
+                if ( 'TrackSuccess' not in enCache ) or ( not enCache['TrackSuccess'] ):
+                    for stamp in stamps:
+                        print stamp
+                
             else:
                 enCache['stampsFound'] = False
+                enCache['Tracklist']   = [] 
+                # 7. Check if it is a short video
+                if timestamp_leq( enCache['Duration'] , timestamp_dict( 0 , 15 , 0 ) ):
+                    shortCount += 1
+                    components = extract_candidate_artist_and_track( enTitle )
+                    if 0:
+                        trackMeasr = GN_most_likely_artist_and_track( gnClient , gnUser , components )
+                        print trackMeasr
+                    
+                    # TODO: PROCESS STAMPS IF NOT TRACKLIST COMPLETE
+                    
+                    
+                else:
+                    print "Long and unlabeled:" , enTitle
+                    
+                    # TODO: HANDLE LONG VIDEOS WITH NO TRACK DATA
+                
         # I. else skip
         else:
             LOG.prnt( "Raw file from" , enCache['URL'] , ", Retrieval failed!" )
+        if not dbSuppressLog: LOG.prnt( "~~~" )
     # I. Write log file
     LOG.prnt( "Found stamps for" , stampCount , "of" , numEntry , "cached items" )
+    LOG.prnt( "Of video without stamps:" , shortCount , "were short" )
+    LOG.prnt( numEntry - ( stampCount + shortCount ) , "possibly without song data!" , 
+              ( numEntry - ( stampCount + shortCount ) ) / numEntry * 100.0 , "%" )
     # I. Pickle with new metadata
     # I. Write session vars
     
@@ -1050,21 +1195,23 @@ if __name__ == "__main__":
         open_all_APIs( GOOG_KEY_PATH , GRNT_KEY_PATH )
         
     # ~~~ Stage 0: Testing ~~~
-    session = load_session( SESSION_PATH )
-    set_session_active( True )
-    if os.path.isfile( ACTIVE_PICKLE_PATH ):
-        METADATA = unpickle_dict( ACTIVE_PICKLE_PATH ) 
-        print "Found cached metadata at" , ACTIVE_PICKLE_PATH , "with" , len( METADATA ) , "entries" 
-        numEntry = len( METADATA )
-    else:
-        print "NO cached metadata at" , ACTIVE_PICKLE_PATH , ", Empty dict" 
-        METADATA = {} 
-    if METADATA:
-        for enID , entry in METADATA.iteritems():
-            scrape_and_check_timestamps_cmnts( entry['Threads'] )
-            break
-        #repopulate_comments( METADATA )
-        #struct_to_pkl( METADATA , ACTIVE_PICKLE_PATH )
+    if 0:
+        session = load_session( SESSION_PATH )
+        set_session_active( True )
+        if os.path.isfile( ACTIVE_PICKLE_PATH ):
+            METADATA = unpickle_dict( ACTIVE_PICKLE_PATH ) 
+            print "Found cached metadata at" , ACTIVE_PICKLE_PATH , "with" , len( METADATA ) , "entries" 
+            numEntry = len( METADATA )
+        else:
+            print "NO cached metadata at" , ACTIVE_PICKLE_PATH , ", Empty dict" 
+            METADATA = {} 
+        if METADATA:
+            #for enID , entry in METADATA.iteritems():
+                #scrape_and_check_timestamps_cmnts( entry['Threads'] )
+                #break
+            if 1:
+                repopulate_duration( METADATA )
+                struct_to_pkl( METADATA , ACTIVE_PICKLE_PATH )
     
     # ~~~ Stage 1: Downloading ~~~
     if 0:
@@ -1072,7 +1219,7 @@ if __name__ == "__main__":
                                 minDelay_s = 30 , maxDelay_s = 60 )
     
     # ~~~ Stage 2: Processing ~~~
-    if 0:
+    if 1:
         Stage_2_Separate_and_Tag()
     
 
