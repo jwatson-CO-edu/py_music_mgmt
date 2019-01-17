@@ -1145,7 +1145,6 @@ def Stage_2_Separate_and_Tag():
                 if numStamp > 1:
                     enCache['stampsFound']  = True
                     enCache['TrackSuccess'] = True
-                    stampCount += 1
                     enCache['Tracklist'] = stamps                    
                 else:
                     enCache['stampsFound'] = False
@@ -1165,6 +1164,9 @@ def Stage_2_Separate_and_Tag():
                         print "Long and unlabeled:" , enTitle
                         
                         # TODO: HANDLE LONG VIDEOS WITH NO TRACK DATA
+            # else there was a cached tracklist found, count
+            else:
+                stampCount += 1
                 
         # I. else skip
         else:
