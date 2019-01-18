@@ -1087,18 +1087,35 @@ def similarity_to_artists( candidateArtist , mxRtn = 10 ):
     else:
         return []
 
-def process_entry_tracklist( enCache ):
-    """ Ask the user for help with assigning song and artist to the track """
-    
-    def resolve_track( trackData ):
-        """ Propmt user for resolution on this track """
-    
+def resolve_track_long( trackData ):
+    """ Propmt user for resolution on this track """
+    # NOTE: This function assumes multi-track data has been extracted
+    print trackData
+    components = extract_candidate_artist_and_track( trackData['balance'] )
+    candidates = GN_most_likely_artist_and_track( gnClient , gnUser , components )    
+    for candidate in candidates:
+        print candidate
+        raw_input( "Press [Enter]" )
+        # FIXME: START HERE
+    # QUIT
+    exit()
+
+def process_entry_tracklist( enCache , tracklist ):
+    """ Ask the user for help with assigning song and artist to the track , The result can be used to chop the raw file """
+    # NOTE: This function assumes that the tracklist has at least one antry
+    # NOTE: The output of this function must be usable for chopping
     enID     = enCache['ID']
     enTracks = enCache['Timestamp']
+    approvedTracks = []
     print "Processing tracklist for" , enID , "..."
     # 1. How many tracks did the initial pass find?
-    # 2. If this is a short recording without a tracklist
-    # 3. Else this is a multi-track recording
+    print "Cached tracklist has" , len( enTracks ) , "items."
+    # 2. For each track in the list
+    for track in tracklist:
+        trackDict = resolve_track( trackData )
+        approvedTracks.append( trackDict )
+    # 3. Return approved tracklist
+    return approvedTracks
 
 def Stage_2_Separate_and_Tag():
     """ Process each of the downloaded raw files: 1. Separate into songs , 2. Apply appropriate ID3 tags , 3. Save """
@@ -1145,28 +1162,32 @@ def Stage_2_Separate_and_Tag():
                 if numStamp > 1:
                     enCache['stampsFound']  = True
                     enCache['TrackSuccess'] = True
-                    enCache['Tracklist'] = stamps                    
+                    enCache['Tracklist']    = stamps 
+                    process_entry_tracklist( enCache , stamps )
                 else:
                     enCache['stampsFound'] = False
                     enCache['Tracklist']   = [] 
-                    # 7. Check if it is a short video
+                    # 7. Check if it is a short video ( <= 15 min )
                     if timestamp_leq( enCache['Duration'] , timestamp_dict( 0 , 15 , 0 ) ):
                         shortCount += 1
                         components = extract_candidate_artist_and_track( enTitle )
-                        if 0:
-                            trackMeasr = GN_most_likely_artist_and_track( gnClient , gnUser , components )
-                            print trackMeasr
+                        print "~ Short Video ~"
+                        print "Title:" , enCache['Title']
+                        print "Desc:" , extract_description_lines( enCache['Metadata'] )
                         
-                        # TODO: PROCESS STAMPS IF NOT TRACKLIST COMPLETE
-                    
-                    
+                        # TODO: HANDLE SHORT VIDEOS WITH NO TRACK DATA
+                        
                     else:
-                        print "Long and unlabeled:" , enTitle
+                        print "Long and unlabeled"
+                        print "Title:" , enCache['Title']
+                        print "Desc:" , extract_description_lines( enCache['Metadata'] )
                         
                         # TODO: HANDLE LONG VIDEOS WITH NO TRACK DATA
+                        
             # else there was a cached tracklist found, count
             else:
                 stampCount += 1
+                process_entry_tracklist( enCache , enCache['Tracklist'] )                
                 
         # I. else skip
         else:
