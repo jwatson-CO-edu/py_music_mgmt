@@ -591,9 +591,8 @@ def GN_most_likely_artist_and_track( GN_client , GN_user , components ):
     """ Given the strings 'op1' and 'op2' , Determine which of the two are the most likely artist and track according to GraceNote """
     op1 = components[0]
     op2 = components[1]    
-    flagPrint = True
+    flagPrint = False
     rtnScores = []
-    
     # 1. Perform search (1,0)
     # The search function requires a clientID, userID, and at least one of either { artist , album , track } to be specified.
     metadata = search(
@@ -602,20 +601,16 @@ def GN_most_likely_artist_and_track( GN_client , GN_user , components ):
         artist   = op2       , 
         track    = op1
     )
-    
     score21 = GN_score_result_with_components( metadata , components )
-    
     rtnScores.append(
         { 'artist' : metadata['album_artist_name'] ,
           'track'  : metadata['track_title']       ,
           'score'  : score21                       }
     )
-    
     if flagPrint: 
         pretty_print_dict( metadata )
         #GN_examine_response_obj( metadata )
         print "Score for this result:" , score21
-    
     # 2. Perform search (0,1)   
     # The search function requires a clientID, userID, and at least one of either { artist , album , track } to be specified.
     metadata = search(
@@ -624,20 +619,16 @@ def GN_most_likely_artist_and_track( GN_client , GN_user , components ):
         artist   = op1       , 
         track    = op2
     )    
-    
     score12 = GN_score_result_with_components( metadata , components )
-    
     rtnScores.append(
         { 'artist' : metadata['album_artist_name'] ,
           'track'  : metadata['track_title']       ,
           'score'  : score12                       }
     )    
-    
     if flagPrint: 
         pretty_print_dict( metadata )
         #GN_examine_response_obj( metadata )
         print "Score for this result:" , score12
-        
     return rtnScores
 
 # == Program Vars ==
@@ -1087,16 +1078,31 @@ def similarity_to_artists( candidateArtist , mxRtn = 10 ):
     else:
         return []
 
-def resolve_track_long( trackData ):
+def make_proper_track_meta( artistName , trackNames , stampBgnISO , stampEndISO ):
+    """ Return a standardized dictionary with enough info to chop the song from the raw file """
+    
+    # FIXME : START HERE
+
+def resolve_track_long( trackData , trkDex ):
     """ Propmt user for resolution on this track """
     # NOTE: This function assumes multi-track data has been extracted
     print trackData
-    components = extract_candidate_artist_and_track( trackData['balance'] )
-    candidates = GN_most_likely_artist_and_track( gnClient , gnUser , components )    
-    for candidate in candidates:
+    components = extract_candidate_artist_and_track( trackData[ trkDex ]['balance'] )
+    candidates = GN_most_likely_artist_and_track( gnClient , gnUser , components ) 
+    print "Balance:" , trackData[ trkDex ]['balance']
+    for canDex , candidate in enumerate( candidates ):
         print candidate
-        raw_input( "Press [Enter]" )
+        #raw_input( "Press [Enter]" )
+        
         # FIXME: START HERE
+        
+        # ~ Options ~
+        # 1. Choose from candidates
+        # 2. Search known artists
+        # 3. Manual Title
+        # 4. Manual Track
+        
+        
     # QUIT
     exit()
 
@@ -1111,8 +1117,8 @@ def process_entry_tracklist( enCache , tracklist ):
     # 1. How many tracks did the initial pass find?
     print "Cached tracklist has" , len( enTracks ) , "items."
     # 2. For each track in the list
-    for track in tracklist:
-        trackDict = resolve_track( trackData )
+    for trkDex , track in enumerate( tracklist ):
+        trackDict = resolve_track_long( tracklist , trkDex )
         approvedTracks.append( trackDict )
     # 3. Return approved tracklist
     return approvedTracks
