@@ -1078,14 +1078,48 @@ def similarity_to_artists( candidateArtist , mxRtn = 10 ):
     else:
         return []
 
-def make_proper_track_meta( artistName , trackNames , stampBgnISO , stampEndISO ):
+def make_proper_track_meta( artistName , trackName , trackNum , stampBgnISO , stampEndISO , albumName ):
     """ Return a standardized dictionary with enough info to chop the song from the raw file """
-    
-    # FIXME : START HERE
+    return {
+        'artist' :  artistName , 
+        'title' :   trackName ,
+        'track' :   trackNum ,
+        'timeBgn' : stampBgnISO ,
+        'timeEnd' : stampEndISO , 
+        'album' :   albumName
+    }
+
+_MENUTRACKLONG = \
+"""~ Options ~
+1. Choose from candidates
+2. Search known artists
+3. Manual Title
+4. Manual Track"""
 
 def resolve_track_long( trackData , trkDex ):
     """ Propmt user for resolution on this track """
     # NOTE: This function assumes multi-track data has been extracted
+    
+    def run_menu( cmpnnts , cnddts ):
+        """ Handle user input for long video resolution """
+        runMenu = True
+        while runMenu:
+            print _MENUTRACKLONG
+            usrChoice = int( raw_input( "Select Option and Press [Enter]:" ) )
+            if usrChoice == 1:
+                for canDex , candidate in enumerate( cnddts ):
+                    print candidate
+                    # FIXME : CODE CHOICE
+            elif usrChoice == 2:
+                pass # FIXME : CODE CHOICE
+            elif usrChoice == 3:
+                pass # FIXME : CODE CHOICE
+            elif usrChoice == 4:
+                pass # FIXME : CODE CHOICE
+            else:
+                print usrChoice , "is not a valid option!"
+                runMenu = True
+    
     print trackData
     components = extract_candidate_artist_and_track( trackData[ trkDex ]['balance'] )
     candidates = GN_most_likely_artist_and_track( gnClient , gnUser , components ) 
@@ -1105,6 +1139,17 @@ def resolve_track_long( trackData , trkDex ):
         
     # QUIT
     exit()
+
+def track_time_bounds( enCache , tracklist ):
+    """ Define a beginning and ending time for each track, in-place, given the beginning of each track and the ending time of the video """
+    numTrax = len( tracklist )
+    mostDex = numTrax - 1
+    for trkDex , track in enumercate( tracklist ):
+        if trkDex < mostDex:
+            pass # FIXME : CODE CASE
+        else:
+            pass # FIXME : CODE CASE
+    
 
 def process_entry_tracklist( enCache , tracklist ):
     """ Ask the user for help with assigning song and artist to the track , The result can be used to chop the raw file """
