@@ -1078,15 +1078,16 @@ def similarity_to_artists( candidateArtist , mxRtn = 10 ):
     else:
         return []
 
-def make_proper_track_meta( artistName , trackName , trackNum , stampBgnISO , stampEndISO , albumName ):
+def make_proper_track_meta( artistName , trackName , trackNum , stampBgnISO , stampEndISO , albumName , complete ):
     """ Return a standardized dictionary with enough info to chop the song from the raw file """
     return {
-        'artist' :  artistName , 
-        'title' :   trackName ,
-        'track' :   trackNum ,
-        'timeBgn' : stampBgnISO ,
-        'timeEnd' : stampEndISO , 
-        'album' :   albumName
+        'artist' :   artistName , 
+        'title' :    trackName ,
+        'track' :    trackNum ,
+        'timeBgn' :  stampBgnISO ,
+        'timeEnd' :  stampEndISO , 
+        'album' :    albumName ,
+        'complete' : complete
     }
 
 _MENUTRACKLONG = \
@@ -1094,11 +1095,18 @@ _MENUTRACKLONG = \
 1. Choose from candidates
 2. Search known artists
 3. Manual Title
-4. Manual Track"""
+4. Manual Track
+5. END"""
 
 def resolve_track_long( trackData , trkDex ):
     """ Propmt user for resolution on this track """
     # NOTE: This function assumes multi-track data has been extracted
+    
+    # 1. Fetch web data
+    print trackData
+    components = extract_candidate_artist_and_track( trackData[ trkDex ]['balance'] )
+    candidates = GN_most_likely_artist_and_track( gnClient , gnUser , components ) 
+    print "Balance:" , trackData[ trkDex ]['balance']    
     
     def run_menu( cmpnnts , cnddts ):
         """ Handle user input for long video resolution """
@@ -1106,37 +1114,33 @@ def resolve_track_long( trackData , trkDex ):
         while runMenu:
             print _MENUTRACKLONG
             usrChoice = int( raw_input( "Select Option and Press [Enter]:" ) )
+            # 1. Choose from candidates
             if usrChoice == 1:
                 for canDex , candidate in enumerate( cnddts ):
-                    print candidate
-                    # FIXME : CODE CHOICE
+                    print "Choice" , canDex , ":" , endl , candidate
+                usrChoice = int( raw_input( "Select Option and Press [Enter]:" ) )
+                    
+                # FIXME : HANDLE THE USER CHOICE FOR BEST CANDIDATE
+                # FIXME : CODE CHOICE
+                    
+                    
+            # 2. Search known artists
             elif usrChoice == 2:
                 pass # FIXME : CODE CHOICE
+            # 3. Manual Title            
             elif usrChoice == 3:
                 pass # FIXME : CODE CHOICE
+            # 4. Manual Track                        
             elif usrChoice == 4:
                 pass # FIXME : CODE CHOICE
+            # 5. END
+            elif usrChoice == 5:
+                runMenu = False
+            # N. USER GOOFED or OTHER ERROR
             else:
                 print usrChoice , "is not a valid option!"
                 runMenu = True
-    
-    print trackData
-    components = extract_candidate_artist_and_track( trackData[ trkDex ]['balance'] )
-    candidates = GN_most_likely_artist_and_track( gnClient , gnUser , components ) 
-    print "Balance:" , trackData[ trkDex ]['balance']
-    for canDex , candidate in enumerate( candidates ):
-        print candidate
-        #raw_input( "Press [Enter]" )
-        
-        # FIXME: START HERE
-        
-        # ~ Options ~
-        # 1. Choose from candidates
-        # 2. Search known artists
-        # 3. Manual Title
-        # 4. Manual Track
-        
-        
+    run_menu( components , candidates )
     # QUIT
     exit()
 
