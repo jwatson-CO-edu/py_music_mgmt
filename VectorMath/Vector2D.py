@@ -43,12 +43,12 @@ def cart_2_polr(cartCoords): # usual conversion # <<< resenv
     """ Convert cartesian coordinates [x , y] to polar coordinates [radius , angle (radians)]. Theta = 0 is X+ """
     return [ vec_mag(cartCoords) , atan2( cartCoords[1] , cartCoords[0] ) ]
 
-def polr_2_cart_0Y(polarCoords): # 0 angle is +Y North # <<< resenv
+def polr_2_cart_0Y(polarCoords): # 0 angle is +Y North 
     """ Convert polar coordinates [radius , angle (radians)] to cartesian [x , y]. Theta = 0 is UP = Y+ """
     return [ polarCoords[0] * sin(polarCoords[1]) , polarCoords[0] * cos(polarCoords[1])  ]
     # TODO : Look into imaginary number transformation and perform a benchmark
     
-def cart_2_polr_0Y(cartCoords): # 0 angle is +Y North  # <<< resenv
+def cart_2_polr_0Y(cartCoords): # 0 angle is +Y North 
     """ Convert cartesian coordinates [x , y] to polar coordinates [radius , angle (radians)]. Theta = 0 is UP = Y+ """
     return [ vec_mag(cartCoords) , atan2( -cartCoords[0] , cartCoords[1] ) ]
     
@@ -60,7 +60,7 @@ def ray_angle( ray ):
     """ Return the direction of the ray in radians """ # [ [ x0 , y0 ] , [ x1 , y1 ] ] : +p0 ------- +p1 ----->
     return cart_2_polr( vec_from_seg( ray ) )[1] # Return only the angle portion of polar equivalent of the direction vector
 
-def circ_spacing( dia , numPts , center = None ): # <<< resenv
+def circ_spacing( dia , numPts , center = None ): 
     """ Return a list of 'numPts' points equally spaced around a 2D circle with a center at (0,0), or at 'center' if specified """
     div = 2 * pi / numPts
     circPts = []
