@@ -214,7 +214,7 @@ def vec_copy_deep( vec ): # <<< resenv
     else:
         raise TypeError("vec_copy_deep: " + str(vec) + " was neither a 'list' nor a 'np.ndarray'!")
 
-def vec_random( dim ): # <<< resenv
+def vec_random( dim ): 
     """ Return a random vector in R-'dim' space with coordinates in [0,1) """
     rtnVec = []
     for i in range(dim):
