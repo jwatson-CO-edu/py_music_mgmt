@@ -1,0 +1,7 @@
+RAW_FILE_DIR,output
+CHOPPED_SONG_DIR,output/chopped
+PICKLE_DIR,output
+ACTIVE_PICKLE_PATH,output/session.pkl
+LOG_DIR,logs
+ACTIVE_SESSION,0
+ARTIST_PICKLE_PATH,output/artists.pkl

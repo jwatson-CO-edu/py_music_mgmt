@@ -5,6 +5,9 @@
 # ~~ Future First ~~
 from __future__ import division # Future imports must be called before everything else, including triple-quote docs!
 
+# ~~ Local ~~
+from marchhare.marchhare import ( LogMH , parse_lines )
+
 """
 retrieve_yt.py
 James Watson, 2019 February
@@ -500,10 +503,6 @@ def fetch_comments_by_thread_id( ytThreadID ):
         parentId   = ytThreadID ,
         textFormat = "plainText"
     )
-
-def get_EXT( fName ):
-    """ Return the capitalized file extension at the end of a path without the period """
-    return os.path.splitext( fName )[-1][1:].upper()
 
 def list_all_files_w_EXT( searchPath , EXTlst ):
     """ Return all of the paths in 'searchPath' that have extensions that appear in 'EXTlst' , Extensions are not case sensitive """

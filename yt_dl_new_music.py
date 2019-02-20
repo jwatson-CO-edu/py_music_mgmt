@@ -158,7 +158,8 @@ print "Loaded 'pygn'! (GraceNote)"
 # ~~ Local ~~
 prepend_dir_to_path( SOURCEDIR )
 from marchhare.marchhare import ( parse_lines , ascii , sep , is_nonempty_list , pretty_print_dict , unpickle_dict , yesno ,
-                                  validate_dirs_writable , LogMH , Stopwatch , nowTimeStampFine , struct_to_pkl , )
+                                  validate_dirs_writable , LogMH , Stopwatch , nowTimeStampFine , struct_to_pkl , strip_EXT , touch , )
+from retrieve_yt import *
 
 # ~~ Constants , Shortcuts , Aliases ~~
 EPSILON = 1e-7
@@ -169,8 +170,6 @@ endl    = os.linesep
 def __prog_signature__(): return __progname__ + " , Version " + __version__ # Return a string representing program name and verions
 
 # ___ End Init _____________________________________________________________________________________________________________________________
-
-
 
 
 # == Program Vars ==
@@ -237,21 +236,31 @@ def open_all_APIs( googKeyFile , GNKeyFile ):
     gnKey = comma_sep_key_val_from_file( GNKeyFile ) # "GNWKEY.txt"
     gnClient = gnKey[ 'clientID' ] #_ Enter your Client ID here '*******-************************'
     gnUser   = register( gnClient ) # Registration should not be done more than once per session      
-    
-
 
 def load_session( sessionPath ):
     """ Read session file and populate session vars """
     global RAW_FILE_DIR , CHOPPED_SONG_DIR , PICKLE_DIR , ACTIVE_PICKLE_PATH , LOG_DIR , ACTIVE_SESSION , ARTIST_PICKLE_PATH
-    sesnDict = comma_sep_key_val_from_file( sessionPath );              print "Loaded session file:" , sessionPath
-    RAW_FILE_DIR       = sesnDict['RAW_FILE_DIR'];                      print "RAW_FILE_DIR:" , RAW_FILE_DIR
-    CHOPPED_SONG_DIR   = sesnDict['CHOPPED_SONG_DIR'];                  print "CHOPPED_SONG_DIR:" , CHOPPED_SONG_DIR
-    PICKLE_DIR         = sesnDict['PICKLE_DIR'];                        print "PICKLE_DIR:" , PICKLE_DIR 
-    ACTIVE_PICKLE_PATH = sesnDict['ACTIVE_PICKLE_PATH'];                print "ACTIVE_PICKLE_PATH:" , ACTIVE_PICKLE_PATH
-    LOG_DIR            = sesnDict['LOG_DIR'];                           print "LOG_DIR" , LOG_DIR
-    ACTIVE_SESSION     = bool( int( sesnDict['ACTIVE_SESSION'] ) );     print "ACTIVE_SESSION:" , yesno( ACTIVE_SESSION )
-    ARTIST_PICKLE_PATH = sesnDict['ARTIST_PICKLE_PATH'];                print "ARTIST_PICKLE_PATH:" , ARTIST_PICKLE_PATH
+    sesnDict = comma_sep_key_val_from_file( sessionPath );           print "Loaded session file:" , sessionPath
+    RAW_FILE_DIR       = sesnDict['RAW_FILE_DIR'];                   print "RAW_FILE_DIR:" , RAW_FILE_DIR
+    CHOPPED_SONG_DIR   = sesnDict['CHOPPED_SONG_DIR'];               print "CHOPPED_SONG_DIR:" , CHOPPED_SONG_DIR
+    PICKLE_DIR         = sesnDict['PICKLE_DIR'];                     print "PICKLE_DIR:" , PICKLE_DIR 
+    ACTIVE_PICKLE_PATH = sesnDict['ACTIVE_PICKLE_PATH'];             print "ACTIVE_PICKLE_PATH:" , ACTIVE_PICKLE_PATH
+    LOG_DIR            = sesnDict['LOG_DIR'];                        print "LOG_DIR" , LOG_DIR
+    ACTIVE_SESSION     = bool( int( sesnDict['ACTIVE_SESSION'] ) );  print "ACTIVE_SESSION:" , yesno( ACTIVE_SESSION )
+    ARTIST_PICKLE_PATH = sesnDict['ARTIST_PICKLE_PATH'];             print "ARTIST_PICKLE_PATH:" , ARTIST_PICKLE_PATH
     return sesnDict
+
+def default_session():
+    """ Set the session vars to reasonable values """
+    global RAW_FILE_DIR , CHOPPED_SONG_DIR , PICKLE_DIR , ACTIVE_PICKLE_PATH , LOG_DIR , ACTIVE_SESSION , ARTIST_PICKLE_PATH
+    RAW_FILE_DIR       = "output";                          print "RAW_FILE_DIR:" , RAW_FILE_DIR
+    CHOPPED_SONG_DIR   = RAW_FILE_DIR + "/chopped";         print "CHOPPED_SONG_DIR:" , CHOPPED_SONG_DIR
+    PICKLE_DIR         = RAW_FILE_DIR;                      print "PICKLE_DIR:" , PICKLE_DIR 
+    ACTIVE_PICKLE_PATH = "output/session.pkl";              print "ACTIVE_PICKLE_PATH:" , ACTIVE_PICKLE_PATH
+    LOG_DIR            = "logs";                            print "LOG_DIR" , LOG_DIR
+    ACTIVE_SESSION     = bool( int( 1 ) );                  print "ACTIVE_SESSION:" , yesno( ACTIVE_SESSION )
+    ARTIST_PICKLE_PATH = "output/artists.pkl";              print "ARTIST_PICKLE_PATH:" , ARTIST_PICKLE_PATH
+    return sesnDict    
     
 def save_session( sessionPath , sesnDict ):
     """ Write session vars to the session file """
@@ -287,17 +296,28 @@ def verify_session_writable( sesnDict ):
 
 def set_session_active( active = 1 ):
     """ Set the session active flag """
-    global ACTIVE_SESSION
+    global ACTIVE_SESSION , SESSION_PATH
     ACTIVE_SESSION = bool( active )
     
-def begin_session():
+def begin_session( inputPath ):
     """ Set all vars that we will need to run a session """
     global LOG , METADATA , ARTISTS
+    # 1. Instantiate a global logger object
     LOG = LogMH()
-    dlTimer = Stopwatch()    
-    session = load_session( SESSION_PATH )
+    # 2. Instantiate a timer
+    dlTimer = Stopwatch()   
+    # 3. Construct session path
+    SESSION_PATH = strip_EXT( inputPath ) + "_session.txt"
+    # 4. Load session  &&  Activate
+    try:
+        session = load_session( SESSION_PATH )
+    except IOError:
+        touch( SESSION_PATH )
+        session = default_session()
     set_session_active( True )
-    # Unpickle session metadata
+    # 4. Construct pickle path
+    ACTIVE_PICKLE_PATH = strip_EXT( inputPath ) + "_metadat.pkl"
+    # 5. Unpickle session metadata
     METADATA = unpickle_dict( ACTIVE_PICKLE_PATH ) 
     if METADATA:
         LOG.prnt( "Found cached metadata at" , ACTIVE_PICKLE_PATH , "with" , len( METADATA ) , "entries" )
@@ -325,7 +345,7 @@ def close_session( session ):
     LOG.out_and_clear( os.path.join( LOG_DIR , "YouTube-Music-Log_" + nowTimeStampFine() + ".txt" ) )     
     
 def Stage_1_Download_w_Data( inputFile ,
-                            minDelay_s = 20 , maxDelay_s = 180 ):
+                             minDelay_s = 20 , maxDelay_s = 180 ):
     """ Check environment for download , Fetch files and metadata , Save files and metadata """
     # NOTE: You may have to run this function several times, especially for long lists of URLs
     global LOG , METADATA
@@ -334,133 +354,137 @@ def Stage_1_Download_w_Data( inputFile ,
     dbugLim = False
     limit = 1
     count = 0
-    #  0. Indicate file
+    #  0. Load session
+    session , dirsWritable , dlTimer = begin_session( inputFile )
+    #  1. Indicate file
     LOG.prnt( "Processing" , inputFile , "..." )
-    #  1. Load session
-    session , dirsWritable , dlTimer = begin_session()
-    numEntry = len( METADATA )
-    if not dirsWritable:
-        return False
-    #  3. Process input file
-    entries = process_video_list( "input/url_sources.txt" )
-    LOG.prnt( "Read input file with" , len( entries ) , "entries" )
-    inCount = len( entries )
-    #  4. Init downloaded
-    ydl = youtube_dl.YoutubeDL( YDL_OPTS )
-    #  5. For each entry
-    LOG.prnt( "## Media Files ##" )
-    for enDex , entry in enumerate( entries ):
-        #  6. If the debug file limit exceeded, exit loop
-        if dbugLim and ( not count < limit ):
-            break        
-        LOG.prnt( '#\n# Entry' , enDex+1 , 'of' , inCount , '#' )
-        enID = entry['id']
-        #  7. URL
-        enURL = entry['url']        
-        cacheMod = False        
-        try:
-            #  8. Attempt to fetch cached data for this entry
-            if( enID in METADATA ):
-                LOG.prnt( "Found cached data for" , enID )
-                enCache = METADATA[ enID ]
-            else:
-                enCache = None
-                cacheMod = True
-            #  9. Create Dir
-            enRawDir = os.path.join( RAW_FILE_DIR , enID )
-            if not os.path.isdir( enRawDir ):
-                try:  
-                    os.mkdir( enRawDir )
-                except OSError:  
-                    LOG.prnt(  "Creation of the directory %s failed" % enRawDir )
-                else:  
-                    LOG.prnt(  "Successfully created the directory %s " % enRawDir )            
-            # 10. Download Raw MP3 File
-            # 11. If this file does not have an entry, the raw file exists, and the file is ok, then download
-            if not ( enCache and enCache['fSuccess'] ):
-                cacheMod = True
-                LOG.prnt( "No file from" , entry['url'] , ", dowloading ..." )
-                dlTimer.start()
-                ydl.download( [ entry['url'] ] )  # This function MUST be passed a list!
-                enElapsed = dlTimer.elapsed()
-                LOG.prnt( "Downloading and Processing:" , enElapsed , "seconds" )
-                # 12. Locate and move the raw file
-                fNames = list_all_files_w_EXT( SOURCEDIR , [ 'MP3' ] )
-                if len( fNames ) > 0:
-                    # Assume that the first item is the newly-arrived file
-                    fSaved = fNames[0]
-                    # 13. Raw File End Destination
-                    enDest = os.path.join( enRawDir , fSaved )
-                    enCpSuccess = False # I. File Success
-                    try:
-                        shutil.move( fSaved , enDest )
-                        enCpSuccess = True
-                        LOG.prnt( "Move success!:" , fSaved , "--to->" , enDest )
-                    except Exception:
-                        enCpSuccess = False
-                else:
-                    LOG.prnt( "No downloaded MP3s detected!" )
-                    enDest = None
-                    enCpSuccess = False            
-            # 14. else skip download
-            else:
-                LOG.prnt( "Raw file from" , entry['url'] , "was previously cached at" , enCache['Timestamp'] )
-                enDest      = None
-                enCpSuccess = True
-                enElapsed   = None
-            # 15. Fetch Description Data
-            if not ( enCache and enCache['Metadata'] ):
-                cacheMod = True
-                enMeta = fetch_metadata_by_yt_video_ID( entry['id'] )
-            else:
-                enMeta = enCache['Metadata']
-            # 16. Verify that the downloaded file is as long as the original video
-            enDur = parse_ISO8601_timestamp( extract_video_duration( enMeta ) ) 
-            print "Duration:" , enDur
-            # 17. Fetch Comment Data
-            if not ( enCache and enCache['Threads'] ):
-                cacheMod = True
-                enComment = fetch_comment_threads_by_yt_ID( entry['id'] )
-            else:
-                enComment = enCache['Threads']
-            # 18. Get time and date for this file
-            enTime = nowTimeStampFine()
-            LOG.prnt( "Recorded Time:" , enTime )
-            # 19. Add file data to a dictionary
-            METADATA[ enID ] = {
-                'ID' :        enID ,
-                'RawPath' :   enDest if enDest else enCache['RawPath'] ,
-                'fSuccess' :  enCpSuccess ,
-                'ProcTime' :  enElapsed if enElapsed else enCache['ProcTime'] ,
-                'URL' :       enURL ,
-                'Metadata' :  enMeta ,
-                'Threads' :   enComment ,
-                'Timestamp' : enTime if cacheMod else enCache['Timestamp'] , 
-                'Duration' :  enDur
-            }
-            # 20. Sleep (if requested)
-            if doSleep:
-                sleepDur = randrange( minDelay_s , maxDelay_s+1 )
-                LOG.prnt( "Sleeping for" , sleepDur , "seconds" )
-                sleep( sleepDur )
-            # 21. Increment counter
-            count += 1
-            LOG.prnt( "# ~~~~~" )   
-        # Need to catch errors here so that the data from the already processed files in not lost
-        except Exception as err:
-            # 22. Add file data to a dictionary
-            METADATA[ enID ] = {
-                'ID' :        enID ,
-                'RawPath' :   None ,
-                'fSuccess' :  False ,
-                'ProcTime' :  None ,
-                'URL' :       enURL ,
-                'Metadata' :  None ,
-                'Threads' :   None ,
-                'Timestamp' : nowTimeStampFine() , 
-                'Duration' :  timestamp_dict( 0,0,0 )
-            }            
-            LOG.prnt( "ERROR: There was an error processing the item _ " , enID , "\n" , err )
+    
+    
+    
+    #numEntry = len( METADATA )
+    #if not dirsWritable:
+        #return False
+    ##  3. Process input file
+    #entries = process_video_list( "input/url_sources.txt" )
+    #LOG.prnt( "Read input file with" , len( entries ) , "entries" )
+    #inCount = len( entries )
+    ##  4. Init downloaded
+    #ydl = youtube_dl.YoutubeDL( YDL_OPTS )
+    ##  5. For each entry
+    #LOG.prnt( "## Media Files ##" )
+    #for enDex , entry in enumerate( entries ):
+        ##  6. If the debug file limit exceeded, exit loop
+        #if dbugLim and ( not count < limit ):
+            #break        
+        #LOG.prnt( '#\n# Entry' , enDex+1 , 'of' , inCount , '#' )
+        #enID = entry['id']
+        ##  7. URL
+        #enURL = entry['url']        
+        #cacheMod = False        
+        #try:
+            ##  8. Attempt to fetch cached data for this entry
+            #if( enID in METADATA ):
+                #LOG.prnt( "Found cached data for" , enID )
+                #enCache = METADATA[ enID ]
+            #else:
+                #enCache = None
+                #cacheMod = True
+            ##  9. Create Dir
+            #enRawDir = os.path.join( RAW_FILE_DIR , enID )
+            #if not os.path.isdir( enRawDir ):
+                #try:  
+                    #os.mkdir( enRawDir )
+                #except OSError:  
+                    #LOG.prnt(  "Creation of the directory %s failed" % enRawDir )
+                #else:  
+                    #LOG.prnt(  "Successfully created the directory %s " % enRawDir )            
+            ## 10. Download Raw MP3 File
+            ## 11. If this file does not have an entry, the raw file exists, and the file is ok, then download
+            #if not ( enCache and enCache['fSuccess'] ):
+                #cacheMod = True
+                #LOG.prnt( "No file from" , entry['url'] , ", dowloading ..." )
+                #dlTimer.start()
+                #ydl.download( [ entry['url'] ] )  # This function MUST be passed a list!
+                #enElapsed = dlTimer.elapsed()
+                #LOG.prnt( "Downloading and Processing:" , enElapsed , "seconds" )
+                ## 12. Locate and move the raw file
+                #fNames = list_all_files_w_EXT( SOURCEDIR , [ 'MP3' ] )
+                #if len( fNames ) > 0:
+                    ## Assume that the first item is the newly-arrived file
+                    #fSaved = fNames[0]
+                    ## 13. Raw File End Destination
+                    #enDest = os.path.join( enRawDir , fSaved )
+                    #enCpSuccess = False # I. File Success
+                    #try:
+                        #shutil.move( fSaved , enDest )
+                        #enCpSuccess = True
+                        #LOG.prnt( "Move success!:" , fSaved , "--to->" , enDest )
+                    #except Exception:
+                        #enCpSuccess = False
+                #else:
+                    #LOG.prnt( "No downloaded MP3s detected!" )
+                    #enDest = None
+                    #enCpSuccess = False            
+            ## 14. else skip download
+            #else:
+                #LOG.prnt( "Raw file from" , entry['url'] , "was previously cached at" , enCache['Timestamp'] )
+                #enDest      = None
+                #enCpSuccess = True
+                #enElapsed   = None
+            ## 15. Fetch Description Data
+            #if not ( enCache and enCache['Metadata'] ):
+                #cacheMod = True
+                #enMeta = fetch_metadata_by_yt_video_ID( entry['id'] )
+            #else:
+                #enMeta = enCache['Metadata']
+            ## 16. Verify that the downloaded file is as long as the original video
+            #enDur = parse_ISO8601_timestamp( extract_video_duration( enMeta ) ) 
+            #print "Duration:" , enDur
+            ## 17. Fetch Comment Data
+            #if not ( enCache and enCache['Threads'] ):
+                #cacheMod = True
+                #enComment = fetch_comment_threads_by_yt_ID( entry['id'] )
+            #else:
+                #enComment = enCache['Threads']
+            ## 18. Get time and date for this file
+            #enTime = nowTimeStampFine()
+            #LOG.prnt( "Recorded Time:" , enTime )
+            ## 19. Add file data to a dictionary
+            #METADATA[ enID ] = {
+                #'ID' :        enID ,
+                #'RawPath' :   enDest if enDest else enCache['RawPath'] ,
+                #'fSuccess' :  enCpSuccess ,
+                #'ProcTime' :  enElapsed if enElapsed else enCache['ProcTime'] ,
+                #'URL' :       enURL ,
+                #'Metadata' :  enMeta ,
+                #'Threads' :   enComment ,
+                #'Timestamp' : enTime if cacheMod else enCache['Timestamp'] , 
+                #'Duration' :  enDur
+            #}
+            ## 20. Sleep (if requested)
+            #if doSleep:
+                #sleepDur = randrange( minDelay_s , maxDelay_s+1 )
+                #LOG.prnt( "Sleeping for" , sleepDur , "seconds" )
+                #sleep( sleepDur )
+            ## 21. Increment counter
+            #count += 1
+            #LOG.prnt( "# ~~~~~" )   
+        ## Need to catch errors here so that the data from the already processed files in not lost
+        #except Exception as err:
+            ## 22. Add file data to a dictionary
+            #METADATA[ enID ] = {
+                #'ID' :        enID ,
+                #'RawPath' :   None ,
+                #'fSuccess' :  False ,
+                #'ProcTime' :  None ,
+                #'URL' :       enURL ,
+                #'Metadata' :  None ,
+                #'Threads' :   None ,
+                #'Timestamp' : nowTimeStampFine() , 
+                #'Duration' :  timestamp_dict( 0,0,0 )
+            #}            
+            #LOG.prnt( "ERROR: There was an error processing the item _ " , enID , "\n" , err )
+            
     # Pickle data and write files
     close_session( session )
 
@@ -599,12 +623,12 @@ if __name__ == "__main__":
                 struct_to_pkl( METADATA , ACTIVE_PICKLE_PATH )
     
     # ~~~ Stage 1: Downloading ~~~
-    if 0:
-        Stage_1_Download_w_Data( "input/url_sources.txt" ,
+    if 1:
+        Stage_1_Download_w_Data( "input/url_src_02.txt" ,
                                 minDelay_s = 30 , maxDelay_s = 60 )
     
     # ~~~ Stage 2: Processing ~~~
-    if 1:
+    if 0:
         Stage_2_Separate_and_Tag()
     
 
