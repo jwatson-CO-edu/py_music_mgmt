@@ -9,3 +9,5 @@ output/session.pkl
 logs/
 session.txt
 output/
+*.pkl
+
