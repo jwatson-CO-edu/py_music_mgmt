@@ -1021,6 +1021,15 @@ class LogMH:
 
 # _ End LogMH _
 
+
+def touch( fname ):
+    """ Create the file if it DNE , Otherwise let the file know we touched it """
+    # URL , 'touch' a file: https://stackoverflow.com/a/1158096
+    if os.path.exists( fname ):
+        os.utime( fname , None )
+    else:
+        open( fname , 'a' ).close()
+
 # __ End File __
 
 
@@ -1104,6 +1113,14 @@ def string_contains_any( bigStr , subsList ):
         if sub in bigStr:
             return True
     return False
+
+def get_EXT( fName ):
+    """ Return the capitalized file extension at the end of a path without the period """
+    return os.path.splitext( fName )[-1][1:].upper()
+
+def strip_EXT( fName ):
+    """ Return the filepath before the extension """
+    return os.path.splitext( fName )[0]
 
 # __ End Strings __
 
