@@ -174,71 +174,72 @@ def __prog_signature__(): return __progname__ + " , Version " + __version__ # Re
 
 # == Program Vars ==
 
-# ~ API Connection Vars ~
-GOOG_KEY_PATH = "APIKEY.txt" 
-GRNT_KEY_PATH = "GNWKEY.txt"
-DEVELOPER_KEY            = None
-YOUTUBE_API_SERVICE_NAME = "youtube"
-YOUTUBE_API_VERSION      = "v3"
-METADATA_SPEC            = 'snippet,contentDetails,statistics'
-#METADATA_SPEC            = 'id,snippet,contentDetails,statistics'
-COMMENT_THREAD_SPEC      = 'id,snippet,replies'
-COMMENT_LIST_SPEC        = 'snippet'
 
-# ~ Authentication Vars ~
-authDict = {}
-youtube  = None
-gnKey    = None
-gnClient = None
-gnUser   = None
 
 # ~ Session Vars ~
-RAW_FILE_DIR       = ""
-CHOPPED_SONG_DIR   = ""
-PICKLE_DIR         = ""
-ACTIVE_PICKLE_PATH = ""
-LOG_DIR            = ""
-ACTIVE_SESSION     = False
-SESSION_PATH       = "session.txt"
-ARTIST_PICKLE_PATH = ""
-LOG                = None
-METADATA           = {} 
-ARTISTS            = {}
 
-# ~ Processing Vars ~
-# Options for youtube-dl
-YDL_OPTS = {
-    'format': 'bestaudio/best',
-    'postprocessors': [ {
-        'key': 'FFmpegExtractAudio',
-        'preferredcodec': 'mp3',
-        'preferredquality': '192',
-    } ] ,
-    'logger': MyLogger(),
-    'progress_hooks': [my_hook],
-}
+class Session:
+    """ Flags and vars representing a session , Also acts as a repo for what would otherwise be globals """
+    
+    def __init__( self ):
+        """ Create a default empty session """
+        
+        # ~ API Connection Vars ~
+        self.GOOG_KEY_PATH            = "APIKEY.txt" 
+        self.GRNT_KEY_PATH            = "GNWKEY.txt"
+        self.DEVELOPER_KEY            = None
+        self.YOUTUBE_API_SERVICE_NAME = "youtube"
+        self.YOUTUBE_API_VERSION      = "v3"
+        self.METADATA_SPEC            = 'snippet,contentDetails,statistics'
+        self.COMMENT_THREAD_SPEC      = 'id,snippet,replies'
+        self.COMMENT_LIST_SPEC        = 'snippet'
+        
+        # ~ Authentication Vars ~
+        self.authDict = {}
+        self.youtube  = None
+        self.gnKey    = None
+        self.gnClient = None
+        self.gnUser   = None        
+         
+        # ~ Session Vars ~
+        self.ACTIVE_SESSION = False
+        self.SESSION_PATH   = "session.txt"        
+        
+        # ~ Binary Output ~
+        self.RAW_FILE_DIR     = ""
+        self.CHOPPED_SONG_DIR = ""
+        self.PICKLE_DIR       = ""
+        
+        # ~ Processing Metadata ~
+        self.ACTIVE_PICKLE_PATH = ""
+        self.ARTIST_PICKLE_PATH = ""
+        self.METADATA           = {} 
+        self.ARTISTS            = {}        
+        
+        # ~ Logging ~
+        self.LOG_DIR = ""
+        self.LOG     = None
+        
+        # ~ Processing Vars ~
+        self.YDL_OPTS = { 
+            # Options for youtube-dl
+            'format': 'bestaudio/best',
+            'postprocessors': [ {
+                'key': 'FFmpegExtractAudio',
+                'preferredcodec': 'mp3',
+                'preferredquality': '192',
+            } ] ,
+            'logger': MyLogger(),
+            'progress_hooks': [my_hook],
+        }
 
 # __ End Vars __
 
-def open_all_APIs( googKeyFile , GNKeyFile ):
-    """ Open an API connection for {Google , GraceNote} """
-    global DEVELOPER_KEY , authDict , youtube , gnKey , gnClient , gnUser
-    
-    # 2. Init Google API connection
-    authDict = comma_sep_key_val_from_file( googKeyFile ) # "APIKEY.txt"
-    DEVELOPER_KEY = authDict['key']
-    print( authDict )
-    youtube = build( YOUTUBE_API_SERVICE_NAME , 
-                     YOUTUBE_API_VERSION , 
-                     developerKey = DEVELOPER_KEY )
-    
-    # 3. Init GraceNote API Connection
-    gnKey = comma_sep_key_val_from_file( GNKeyFile ) # "GNWKEY.txt"
-    gnClient = gnKey[ 'clientID' ] #_ Enter your Client ID here '*******-************************'
-    gnUser   = register( gnClient ) # Registration should not be done more than once per session      
-
 def load_session( sessionPath ):
     """ Read session file and populate session vars """
+    
+    # FIXME: START HERE
+    
     global RAW_FILE_DIR , CHOPPED_SONG_DIR , PICKLE_DIR , ACTIVE_PICKLE_PATH , LOG_DIR , ACTIVE_SESSION , ARTIST_PICKLE_PATH
     sesnDict = comma_sep_key_val_from_file( sessionPath );           print "Loaded session file:" , sessionPath
     RAW_FILE_DIR       = sesnDict['RAW_FILE_DIR'];                   print "RAW_FILE_DIR:" , RAW_FILE_DIR
@@ -248,7 +249,25 @@ def load_session( sessionPath ):
     LOG_DIR            = sesnDict['LOG_DIR'];                        print "LOG_DIR" , LOG_DIR
     ACTIVE_SESSION     = bool( int( sesnDict['ACTIVE_SESSION'] ) );  print "ACTIVE_SESSION:" , yesno( ACTIVE_SESSION )
     ARTIST_PICKLE_PATH = sesnDict['ARTIST_PICKLE_PATH'];             print "ARTIST_PICKLE_PATH:" , ARTIST_PICKLE_PATH
-    return sesnDict
+    return session
+
+def open_all_APIs( sssn , googKeyFile , GNKeyFile ):
+    """ Open an API connection for {Google , GraceNote} """
+    # NOTE: 'load_session' must be run first
+    global DEVELOPER_KEY , authDict , youtube , gnKey , gnClient , gnUser
+    
+    # 2. Init Google API connection
+    sssn.authDict = comma_sep_key_val_from_file( googKeyFile ) # "APIKEY.txt"
+    sssn.DEVELOPER_KEY = authDict['key']
+    print( authDict )
+    youtube = build( sssn.YOUTUBE_API_SERVICE_NAME , 
+                     sssn.YOUTUBE_API_VERSION , 
+                     developerKey = sssn.DEVELOPER_KEY )
+    
+    # 3. Init GraceNote API Connection
+    sssn.gnKey = comma_sep_key_val_from_file( GNKeyFile ) # "GNWKEY.txt"
+    sssn.gnClient = gnKey[ 'clientID' ] #_ Enter your Client ID here '*******-************************'
+    sssn.gnUser   = register( sssn.gnClient ) # Registration should not be done more than once per session      
 
 def default_session():
     """ Set the session vars to reasonable values """
@@ -294,6 +313,12 @@ def verify_session_writable( sesnDict ):
 
 # ===== STAGE 1 ============================================================================================================================
 
+# == Stage 1 Vars ==
+
+
+
+# __ End Vars __
+
 def set_session_active( active = 1 ):
     """ Set the session active flag """
     global ACTIVE_SESSION , SESSION_PATH
@@ -301,7 +326,7 @@ def set_session_active( active = 1 ):
     
 def begin_session( inputPath ):
     """ Set all vars that we will need to run a session """
-    global LOG , METADATA , ARTISTS
+    global LOG , METADATA , ARTISTS , SESSION_PATH , ACTIVE_PICKLE_PATH , OU
     # 1. Instantiate a global logger object
     LOG = LogMH()
     # 2. Instantiate a timer
@@ -316,7 +341,7 @@ def begin_session( inputPath ):
         session = default_session()
     set_session_active( True )
     # 4. Construct pickle path
-    ACTIVE_PICKLE_PATH = strip_EXT( inputPath ) + "_metadat.pkl"
+    ACTIVE_PICKLE_PATH = RAW_FILE_DIR + '/' + strip_EXT( str( os.path.split( inputPath )[-1] ) ) + "_metadata.pkl"
     # 5. Unpickle session metadata
     METADATA = unpickle_dict( ACTIVE_PICKLE_PATH ) 
     if METADATA:
@@ -625,7 +650,7 @@ if __name__ == "__main__":
     # ~~~ Stage 1: Downloading ~~~
     if 1:
         Stage_1_Download_w_Data( "input/url_src_02.txt" ,
-                                minDelay_s = 30 , maxDelay_s = 60 )
+                                 minDelay_s = 30 , maxDelay_s = 60 )
     
     # ~~~ Stage 2: Processing ~~~
     if 0:
