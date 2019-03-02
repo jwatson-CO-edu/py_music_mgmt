@@ -63,9 +63,37 @@ def parse_video_entry( txtLine ):
              ascii( "seq" ) : int( components[1] )             ,
              ascii( "id"  ) : get_id_from_URL( components[0] ) }
 
-def process_video_list( fPath ):
+
+# === METADATA GUIDE =======================================================================================================================
+
+# {  ~ Dictionary: Keys are 11-char IDs , Ex: m0PvtQ53rqI ~
+# ...      
+#     [ ID ]
+#     {
+#         'id'  : __ Same as above
+#         'seq' : __ Sequence number given in the original input file, Doesn't really matter
+#         'url' : __ Full URL one would follow to watch the video in the 
+#         'FL_URL' : Flag for whether a URL was loaded
+#     }
+# ...      
+# }
+
+# ___ END METADATA _________________________________________________________________________________________________________________________
+
+
+def init_metadata_from_list( fPath ):
     """ Get all the URLs from the prepared list """
-    return parse_lines( fPath , parse_video_entry )
+    lineData = parse_lines( fPath , parse_video_entry )
+    rtnDict  = {}
+    # Metadata is first created here!
+    for datum in lineData:
+        rtnDict[ datum['id'] ] = {
+            'url' :    datum['url']             ,
+            'seq' :    datum['seq']             ,
+            'id'  :    datum['id']              ,
+            'FL_URL' : len( datum['url'] ) > 11 # Flag for whether a URL was loaded 
+        }
+    return rtnDict
 
 def comma_sep_key_val_from_file( fPath ):
     """ Read a file, treating each line as a key-val pair separated by a comma """
