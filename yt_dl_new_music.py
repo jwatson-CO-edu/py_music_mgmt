@@ -218,7 +218,7 @@ class Session:
         
         # ~ Logging ~
         self.LOG_DIR = ""
-        self.LOG     = None
+        self.LOG     = LogMH() # Instantiate a global logger object
         
         # ~ Processing Vars ~
         self.YDL_OPTS = { 
@@ -237,73 +237,74 @@ class Session:
 
 def load_session( sessionPath ):
     """ Read session file and populate session vars """
-    
-    # FIXME: START HERE
-    
-    global RAW_FILE_DIR , CHOPPED_SONG_DIR , PICKLE_DIR , ACTIVE_PICKLE_PATH , LOG_DIR , ACTIVE_SESSION , ARTIST_PICKLE_PATH
-    sesnDict = comma_sep_key_val_from_file( sessionPath );           print "Loaded session file:" , sessionPath
-    RAW_FILE_DIR       = sesnDict['RAW_FILE_DIR'];                   print "RAW_FILE_DIR:" , RAW_FILE_DIR
-    CHOPPED_SONG_DIR   = sesnDict['CHOPPED_SONG_DIR'];               print "CHOPPED_SONG_DIR:" , CHOPPED_SONG_DIR
-    PICKLE_DIR         = sesnDict['PICKLE_DIR'];                     print "PICKLE_DIR:" , PICKLE_DIR 
-    ACTIVE_PICKLE_PATH = sesnDict['ACTIVE_PICKLE_PATH'];             print "ACTIVE_PICKLE_PATH:" , ACTIVE_PICKLE_PATH
-    LOG_DIR            = sesnDict['LOG_DIR'];                        print "LOG_DIR" , LOG_DIR
-    ACTIVE_SESSION     = bool( int( sesnDict['ACTIVE_SESSION'] ) );  print "ACTIVE_SESSION:" , yesno( ACTIVE_SESSION )
-    ARTIST_PICKLE_PATH = sesnDict['ARTIST_PICKLE_PATH'];             print "ARTIST_PICKLE_PATH:" , ARTIST_PICKLE_PATH
+    session = Session()
+    sesnDict = comma_sep_key_val_from_file( sessionPath );          print "Loaded session file:" , sessionPath
+    session.RAW_FILE_DIR       = sesnDict['RAW_FILE_DIR'];          print "RAW_FILE_DIR:" , session.RAW_FILE_DIR
+    session.CHOPPED_SONG_DIR   = sesnDict['CHOPPED_SONG_DIR'];      print "CHOPPED_SONG_DIR:" , session.CHOPPED_SONG_DIR
+    session.PICKLE_DIR         = sesnDict['PICKLE_DIR'];            print "PICKLE_DIR:" , session.PICKLE_DIR 
+    session.ACTIVE_PICKLE_PATH = sesnDict['ACTIVE_PICKLE_PATH'];    print "ACTIVE_PICKLE_PATH:" , session.ACTIVE_PICKLE_PATH
+    session.LOG_DIR            = sesnDict['LOG_DIR'];               print "LOG_DIR" , session.LOG_DIR
+    session.ACTIVE_SESSION     = sesnDict['ACTIVE_SESSION'];        print "ACTIVE_SESSION:" , yesno( session.ACTIVE_SESSION )
+    session.ARTIST_PICKLE_PATH = sesnDict['ARTIST_PICKLE_PATH'];    print "ARTIST_PICKLE_PATH:" , session.ARTIST_PICKLE_PATH
     return session
 
-def open_all_APIs( sssn , googKeyFile , GNKeyFile ):
+def open_all_APIs( sssn ):
     """ Open an API connection for {Google , GraceNote} """
     # NOTE: 'load_session' must be run first
-    global DEVELOPER_KEY , authDict , youtube , gnKey , gnClient , gnUser
-    
-    # 2. Init Google API connection
-    sssn.authDict = comma_sep_key_val_from_file( googKeyFile ) # "APIKEY.txt"
-    sssn.DEVELOPER_KEY = authDict['key']
-    print( authDict )
-    youtube = build( sssn.YOUTUBE_API_SERVICE_NAME , 
-                     sssn.YOUTUBE_API_VERSION , 
-                     developerKey = sssn.DEVELOPER_KEY )
-    
-    # 3. Init GraceNote API Connection
-    sssn.gnKey = comma_sep_key_val_from_file( GNKeyFile ) # "GNWKEY.txt"
-    sssn.gnClient = gnKey[ 'clientID' ] #_ Enter your Client ID here '*******-************************'
-    sssn.gnUser   = register( sssn.gnClient ) # Registration should not be done more than once per session      
+    try:
+        # 2. Init Google API connection
+        sssn.authDict = comma_sep_key_val_from_file( sssn.GOOG_KEY_PATH ) # "APIKEY.txt"
+        sssn.DEVELOPER_KEY = sssn.authDict['key']
+        #print( authDict )
+        youtube = build( sssn.YOUTUBE_API_SERVICE_NAME , 
+                         sssn.YOUTUBE_API_VERSION , 
+                         developerKey = sssn.DEVELOPER_KEY )
+        # 3. Init GraceNote API Connection
+        sssn.gnKey = comma_sep_key_val_from_file( sssn.GRNT_KEY_PATH ) # "GNWKEY.txt"
+        sssn.gnClient = sssn.gnKey[ 'clientID' ] #_ Enter your Client ID here '*******-************************'
+        sssn.gnUser   = register( sssn.gnClient ) # Registration should not be done more than once per session      
+        
+        print "API Connection SUCCESS!"
+        
+    except Exception as ex:
+        print "API Connection FAILURE!" , str( ex )
 
 def default_session():
     """ Set the session vars to reasonable values """
-    global RAW_FILE_DIR , CHOPPED_SONG_DIR , PICKLE_DIR , ACTIVE_PICKLE_PATH , LOG_DIR , ACTIVE_SESSION , ARTIST_PICKLE_PATH
-    RAW_FILE_DIR       = "output";                          print "RAW_FILE_DIR:" , RAW_FILE_DIR
-    CHOPPED_SONG_DIR   = RAW_FILE_DIR + "/chopped";         print "CHOPPED_SONG_DIR:" , CHOPPED_SONG_DIR
-    PICKLE_DIR         = RAW_FILE_DIR;                      print "PICKLE_DIR:" , PICKLE_DIR 
-    ACTIVE_PICKLE_PATH = "output/session.pkl";              print "ACTIVE_PICKLE_PATH:" , ACTIVE_PICKLE_PATH
-    LOG_DIR            = "logs";                            print "LOG_DIR" , LOG_DIR
-    ACTIVE_SESSION     = bool( int( 1 ) );                  print "ACTIVE_SESSION:" , yesno( ACTIVE_SESSION )
-    ARTIST_PICKLE_PATH = "output/artists.pkl";              print "ARTIST_PICKLE_PATH:" , ARTIST_PICKLE_PATH
-    return sesnDict    
+    session = Session()
+    session.RAW_FILE_DIR       = "output";                           print "RAW_FILE_DIR:" , cRAW_FILE_DIR
+    session.CHOPPED_SONG_DIR   = session.RAW_FILE_DIR + "/chopped";  print "CHOPPED_SONG_DIR:" , session.CHOPPED_SONG_DIR
+    session.PICKLE_DIR         = session.RAW_FILE_DIR;               print "PICKLE_DIR:" , session.PICKLE_DIR 
+    session.ACTIVE_PICKLE_PATH = "output/session.pkl";               print "ACTIVE_PICKLE_PATH:" , session.ACTIVE_PICKLE_PATH
+    session.LOG_DIR            = "logs";                             print "LOG_DIR" , session.LOG_DIR
+    session.ACTIVE_SESSION     = bool( int( 1 ) );                   print "ACTIVE_SESSION:" , yesno( session.ACTIVE_SESSION )
+    session.ARTIST_PICKLE_PATH = "output/artists.pkl";               print "ARTIST_PICKLE_PATH:" , session.ARTIST_PICKLE_PATH
+    return session    
     
-def save_session( sessionPath , sesnDict ):
+def save_session( session ):
     """ Write session vars to the session file """
     # 1. If a file exists at this path, erase it
-    if os.path.isfile( sessionPath ):
-        print "Session" , sessionPath , "was overwritten!"
-        os.remove( sessionPath )
+    if os.path.isfile( session.SESSION_PATH ):
+        print "Session" , session.SESSION_PATH , "was overwritten!"
+        os.remove( session.SESSION_PATH )
     # 2. Write each line
-    f = open( sessionPath , "w+" )
-    f.write( 'RAW_FILE_DIR'       + ',' + str( sesnDict['RAW_FILE_DIR'] )          + '\n' )
-    f.write( 'CHOPPED_SONG_DIR'   + ',' + str( sesnDict['CHOPPED_SONG_DIR'] )      + '\n' )
-    f.write( 'PICKLE_DIR'         + ',' + str( sesnDict['PICKLE_DIR'] )            + '\n' )
-    f.write( 'ACTIVE_PICKLE_PATH' + ',' + str( sesnDict['ACTIVE_PICKLE_PATH'] )    + '\n' )
-    f.write( 'LOG_DIR'            + ',' + str( sesnDict['LOG_DIR'] )               + '\n' )
-    f.write( 'ACTIVE_SESSION'     + ',' + str( int( sesnDict['ACTIVE_SESSION'] ) ) + '\n' )
-    f.write( 'ARTIST_PICKLE_PATH' + ',' + str( sesnDict['ARTIST_PICKLE_PATH'] )    + '\n' )
+    f = open( session.SESSION_PATH , "w+" )
+    f.write( 'RAW_FILE_DIR'       + ',' + str( session.RAW_FILE_DIR )        + '\n' )
+    f.write( 'CHOPPED_SONG_DIR'   + ',' + str( session.CHOPPED_SONG_DIR )    + '\n' )
+    f.write( 'PICKLE_DIR'         + ',' + str( session.PICKLE_DIR )          + '\n' )
+    f.write( 'ACTIVE_PICKLE_PATH' + ',' + str( session.ACTIVE_PICKLE_PATH )  + '\n' )
+    f.write( 'LOG_DIR'            + ',' + str( session.LOG_DIR )             + '\n' )
+    f.write( 'ACTIVE_SESSION'     + ',' + str( session.ACTIVE_SESSION )      + '\n' )
+    f.write( 'ARTIST_PICKLE_PATH' + ',' + str( session.ARTIST_PICKLE_PATH )  + '\n' )
+    print "Session saved to" , session.SESSION_PATH
   
-def verify_session_writable( sesnDict ):
+def verify_session_writable( sssn ):
     """ Make sure that we can write to the relevant directories """
     allWrite = validate_dirs_writable(  
-        os.path.join( SOURCEDIR , sesnDict['RAW_FILE_DIR'] )     ,
-        os.path.join( SOURCEDIR , sesnDict['CHOPPED_SONG_DIR'] ) ,
-        os.path.join( SOURCEDIR , sesnDict['PICKLE_DIR'] )       ,
-        os.path.join( SOURCEDIR , sesnDict['LOG_DIR'] )          ,
+        os.path.join( SOURCEDIR , sssn.RAW_FILE_DIR )     ,
+        os.path.join( SOURCEDIR , sssn.CHOPPED_SONG_DIR ) ,
+        os.path.join( SOURCEDIR , sssn.PICKLE_DIR )       ,
+        os.path.join( SOURCEDIR , sssn.LOG_DIR )          ,
     )
     print "Session dirs writable:" , yesno( allWrite )
     return allWrite
@@ -326,9 +327,6 @@ def set_session_active( active = 1 ):
     
 def begin_session( inputPath ):
     """ Set all vars that we will need to run a session """
-    global LOG , METADATA , ARTISTS , SESSION_PATH , ACTIVE_PICKLE_PATH , OU
-    # 1. Instantiate a global logger object
-    LOG = LogMH()
     # 2. Instantiate a timer
     dlTimer = Stopwatch()   
     # 3. Construct session path
@@ -339,41 +337,41 @@ def begin_session( inputPath ):
     except IOError:
         touch( SESSION_PATH )
         session = default_session()
+    session.SESSION_PATH = SESSION_PATH
     set_session_active( True )
     # 4. Construct pickle path
-    ACTIVE_PICKLE_PATH = RAW_FILE_DIR + '/' + strip_EXT( str( os.path.split( inputPath )[-1] ) ) + "_metadata.pkl"
+    session.ACTIVE_PICKLE_PATH = session.RAW_FILE_DIR + '/' + strip_EXT( str( os.path.split( inputPath )[-1] ) ) + "_metadata.pkl"
     # 5. Unpickle session metadata
-    METADATA = unpickle_dict( ACTIVE_PICKLE_PATH ) 
-    if METADATA:
-        LOG.prnt( "Found cached metadata at" , ACTIVE_PICKLE_PATH , "with" , len( METADATA ) , "entries" )
+    session.METADATA = unpickle_dict( session.ACTIVE_PICKLE_PATH ) 
+    if session.METADATA:
+        session.LOG.prnt( "Found cached metadata at" , session.ACTIVE_PICKLE_PATH , "with" , len( session.METADATA ) , "entries" )
     else:
-        LOG.prnt( "NO cached metadata at" , ACTIVE_PICKLE_PATH )
+        session.LOG.prnt( "NO cached metadata at" , session.ACTIVE_PICKLE_PATH )
     # Unpickle artist set
-    ARTISTS = unpickle_dict( ARTIST_PICKLE_PATH ) 
-    if ARTISTS:
-        LOG.prnt( "Found cached artist set at" , ARTIST_PICKLE_PATH , "with" , len( ARTISTS ) , "entries" )
+    session.ARTISTS = unpickle_dict( session.ARTIST_PICKLE_PATH ) 
+    if session.ARTISTS:
+        session.LOG.prnt( "Found cached artist set at" , session.ARTIST_PICKLE_PATH , "with" , len( session.ARTISTS ) , "entries" )
     else:
-        LOG.prnt( "NO cached artist set at" , ARTIST_PICKLE_PATH )
+        session.LOG.prnt( "NO cached artist set at" , session.ARTIST_PICKLE_PATH )
     #  1.1. Activate session
-    ACTIVE_SESSION = True
+    session.ACTIVE_SESSION = True
     #  2. Check Write locations
     dirsWritable = verify_session_writable( session )
     return session , dirsWritable , dlTimer
     
-def close_session( session ):
+def close_session( sssn ):
     """ Cache data and write logs """
     # 23. Pickle all data
-    struct_to_pkl( METADATA , ACTIVE_PICKLE_PATH )
-    struct_to_pkl( ARTISTS  , ARTIST_PICKLE_PATH )
+    struct_to_pkl( sssn.METADATA , sssn.ACTIVE_PICKLE_PATH )
+    struct_to_pkl( sssn.ARTISTS  , sssn.ARTIST_PICKLE_PATH )
     # 24. Save session && output log data
-    save_session( SESSION_PATH , session )
-    LOG.out_and_clear( os.path.join( LOG_DIR , "YouTube-Music-Log_" + nowTimeStampFine() + ".txt" ) )     
+    save_session( sssn )
+    sssn.LOG.out_and_clear( os.path.join( sssn.LOG_DIR , "YouTube-Music-Log_" + nowTimeStampFine() + ".txt" ) )     
     
 def Stage_1_Download_w_Data( inputFile ,
                              minDelay_s = 20 , maxDelay_s = 180 ):
     """ Check environment for download , Fetch files and metadata , Save files and metadata """
     # NOTE: You may have to run this function several times, especially for long lists of URLs
-    global LOG , METADATA
     doSleep = False # ffmpeg conversion seems to be a sufficient wait time, especially for large files 
     # DEBUG
     dbugLim = False
@@ -381,14 +379,18 @@ def Stage_1_Download_w_Data( inputFile ,
     count = 0
     #  0. Load session
     session , dirsWritable , dlTimer = begin_session( inputFile )
+    open_all_APIs( session )
     #  1. Indicate file
-    LOG.prnt( "Processing" , inputFile , "..." )
-    
-    
-    
-    #numEntry = len( METADATA )
-    #if not dirsWritable:
-        #return False
+    session.LOG.prnt( "Processing" , inputFile , "..." )
+    #  2. How much metadat?   
+    numEntry = len( session.METADATA )
+    session.LOG.prnt( "Current metadata has" , numEntry , "entries." )
+    #  3. Determine if dirs writable
+    if not dirsWritable:
+        session.LOG.prnt( "ERROR: Program does NOT have permission to modify the indicated directories!" )
+        return False
+    else:
+        session.LOG.prnt( "Program has appropriate directory permissions." )
     ##  3. Process input file
     #entries = process_video_list( "input/url_sources.txt" )
     #LOG.prnt( "Read input file with" , len( entries ) , "entries" )
@@ -557,7 +559,7 @@ def Stage_2_Separate_and_Tag():
         return False
     # 4. For every cached entry
     shortCount = 0
-    LOG.prnt( "~~~" )
+    session.LOG.prnt( "~~~" )
     for enID , enCache in METADATA.iteritems():
         if not dbSuppressLog: LOG.prnt( "Processing" , enID , "..." )
         enMeta  = enCache['Metadata']
@@ -607,9 +609,9 @@ def Stage_2_Separate_and_Tag():
             LOG.prnt( "Raw file from" , enCache['URL'] , ", Retrieval failed!" )
         if not dbSuppressLog: LOG.prnt( "~~~" )
     # I. Write log file
-    LOG.prnt( "Found stamps for" , stampCount , "of" , numEntry , "cached items" )
-    LOG.prnt( "Of video without stamps:" , shortCount , "were short" )
-    LOG.prnt( numEntry - ( stampCount + shortCount ) , "possibly without song data!" , 
+    session.LOG.prnt( "Found stamps for" , stampCount , "of" , numEntry , "cached items" )
+    session.LOG.prnt( "Of video without stamps:" , shortCount , "were short" )
+    session.LOG.prnt( numEntry - ( stampCount + shortCount ) , "possibly without song data!" , 
               ( numEntry - ( stampCount + shortCount ) ) / numEntry * 100.0 , "%" )
     # I. Pickle with new metadata
     # I. Write session vars
@@ -625,7 +627,7 @@ if __name__ == "__main__":
     termArgs = sys.argv[1:] # Terminal arguments , if they exist
     
     # 1. Open API connections ()
-    if 1:
+    if 0:
         open_all_APIs( GOOG_KEY_PATH , GRNT_KEY_PATH )
         
     # ~~~ Stage 0: Testing ~~~
