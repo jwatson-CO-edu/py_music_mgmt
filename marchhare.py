@@ -410,6 +410,21 @@ def double_all_elem_except( inList , exceptedIndices = [] ):
             rtnList.extend( [ elem , elem ] )
     return rtnList    
 
+def merge_two_dicts( x , y ):
+    """ Merge 2 dictionaries """
+    # URL , Merge dictionaries:  https://stackoverflow.com/a/26853961
+    z = x.copy()   # start with x's keys and values
+    z.update( y )    # modifies z with y's keys and values & returns None
+    return z
+
+def dict_A_add_B_new_only( dctA , dctB ):
+    """ Add the key-value pairs of 'dctB' to 'dctA', in place, for keys that do NOT already exist in 'dctA' """
+    B = dctB.copy()
+    for key , val in B.iteritems():
+        if key not in dctA:
+            dctA[ key ] = val
+    return dctA
+
 # = Containers for Algorithms =
 
 class Stack(list): 
