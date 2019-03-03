@@ -391,10 +391,14 @@ def Stage_1_Download_w_Data( inputFile ,
         return False
     else:
         session.LOG.prnt( "Program has appropriate directory permissions." )
-    ##  3. Process input file
-    #entries = process_video_list( "input/url_sources.txt" )
-    #LOG.prnt( "Read input file with" , len( entries ) , "entries" )
-    #inCount = len( entries )
+    #  3. Process input file
+    lstMeta = init_metadata_from_list( inputFile )
+    inCount = len( lstMeta )
+    session.LOG.prnt( "Read input file with" , inCount , "entries" )
+    
+    
+    # FIXME: dict_A_add_B_new_only( dctA , dctB )
+    
     ##  4. Init downloaded
     #ydl = youtube_dl.YoutubeDL( YDL_OPTS )
     ##  5. For each entry

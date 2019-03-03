@@ -10,4 +10,7 @@ logs/
 session.txt
 output/
 *.pkl
+*.pyc
+*/*.pyc
+*/*/*.pyc
 

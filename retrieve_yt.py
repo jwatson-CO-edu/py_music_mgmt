@@ -6,7 +6,7 @@
 from __future__ import division # Future imports must be called before everything else, including triple-quote docs!
 
 # ~~ Local ~~
-from marchhare.marchhare import ( LogMH , parse_lines )
+from marchhare.marchhare import ( LogMH , parse_lines , ascii )
 
 """
 retrieve_yt.py
@@ -72,7 +72,7 @@ def parse_video_entry( txtLine ):
 #     {
 #         'id'  : __ Same as above
 #         'seq' : __ Sequence number given in the original input file, Doesn't really matter
-#         'url' : __ Full URL one would follow to watch the video in the 
+#         'url' : __ Full URL one would follow to watch the video in the browser
 #         'FL_URL' : Flag for whether a URL was loaded
 #     }
 # ...      
@@ -87,11 +87,11 @@ def init_metadata_from_list( fPath ):
     rtnDict  = {}
     # Metadata is first created here!
     for datum in lineData:
-        rtnDict[ datum['id'] ] = {
-            'url' :    datum['url']             ,
-            'seq' :    datum['seq']             ,
-            'id'  :    datum['id']              ,
-            'FL_URL' : len( datum['url'] ) > 11 # Flag for whether a URL was loaded 
+        rtnDict[ datum['id'] ] = { # Keys are 11-char IDs , Ex: m0PvtQ53rqI
+            'url' :    datum['url']             , # Full URL one would follow to watch the video in the browser
+            'seq' :    datum['seq']             , # Sequence number given in the original input file, Doesn't really matter
+            'id'  :    datum['id']              , # Same as above
+            'FL_URL' : len( datum['url'] ) > 11 # _ Flag for whether a URL was loaded 
         }
     return rtnDict
 
