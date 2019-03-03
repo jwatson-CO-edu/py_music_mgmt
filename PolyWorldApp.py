@@ -15,19 +15,22 @@ Tkinter simulation environment for 2D polygons
 """
 
 # ~ Standard Libraries ~
+import os
 import time # --------- For calculating framerate
 from Tkinter import * # Standard Python cross-platform GUI
 # ~ Special Libraries ~
 import numpy as np
 # ~ Local Libraries ~
-from Vector2D import SimFrame2D , Segment , Poly2D
+from VectorMath.Vector2D import SimFrame2D , Segment , Poly2D
 
 # ~~ Constants , Shortcuts , Aliases ~~
-
+EPSILON = 1e-7
+infty   = 1e309 # URL: http://stackoverflow.com/questions/1628026/python-infinity-any-caveats#comment31860436_1628026
+endl    = os.linesep
 
 # == Poly2D Tkinter App ==
 
-class Poly2DApp(object):
+class Poly2DApp( object ):
     """ A Tkinter display to display 2D polygon worlds """
     
     def __init__( self , winWidth , winHeight ):
@@ -146,7 +149,7 @@ class Poly2DApp(object):
         for frame in rootFrame.subFrames:
             self.color_all( pColor , frame )    
 	
-    def run(self):
+    def run( self ):
 #        for segment in self.staticSegments: # Draw world axes
 #            segment.update() # These will never change, draw them safely at the beginning
             
@@ -178,7 +181,7 @@ class Poly2DApp(object):
 
 if __name__ == "__main__":
     # File that runs the poly sim should import this library
-    # from PolyWorldApp import *
+    # from marchhare.PolyWorldApp import *
 
     # Create objects to add to the simulation
     hept = Poly2D.regular( 7 , 200 , [0,0] , np.pi / 17 )
@@ -193,7 +196,7 @@ if __name__ == "__main__":
     foo.set_title( "Sim Window Test" ) # This will appear in the top bar of the simulation window
     
     # ~~ Setup ~~
-    foo.calcFunc = update_shape # ------ Give the app work to do each frame
+    foo.calcFunc = [ update_shape ] # ------ Give the app work to do each frame
     foo.attach_drawables( hept ) # ----- Add Frame2D/Poly objects to the world so that they can be drawn
     foo.color_all( 'green' ) # --------- Default segment color is black 
                                          # TODO: Make a new default color!
