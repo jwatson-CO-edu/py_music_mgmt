@@ -1133,6 +1133,16 @@ def get_EXT( fName ):
     """ Return the capitalized file extension at the end of a path without the period """
     return os.path.splitext( fName )[-1][1:].upper()
 
+def get_all_w_EXT( qPath , EXT ):
+    """ Return the names of all the files with 'EXT' """
+    qEXT = str( EXT ).upper()
+    rtnLst = []
+    fLst = [ f.path for f in os.scandir( qPath ) if f.is_file() ]  # https://stackoverflow.com/a/40347279
+    for f_i in fLst:
+        if get_EXT( f_i ) == qEXT:
+            rtnLst.append( f_i )
+    return rtnLst
+
 def strip_EXT( fName ):
     """ Return the filepath before the extension """
     return os.path.splitext( fName )[0]
