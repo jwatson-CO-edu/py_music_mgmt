@@ -410,6 +410,21 @@ def double_all_elem_except( inList , exceptedIndices = [] ):
             rtnList.extend( [ elem , elem ] )
     return rtnList    
 
+def merge_two_dicts( x , y ):
+    """ Merge 2 dictionaries """
+    # URL , Merge dictionaries:  https://stackoverflow.com/a/26853961
+    z = x.copy()   # start with x's keys and values
+    z.update( y )    # modifies z with y's keys and values & returns None
+    return z
+
+def dict_A_add_B_new_only( dctA , dctB ):
+    """ Add the key-value pairs of 'dctB' to 'dctA', in place, for keys that do NOT already exist in 'dctA' """
+    B = dctB.copy()
+    for key , val in B.iteritems():
+        if key not in dctA:
+            dctA[ key ] = val
+    return dctA
+
 # = Containers for Algorithms =
 
 class Stack(list): 
@@ -1117,6 +1132,16 @@ def string_contains_any( bigStr , subsList ):
 def get_EXT( fName ):
     """ Return the capitalized file extension at the end of a path without the period """
     return os.path.splitext( fName )[-1][1:].upper()
+
+def get_all_w_EXT( qPath , EXT ):
+    """ Return the names of all the files with 'EXT' """
+    qEXT = str( EXT ).upper()
+    rtnLst = []
+    fLst = [ f.path for f in os.scandir( qPath ) if f.is_file() ]  # https://stackoverflow.com/a/40347279
+    for f_i in fLst:
+        if get_EXT( f_i ) == qEXT:
+            rtnLst.append( f_i )
+    return rtnLst
 
 def strip_EXT( fName ):
     """ Return the filepath before the extension """
