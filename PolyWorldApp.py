@@ -17,17 +17,21 @@ Tkinter simulation environment for 2D polygons
 # ~ Standard Libraries ~
 import time # --------- For calculating framerate
 from Tkinter import * # Standard Python cross-platform GUI
+import os
 # ~ Special Libraries ~
 import numpy as np
 # ~ Local Libraries ~
-from Vector2D import SimFrame2D , Segment , Poly2D
+from VectorMath.Vector2D import SimFrame2D , Segment , Poly2D
 
 # ~~ Constants , Shortcuts , Aliases ~~
+EPSILON = 1e-7
+infty   = 1e309 # URL: http://stackoverflow.com/questions/1628026/python-infinity-any-caveats#comment31860436_1628026
+endl    = os.linesep
 
 
 # == Poly2D Tkinter App ==
 
-class Poly2DApp(object):
+class Poly2DApp( object ):
     """ A Tkinter display to display 2D polygon worlds """
     
     def __init__( self , winWidth , winHeight ):
@@ -39,15 +43,15 @@ class Poly2DApp(object):
         self.renderScale = 1 # 1/2.0
         self.rootWin = Tk()
         # self.rootWin.wm_title("Polygon Playground") # No default title
-        self.rootWin.protocol("WM_DELETE_WINDOW", self.callback_destroy)
+        self.rootWin.protocol( "WM_DELETE_WINDOW" , self.callback_destroy )
         self.calcFunc = [ self.dummy_calculation ] # Should really be loaded with something before running
         self.winRunning = False
         self.simFrame = SimFrame2D( [ [ -self.winWidth/2 , -self.winHeight/2 ] , [ self.winWidth/2 , self.winHeight/2 ] ] ) 
         self.simFrame.name = "simFrame" # Just in case someone asks
         # 2. Set up window
         self.canvas = Canvas(self.rootWin, width=self.winWidth, height = self.winHeight)
-        self.canvas.config(background='black')
-        self.FLATORIGIN = [self.winWidth/2, self.winHeight/2]
+        self.canvas.config( background = 'black' )
+        self.FLATORIGIN = [ self.winWidth/2, self.winHeight/2 ]
         FLATORIGIN = self.FLATORIGIN
         self.set_stage()
         # 3. Pack window
@@ -64,13 +68,13 @@ class Poly2DApp(object):
         pass
 
     def offset_transform(self):
-	""" Return the default transformation function to the lab frame """
-        def offset(pntList, scale): 
+        """ Return the default transformation function to the lab frame """
+        def offset( pntList , scale ):
             #print "called offset"
             rtnList = []
             for pnt in pntList:
                 rtnList.append( np.add( [ pnt[0] , -pnt[1] ] , self.FLATORIGIN ) )
-            #print rtnList
+                #print rtnList
             return rtnList # no actual transformation done to coords
         return offset
                 
@@ -103,8 +107,8 @@ class Poly2DApp(object):
 
     def report_frames(self, currFrame):
         """ Print the relative and lab poses of each of the serial frames in the simulation """
-        print "Rel:",str(currFrame)
-        print "Lab:",str(currFrame.labPose)
+        print "Rel:" , str(currFrame)
+        print "Lab:" , str(currFrame.labPose)
         if len(currFrame.subFrames) < 1:
             print
         else:
@@ -115,7 +119,7 @@ class Poly2DApp(object):
         """ Attach a 'drawable' object that is derived from Frame2D to the canvas """
         for obj in drawable.objs: # For each canvas element, assign to the app canvas
             obj.transform = self.offset_transform()
-            obj.attach_to_canvas( self.canvas )		
+            obj.attach_to_canvas( self.canvas )     
         for subFrm in drawable.subFrames:
             self.attach_to_canvas( subFrm )
     
@@ -124,7 +128,7 @@ class Poly2DApp(object):
         for drawable in drawables:
             self.simFrame.attach_sub( drawable ) # Attach the Frame2D
             self.attach_to_canvas( drawable )
-    	
+        
     def update_all( self ):
         """ Recalc all frames and objects for repainting the window or otherwise obtaining geometric info """
         # 4.a. Calc geometry
@@ -145,7 +149,7 @@ class Poly2DApp(object):
                 obj.set_color( pColor )   
         for frame in rootFrame.subFrames:
             self.color_all( pColor , frame )    
-	
+    
     def run(self):
 #        for segment in self.staticSegments: # Draw world axes
 #            segment.update() # These will never change, draw them safely at the beginning
@@ -171,7 +175,7 @@ class Poly2DApp(object):
         # 4.e. Mark beginning of next loop
         self.last = time.time() * 1000  
         self.rootWin.after( sleepTime , self.run )
-	#print "looping"
+    #print "looping"
 
 
 # === USAGE GUIDE ===
@@ -193,7 +197,7 @@ if __name__ == "__main__":
     foo.set_title( "Sim Window Test" ) # This will appear in the top bar of the simulation window
     
     # ~~ Setup ~~
-    foo.calcFunc = update_shape # ------ Give the app work to do each frame
+    foo.calcFunc = [ update_shape ] # ------ Give the app work to do each frame
     foo.attach_drawables( hept ) # ----- Add Frame2D/Poly objects to the world so that they can be drawn
     foo.color_all( 'green' ) # --------- Default segment color is black 
                                          # TODO: Make a new default color!
