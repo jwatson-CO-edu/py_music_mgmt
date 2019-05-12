@@ -158,7 +158,8 @@ print "Loaded 'pygn'! (GraceNote)"
 # ~~ Local ~~
 prepend_dir_to_path( SOURCEDIR )
 from marchhare.marchhare import ( parse_lines , ascii , sep , is_nonempty_list , pretty_print_dict , unpickle_dict , yesno ,
-                                  validate_dirs_writable , LogMH , Stopwatch , nowTimeStampFine , struct_to_pkl , )
+                                  validate_dirs_writable , LogMH , Stopwatch , nowTimeStampFine , struct_to_pkl , strip_EXT , touch , )
+from retrieve_yt import *
 
 # ~~ Constants , Shortcuts , Aliases ~~
 EPSILON = 1e-7
@@ -171,794 +172,350 @@ def __prog_signature__(): return __progname__ + " , Version " + __version__ # Re
 # ___ End Init _____________________________________________________________________________________________________________________________
 
 
-# = youtube-dl Logging =
-
-class MyLogger( object ):
-    """ Logging class for YT downloads """
-    # https://github.com/rg3/youtube-dl/blob/master/README.md#embedding-youtube-dl
-    global LOG
-    
-    def __init__( self ):
-        """ Put ther noisier output in separate logs for easier debugging """
-        self.dbgLog = LogMH()
-        self.wrnLog = LogMH()
-        
-    def debug( self , msg ):
-        """ Log debug output """
-        self.dbgLog.prnt( "DEBUG:" , msg )
-        
-    def warning( self , msg ):
-        """ Log warnings """
-        self.wrnLog.prnt( "WARN:" , msg )
-        
-    def error( self , msg ):
-        """ Log erros in the main log """
-        LOG.prnt( "ERROR:" , msg )
-
-def my_hook( d ):
-    # https://github.com/rg3/youtube-dl/blob/master/README.md#embedding-youtube-dl
-    if d[ 'status' ] == 'finished':
-        print( 'Done downloading, now converting ...' )
-
-# _ End Logging _
-
-
-# = Program Functions =
-
-def get_id_from_URL( URLstr ):
-    """ Get the 11-char video ID from the URL string """
-    # NOTE: This function assumes that the URL has only one "=" and that the ID follows it
-    components = URLstr.split( '=' , 1 )
-    if len( components ) > 1:
-        return ascii( components[1] )
-    return ''
-
-def parse_video_entry( txtLine ):
-    """ Obtain the video url from the line """
-    components = [ rawToken for rawToken in txtLine.split( ',' ) ]
-    return { ascii( "url" ) : str( components[0] )             ,
-             ascii( "seq" ) : int( components[1] )             ,
-             ascii( "id"  ) : get_id_from_URL( components[0] ) }
-
-def process_video_list( fPath ):
-    """ Get all the URLs from the prepared list """
-    return parse_lines( fPath , parse_video_entry )
-
-def comma_sep_key_val_from_file( fPath ):
-    """ Read a file, treating each line as a key-val pair separated by a comma """
-    entryFunc = lambda txtLine : [ str( rawToken ).strip() for rawToken in txtLine.split( ',' ) ]
-    lines = parse_lines( fPath , entryFunc )
-    rtnDict = {}
-    for line in lines:
-        rtnDict[ line[0] ] = line[1]
-    return rtnDict
-
-def remove_empty_kwargs( **kwargs ):
-    """ Remove keyword arguments that are not set """
-    good_kwargs = {}
-    if kwargs is not None:
-        for key, value in kwargs.iteritems():
-            if value:
-                good_kwargs[key] = value
-    return good_kwargs
-
-def print_response( response ):
-    """ Print the thing , Return the thing """
-    print( response )
-    return response
-
-def videos_list_by_id( client , **kwargs ):
-    """ Fetch the specified video info """
-    kwargs   = remove_empty_kwargs( **kwargs )
-    response = client.videos().list( **kwargs ).execute()
-    return print_response( response )
-
-def comment_threads_list_by_video_id( client , **kwargs ):
-    """ Fetch the comment thread IDs from the specified video info """
-    kwargs   = remove_empty_kwargs( **kwargs )
-    response = client.commentThreads().list( **kwargs ).execute()
-    return print_response( response )
-
-def comment_thread_by_thread_id( client , **kwargs ):
-    """ Fetch the comments from the specified thread """
-    kwargs   = remove_empty_kwargs( **kwargs ) 
-    response = client.comments().list( **kwargs ).execute()
-    return print_response( response )
-
-def extract_description_lines( metadata ):
-    """ Retrieve the description from the video data """
-    return metadata['items'][0]['snippet']['localized']['description'].splitlines()
-
-def extract_video_duration( metadata ):
-    """ Get the ISO 8601 string from the video metadata """
-    return ascii( metadata['items'][0]['contentDetails']['duration'] )
-
-def get_last_digits( inputStr ):
-    """ Get the last contiguous substring of digits in the 'inputStr' """
-    rtnStr = ""
-    lastWasDigit = False
-    # 1. For each character in the string
-    for char in inputStr:
-        # 2. If the character is a digit, then we potentially care about it
-        if char.isdigit():
-            # 3. If the last character was a digit , then add it to the string of digits to return
-            if lastWasDigit:
-                rtnStr += char
-            # 4. else last character was not digit , Begin new digit string
-            else:
-                rtnStr = char
-            # 5. Set flag for digit char
-            lastWasDigit = True
-        # else the character is not digit , Set flag
-        else:
-            lastWasDigit = False
-    return rtnStr
-        
-def get_first_digits( inputStr ):
-    """ Get the first contiguous substring of digits in the 'inputStr' """
-    rtnStr = ""
-    gatheredDigits = False
-    # 1. For each character in the string
-    for char in inputStr:
-        # 2. If the character is a digit, then we care about it
-        if char.isdigit():
-            gatheredDigits = True
-            rtnStr += char
-        # 3. else char was not digit, but we have collected digits , so return them
-        elif gatheredDigits:
-            return rtnStr
-        # else was not digit and have no digits, keep searching
-    # 4. If we made it here then either no digits were found, or the string ended with the first digit substring which we wish to return
-    return rtnStr    
-
-def get_timestamp_from_line( line ):
-    """ Search for a timestamp substring and return it or [] """
-    # NOTE: Only accepting timestamps with ':' in between numbers
-    # NOTE: This function assumest that ':' is used only for separating parts of the timestamp
-    
-    # 1. Fetch the parts of the string that are separated by ":"s
-    components = line.split(':') 
-    stampParts = []
-    
-    # 2. If there was at least one interior ":"
-    if len( components ) and ":" in line:
-        # 3. For each of the split components
-        for i , comp in enumerate( components ):
-            # 4. For the first component, assume that the pertinent substring appears last
-            if i == 0:
-                # 5. Fetch last digits and cast to int if they exist , append to timestamp
-                digits = get_last_digits( comp )
-                if len( digits ) > 0:
-                    stampParts.append( int( digits ) )
-            # 5. For the last component, assume that the pertinent substring appears first
-            elif i == len( components ) - 1: 
-                # 6. Fetch first digits and cast to int if they exist , append to timestamp
-                digits = get_first_digits( comp )
-                if len( digits ) > 0:
-                    stampParts.append( int( digits ) )  
-            # 7. Middle components should have digits only
-            else:
-                comp = comp.strip()
-                # 8. If middle was digits only, add to stamp
-                if comp.isdigit():
-                    stampParts.append( int( comp ) ) 
-                # 9. else middle was somthing else, fail
-                else:
-                    return []
-    # N. Return timestamp components if found, Otherwise return empty list
-    return stampParts
-        
-def parse_ISO8601_timestamp( PT_H_M_S ):
-    """ Return a dictionary representing the time represented by the ISO 8601 standard for durations """
-    # ISO 8601 standard for durations: https://en.wikipedia.org/wiki/ISO_8601#Durations
-    dividers = ( 'H' , 'M' , 'S' )
-    H = '' ; M = '' ; S = ''
-    currStr = ''
-    rtnStamp = {}
-    for char in PT_H_M_S:
-        if char.isdigit():
-            currStr += char
-        elif ( char in dividers ) and ( len( currStr ) > 0 ):
-            rtnStamp[ char ] = int( currStr )
-            currStr = ''
-    return rtnStamp
-
-def timestamp_dict( hr = 0 , mn = 0 , sc = 0 ):
-    """ Given hours, minutes, and seconds, return a timestamp of the type used by this program """
-    return { 'H' : hr , 'M' : mn , 'S' : sc }
-
-def parse_list_timestamp( compList ):
-    """ Standardise the list of timestamp components into a standard dictionary """
-    # NOTE: This function assumes that 'compList' will have no more than 3 elements , If it does then only the last 3 will be parsed
-    # NOTE: This function assumes that 'compList' is ordered largest to smallest time division, and that it will always include at least seconds
-    dividers = ( 'H' , 'M' , 'S' )
-    j = 0
-    tsLen = len( compList )
-    rtnStamp = {}
-    for i in range( -1 , -4 , -1 ):
-        if j < tsLen:
-            rtnStamp[ dividers[i] ] = compList[i]
-            j += 1
-    return rtnStamp
-
-def timestamp_leq( op1 , op2 ):
-    """ Return true if 'op1' <= 'op2' """
-    # For each descending devision in time
-    for div in ( 'H' , 'M' , 'S' ): 
-        try:
-            val1 = op1[ div ] ; val2 = op2[ div ]
-            if val1 < val2:
-                return True
-            elif val1 > val2:
-                return False
-        except KeyError:
-            pass
-    return True
-
-def remove_timestamp_from_line( line ):
-    """ Remove timestamp from the line """
-    # NOTE: This function assumes that the timestamp is contiguous
-    # NOTE: This function assumes the timestampe begins and ends with a number
-    foundNum = False ; foundCln = False
-    bgnDex = 0 ; endDex = 0
-    
-    for i , char in enumerate( line ):
-        if char.isdigit():
-            if not foundNum:
-                foundNum = True
-                bgnDex   = i
-            if foundNum and foundCln:
-                endDex   = i
-        elif char == ':':
-            foundCln = True
-        elif foundNum and foundCln:
-            break
-        else:
-            foundNum = False ; foundCln = False
-            bgnDex = 0 ; endDex = 0            
-            
-    if foundNum and foundCln:
-        return line[ :bgnDex ] + line[ endDex+1: ]
-    else:
-        return line
-
-def remove_leading_digits_from_line( line ):
-    """ Remove the leading digits and leading space from a string """
-    bgnDex = 0
-    for i , char in enumerate( line ):
-        if char.isdigit() or char.isspace():
-            pass
-        else:
-            bgnDex = i
-            break
-    return line[bgnDex:]
-            
-def get_timestamps_from_lines( lines , duration ):
-    """ Attempt to get the tracklist from the list of 'lines' and return it , but only Return if all stamps are lesser than 'duration' """
-    # 3. Get candidate tracklist from the description 
-    trkLstFltrd = []
-    for line in lines:
-        stamp = get_timestamp_from_line( line )
-        if len( stamp ) > 0:
-            stamp = parse_list_timestamp( stamp )
-            if timestamp_leq( stamp , duration ):
-                linBal = remove_timestamp_from_line( line )
-                vidSeq = get_first_digits( line )
-                if vidSeq:
-                    vidSeq = int( vidSeq )
-                    linBal = remove_leading_digits_from_line( linBal )
-                else:
-                    vidSeq = -1
-                trkLstFltrd.append(
-                    { ascii( 'timestamp' ) : stamp  , # When the song begins in the video
-                      ascii( 'videoSeq' ) :  vidSeq , # Sequence number in the video, if labeled
-                      ascii( 'balance' ) :   linBal , # Remainder of scraped line after the timestamp and sequence number are removed
-                      ascii( 'line' ) :      line   } # Full text of the scraped line 
-                )
-    # N. Return tracklist
-    return trkLstFltrd    
-            
-def duration_from_yt_response( reponseObj ):
-    """ Get the timestamp from the YouTube search result """
-    return parse_ISO8601_timestamp( extract_video_duration( reponseObj ) )
-            
-def scrape_and_check_timestamps_desc( reponseObj ):
-    """ Attempt to get the tracklist from the response object and return it , Return if all the stamps are lesser than the duration """
-    # NOTE: This function assumes that a playlist can be found in the decription
-    # NOTE: This function assumes that if there is a number representing a songs's place in the sequence, then it is the first digits in a line
-    
-    # 1. Get the description from the response object
-    descLines = extract_description_lines( reponseObj )
-    # 2. Get the video length from the response object
-    duration  = duration_from_yt_response( reponseObj )
-    # 3. Scrape lines from the description
-    return get_timestamps_from_lines( descLines , duration )
-
-def extract_candidate_artist_and_track( inputStr ):
-    """ Given the balance of the timestamp-sequence extraction , Attempt to infer the artist and track names """
-    # 1. Split on dividing char "- "
-    components = inputStr.split( '- ' )
-    # 2. Strip leading and trailing whitespace
-    components = [ comp.strip() for comp in components ]
-    # 3. Retain nonempty strings
-    components = [ comp for comp in components if len( comp ) ]
-    #print components
-    numComp    = len( components )
-    if numComp > 2:
-        # If there are more than 2 components, then only take the longest 2
-        components.sort( lambda x , y : cmp( len(y) , len(x) ) ) # Sort Longest --to-> Shortest
-        print "WARN: There were more than 2 components! ," , components
-        return components[:2]
-    elif numComp == 2:
-        return components
-    else:
-        for i in range( 2 - numComp ):
-            components.append( '' )
-        return components
-    
-def obj_to_dict( obj ):
-    """ Return a dictionary version of the object """
-    # Easy: The object already has a dictionary
-    try:
-        if len( obj.__dict__ ) == 0:
-            raise KeyError( "Empty Dict" )
-        print "About to return a dictionary with" , len( obj.__dict__ ) , "attributes"
-        return obj.__dict__
-    # Hard: Fetch and associate attributes
-    except:
-        objDict = {}
-        attrs = dir( obj )
-        print "Found" , len( attrs ) , "attributes in the" , type( obj )
-        for attr in attrs:
-            objDict[ attr ] = getattr( obj , attr )
-        return objDict
-    
-def GN_dictify_response_obj( resultObj ):
-    """ Iterate over the response object and convert into a dictionary """
-    # being able to 'pretty_print_dict' seems to imply that we can just iterate over keys in a for loop and access them with 'response[ key ]'
-    rtnDict = {}
-    try:
-        for item in resultObj:
-            #print "key:" , str( item ) , ", val:" , resultObj[ item ]
-            rtnDict[ item ] = resultObj[ item ]
-    except TypeError:
-        print "WARN:" , type( resultObj ) , "is not iterable!"
-    return rtnDict
-
-def count_nested_values( superDict , val ):
-    """ Count the number of times that 'val' occurs in 'superDict' """
-    debugPrnt = False
-    # 1. Base Case : This is a value of the dictionary
-    if type( superDict ) not in ( dict , pygn.pygn.gnmetadata , list ):
-        if debugPrnt: print "Base case with type" , type( superDict )
-        try:
-            if debugPrnt: print "Got" , superDict , ", Type:" , type( superDict )
-            num = superDict.count( val )
-            if debugPrnt: print "Base: Searching" , superDict , 'for' , val , ", Occurrences:" , num
-            return num
-        except:
-            return 0
-    # 2. Recursive Case : This is an inner list
-    elif type( superDict ) == list:
-        total = 0
-        for item in superDict:
-            total += count_nested_values( item , val )
-        return total
-    # 3. Recursive Case : This is an inner dictionary or object
-    else:
-        if debugPrnt: print "Recursive case with type" , type( superDict )
-        total = 0
-        if type( superDict ) == dict:
-            for key , dVal in superDict.iteritems():
-                if debugPrnt: print "Reecurring on" , dVal , "..."
-                total += count_nested_values( dVal , val )
-        elif type( superDict ) == pygn.pygn.gnmetadata:
-            gotDict = GN_dictify_response_obj( superDict )
-            #print gotDict
-            for key , dVal in gotDict.iteritems():
-                if debugPrnt: print "Reecurring on" , dVal , "..."
-                total += count_nested_values( dVal , val )  
-        else:
-            if debugPrnt: print "Found some other type:" , type( superDict )
-        return total
-    
-"""
-### ISSUE: 'GN_score_result_with_components' DOES NOT FIND OBVIOUS MATCHES ###
-There are occurrences of search keys that are not turning up in the count
-"""
-    
-def GN_score_result_with_components( resultObj , components ):
-    """ Tally the instances for each of the components in the result object """
-    total = 0
-    currCount = 0
-    debugPrnt = False
-    for comp in components:
-        currCount = count_nested_values( resultObj , comp )
-        total += currCount
-        if debugPrnt: print "Component:" , comp , ", Occurrences:" , currCount
-    return total
-
-def GN_examine_response_obj( resultObj ):
-    """ CAN WE JUST ITERATE OVER THIS? : YES """
-    # being able to 'pretty_print_dict' seems to imply that we can just iterate over keys in a for loop and access them with 'response[ key ]'
-    try:
-        for item in resultObj:
-            print "key:" , str( item ) , ", val:" , resultObj[ item ]
-    except TypeError:
-        print "WARN:" , type( resultObj ) , "is not iterable!"
-    
-def GN_most_likely_artist_and_track( GN_client , GN_user , components ):
-    """ Given the strings 'op1' and 'op2' , Determine which of the two are the most likely artist and track according to GraceNote """
-    op1 = components[0]
-    op2 = components[1]    
-    flagPrint = False
-    rtnScores = []
-    # 1. Perform search (1,0)
-    # The search function requires a clientID, userID, and at least one of either { artist , album , track } to be specified.
-    metadata = search(
-        clientID = GN_client , 
-        userID   = GN_user   , 
-        artist   = op2       , 
-        track    = op1
-    )
-    score21 = GN_score_result_with_components( metadata , components )
-    rtnScores.append(
-        { 'artist' : metadata['album_artist_name'] ,
-          'track'  : metadata['track_title']       ,
-          'score'  : score21                       }
-    )
-    if flagPrint: 
-        pretty_print_dict( metadata )
-        #GN_examine_response_obj( metadata )
-        print "Score for this result:" , score21
-    # 2. Perform search (0,1)   
-    # The search function requires a clientID, userID, and at least one of either { artist , album , track } to be specified.
-    metadata = search(
-        clientID = GN_client , 
-        userID   = GN_user   , 
-        artist   = op1       , 
-        track    = op2
-    )    
-    score12 = GN_score_result_with_components( metadata , components )
-    rtnScores.append(
-        { 'artist' : metadata['album_artist_name'] ,
-          'track'  : metadata['track_title']       ,
-          'score'  : score12                       }
-    )    
-    if flagPrint: 
-        pretty_print_dict( metadata )
-        #GN_examine_response_obj( metadata )
-        print "Score for this result:" , score12
-    return rtnScores
-
 # == Program Vars ==
 
-# ~ API Connection Vars ~
-GOOG_KEY_PATH = "APIKEY.txt" 
-GRNT_KEY_PATH = "GNWKEY.txt"
-DEVELOPER_KEY            = None
-YOUTUBE_API_SERVICE_NAME = "youtube"
-YOUTUBE_API_VERSION      = "v3"
-METADATA_SPEC            = 'snippet,contentDetails,statistics'
-#METADATA_SPEC            = 'id,snippet,contentDetails,statistics'
-COMMENT_THREAD_SPEC      = 'id,snippet,replies'
-COMMENT_LIST_SPEC        = 'snippet'
 
-# ~ Authentication Vars ~
-authDict = {}
-youtube  = None
-gnKey    = None
-gnClient = None
-gnUser   = None
 
 # ~ Session Vars ~
-RAW_FILE_DIR       = ""
-CHOPPED_SONG_DIR   = ""
-PICKLE_DIR         = ""
-ACTIVE_PICKLE_PATH = ""
-LOG_DIR            = ""
-ACTIVE_SESSION     = False
-SESSION_PATH       = "session.txt"
-ARTIST_PICKLE_PATH = ""
-LOG                = None
-METADATA           = {} 
-ARTISTS            = {}
 
-# ~ Processing Vars ~
-# Options for youtube-dl
-YDL_OPTS = {
-    'format': 'bestaudio/best',
-    'postprocessors': [ {
-        'key': 'FFmpegExtractAudio',
-        'preferredcodec': 'mp3',
-        'preferredquality': '192',
-    } ] ,
-    'logger': MyLogger(),
-    'progress_hooks': [my_hook],
-}
+class Session:
+    """ Flags and vars representing a session , Also acts as a repo for what would otherwise be globals """
+    
+    def __init__( self ):
+        """ Create a default empty session """
+        
+        # ~ API Connection Vars ~
+        self.GOOG_KEY_PATH            = "APIKEY.txt" 
+        self.GRNT_KEY_PATH            = "GNWKEY.txt"
+        self.DEVELOPER_KEY            = None
+        self.YOUTUBE_API_SERVICE_NAME = "youtube"
+        self.YOUTUBE_API_VERSION      = "v3"
+        self.METADATA_SPEC            = 'snippet,contentDetails,statistics'
+        self.COMMENT_THREAD_SPEC      = 'id,snippet,replies'
+        self.COMMENT_LIST_SPEC        = 'snippet'
+        
+        # ~ Authentication Vars ~
+        self.authDict = {}
+        self.youtube  = None
+        self.gnKey    = None
+        self.gnClient = None
+        self.gnUser   = None        
+         
+        # ~ Session Vars ~
+        self.ACTIVE_SESSION = False
+        self.SESSION_PATH   = "session.txt"        
+        
+        # ~ Binary Output ~
+        self.RAW_FILE_DIR     = ""
+        self.CHOPPED_SONG_DIR = ""
+        self.PICKLE_DIR       = ""
+        
+        # ~ Processing Metadata ~
+        self.ACTIVE_PICKLE_PATH = ""
+        self.ARTIST_PICKLE_PATH = ""
+        self.METADATA           = {} 
+        self.ARTISTS            = {}        
+        
+        # ~ Logging ~
+        self.LOG_DIR = ""
+        self.LOG     = LogMH() # Instantiate a global logger object
+        
+        # ~ Processing Vars ~
+        self.YDL_OPTS = { 
+            # Options for youtube-dl
+            'format': 'bestaudio/best',
+            'postprocessors': [ {
+                'key': 'FFmpegExtractAudio',
+                'preferredcodec': 'mp3',
+                'preferredquality': '192',
+            } ] ,
+            'logger': MyLogger(),
+            'progress_hooks': [my_hook],
+        }
 
 # __ End Vars __
 
-def open_all_APIs( googKeyFile , GNKeyFile ):
-    """ Open an API connection for {Google , GraceNote} """
-    global DEVELOPER_KEY , authDict , youtube , gnKey , gnClient , gnUser
-    
-    # 2. Init Google API connection
-    authDict = comma_sep_key_val_from_file( googKeyFile ) # "APIKEY.txt"
-    DEVELOPER_KEY = authDict['key']
-    print( authDict )
-    youtube = build( YOUTUBE_API_SERVICE_NAME , 
-                     YOUTUBE_API_VERSION , 
-                     developerKey = DEVELOPER_KEY )
-    
-    # 3. Init GraceNote API Connection
-    gnKey = comma_sep_key_val_from_file( GNKeyFile ) # "GNWKEY.txt"
-    gnClient = gnKey[ 'clientID' ] #_ Enter your Client ID here '*******-************************'
-    gnUser   = register( gnClient ) # Registration should not be done more than once per session      
-    
-def fetch_metadata_by_yt_video_ID( ytVideoID ):
-    """ Fetch and return the response object that results from a YouTube API search for 'ytVideoID' """
-    global youtube , METADATA_SPEC
-    return videos_list_by_id(
-        youtube ,
-        part = METADATA_SPEC ,
-        id   = ytVideoID
-    )  
-
-def fetch_comment_threads_by_yt_ID( ytVideoID ): 
-    """ Fetch and return comment thread metadata that results from a YouTube API search for 'ytVideoID' """
-    global youtube , COMMENT_THREAD_SPEC
-    return comment_threads_list_by_video_id(
-        youtube ,
-        part       = COMMENT_THREAD_SPEC ,
-        videoId    = ytVideoID ,
-        textFormat = "plainText",
-        maxResults = 100       
-    )
-
-def fetch_comments_by_thread_id( ytThreadID ):
-    """ Fetch and return thread comments that results from a YouTube API search for 'ytThreadID' """
-    global youtube , COMMENT_LIST_SPEC
-    return comment_thread_by_thread_id(
-        youtube ,
-        part       = COMMENT_LIST_SPEC ,
-        parentId   = ytThreadID ,
-        textFormat = "plainText"
-    )
-
 def load_session( sessionPath ):
     """ Read session file and populate session vars """
-    global RAW_FILE_DIR , CHOPPED_SONG_DIR , PICKLE_DIR , ACTIVE_PICKLE_PATH , LOG_DIR , ACTIVE_SESSION , ARTIST_PICKLE_PATH
-    sesnDict = comma_sep_key_val_from_file( sessionPath );              print "Loaded session file:" , sessionPath
-    RAW_FILE_DIR       = sesnDict['RAW_FILE_DIR'];                      print "RAW_FILE_DIR:" , RAW_FILE_DIR
-    CHOPPED_SONG_DIR   = sesnDict['CHOPPED_SONG_DIR'];                  print "CHOPPED_SONG_DIR:" , CHOPPED_SONG_DIR
-    PICKLE_DIR         = sesnDict['PICKLE_DIR'];                        print "PICKLE_DIR:" , PICKLE_DIR 
-    ACTIVE_PICKLE_PATH = sesnDict['ACTIVE_PICKLE_PATH'];                print "ACTIVE_PICKLE_PATH:" , ACTIVE_PICKLE_PATH
-    LOG_DIR            = sesnDict['LOG_DIR'];                           print "LOG_DIR" , LOG_DIR
-    ACTIVE_SESSION     = bool( int( sesnDict['ACTIVE_SESSION'] ) );     print "ACTIVE_SESSION:" , yesno( ACTIVE_SESSION )
-    ARTIST_PICKLE_PATH = sesnDict['ARTIST_PICKLE_PATH'];                print "ARTIST_PICKLE_PATH:" , ARTIST_PICKLE_PATH
-    return sesnDict
+    session = Session()
+    sesnDict = comma_sep_key_val_from_file( sessionPath );          print "Loaded session file:" , sessionPath
+    session.RAW_FILE_DIR       = sesnDict['RAW_FILE_DIR'];          print "RAW_FILE_DIR:" , session.RAW_FILE_DIR
+    session.CHOPPED_SONG_DIR   = sesnDict['CHOPPED_SONG_DIR'];      print "CHOPPED_SONG_DIR:" , session.CHOPPED_SONG_DIR
+    session.PICKLE_DIR         = sesnDict['PICKLE_DIR'];            print "PICKLE_DIR:" , session.PICKLE_DIR 
+    session.ACTIVE_PICKLE_PATH = sesnDict['ACTIVE_PICKLE_PATH'];    print "ACTIVE_PICKLE_PATH:" , session.ACTIVE_PICKLE_PATH
+    session.LOG_DIR            = sesnDict['LOG_DIR'];               print "LOG_DIR" , session.LOG_DIR
+    session.ACTIVE_SESSION     = sesnDict['ACTIVE_SESSION'];        print "ACTIVE_SESSION:" , yesno( session.ACTIVE_SESSION )
+    session.ARTIST_PICKLE_PATH = sesnDict['ARTIST_PICKLE_PATH'];    print "ARTIST_PICKLE_PATH:" , session.ARTIST_PICKLE_PATH
+    return session
+
+def open_all_APIs( sssn ):
+    """ Open an API connection for {Google , GraceNote} """
+    # NOTE: 'load_session' must be run first
+    try:
+        # 2. Init Google API connection
+        sssn.authDict = comma_sep_key_val_from_file( sssn.GOOG_KEY_PATH ) # "APIKEY.txt"
+        sssn.DEVELOPER_KEY = sssn.authDict['key']
+        #print( authDict )
+        youtube = build( sssn.YOUTUBE_API_SERVICE_NAME , 
+                         sssn.YOUTUBE_API_VERSION , 
+                         developerKey = sssn.DEVELOPER_KEY )
+        # 3. Init GraceNote API Connection
+        sssn.gnKey = comma_sep_key_val_from_file( sssn.GRNT_KEY_PATH ) # "GNWKEY.txt"
+        sssn.gnClient = sssn.gnKey[ 'clientID' ] #_ Enter your Client ID here '*******-************************'
+        sssn.gnUser   = register( sssn.gnClient ) # Registration should not be done more than once per session      
+        
+        print "API Connection SUCCESS!"
+        
+    except Exception as ex:
+        print "API Connection FAILURE!" , str( ex )
+
+def default_session():
+    """ Set the session vars to reasonable values """
+    session = Session()
+    session.RAW_FILE_DIR       = "output";                           print "RAW_FILE_DIR:" , cRAW_FILE_DIR
+    session.CHOPPED_SONG_DIR   = session.RAW_FILE_DIR + "/chopped";  print "CHOPPED_SONG_DIR:" , session.CHOPPED_SONG_DIR
+    session.PICKLE_DIR         = session.RAW_FILE_DIR;               print "PICKLE_DIR:" , session.PICKLE_DIR 
+    session.ACTIVE_PICKLE_PATH = "output/session.pkl";               print "ACTIVE_PICKLE_PATH:" , session.ACTIVE_PICKLE_PATH
+    session.LOG_DIR            = "logs";                             print "LOG_DIR" , session.LOG_DIR
+    session.ACTIVE_SESSION     = bool( int( 1 ) );                   print "ACTIVE_SESSION:" , yesno( session.ACTIVE_SESSION )
+    session.ARTIST_PICKLE_PATH = "output/artists.pkl";               print "ARTIST_PICKLE_PATH:" , session.ARTIST_PICKLE_PATH
+    return session    
     
-def save_session( sessionPath , sesnDict ):
+def save_session( session ):
     """ Write session vars to the session file """
     # 1. If a file exists at this path, erase it
-    if os.path.isfile( sessionPath ):
-        print "Session" , sessionPath , "was overwritten!"
-        os.remove( sessionPath )
+    if os.path.isfile( session.SESSION_PATH ):
+        print "Session" , session.SESSION_PATH , "was overwritten!"
+        os.remove( session.SESSION_PATH )
     # 2. Write each line
-    f = open( sessionPath , "w+" )
-    f.write( 'RAW_FILE_DIR'       + ',' + str( sesnDict['RAW_FILE_DIR'] )          + '\n' )
-    f.write( 'CHOPPED_SONG_DIR'   + ',' + str( sesnDict['CHOPPED_SONG_DIR'] )      + '\n' )
-    f.write( 'PICKLE_DIR'         + ',' + str( sesnDict['PICKLE_DIR'] )            + '\n' )
-    f.write( 'ACTIVE_PICKLE_PATH' + ',' + str( sesnDict['ACTIVE_PICKLE_PATH'] )    + '\n' )
-    f.write( 'LOG_DIR'            + ',' + str( sesnDict['LOG_DIR'] )               + '\n' )
-    f.write( 'ACTIVE_SESSION'     + ',' + str( int( sesnDict['ACTIVE_SESSION'] ) ) + '\n' )
-    f.write( 'ARTIST_PICKLE_PATH' + ',' + str( sesnDict['ARTIST_PICKLE_PATH'] )    + '\n' )
+    f = open( session.SESSION_PATH , "w+" )
+    f.write( 'RAW_FILE_DIR'       + ',' + str( session.RAW_FILE_DIR )        + '\n' )
+    f.write( 'CHOPPED_SONG_DIR'   + ',' + str( session.CHOPPED_SONG_DIR )    + '\n' )
+    f.write( 'PICKLE_DIR'         + ',' + str( session.PICKLE_DIR )          + '\n' )
+    f.write( 'ACTIVE_PICKLE_PATH' + ',' + str( session.ACTIVE_PICKLE_PATH )  + '\n' )
+    f.write( 'LOG_DIR'            + ',' + str( session.LOG_DIR )             + '\n' )
+    f.write( 'ACTIVE_SESSION'     + ',' + str( session.ACTIVE_SESSION )      + '\n' )
+    f.write( 'ARTIST_PICKLE_PATH' + ',' + str( session.ARTIST_PICKLE_PATH )  + '\n' )
+    print "Session saved to" , session.SESSION_PATH
   
-def verify_session_writable( sesnDict ):
+def verify_session_writable( sssn ):
     """ Make sure that we can write to the relevant directories """
     allWrite = validate_dirs_writable(  
-        os.path.join( SOURCEDIR , sesnDict['RAW_FILE_DIR'] )     ,
-        os.path.join( SOURCEDIR , sesnDict['CHOPPED_SONG_DIR'] ) ,
-        os.path.join( SOURCEDIR , sesnDict['PICKLE_DIR'] )       ,
-        os.path.join( SOURCEDIR , sesnDict['LOG_DIR'] )          ,
+        os.path.join( SOURCEDIR , sssn.RAW_FILE_DIR )     ,
+        os.path.join( SOURCEDIR , sssn.CHOPPED_SONG_DIR ) ,
+        os.path.join( SOURCEDIR , sssn.PICKLE_DIR )       ,
+        os.path.join( SOURCEDIR , sssn.LOG_DIR )          ,
     )
     print "Session dirs writable:" , yesno( allWrite )
     return allWrite
 
-def get_EXT( fName ):
-    """ Return the capitalized file extension at the end of a path without the period """
-    return os.path.splitext( fName )[-1][1:].upper()
 
-def list_all_files_w_EXT( searchPath , EXTlst ):
-    """ Return all of the paths in 'searchPath' that have extensions that appear in 'EXTlst' , Extensions are not case sensitive """
-    items = os.listdir( searchPath )
-    rtnLst = []
-    for item in items:
-        fEXT = get_EXT( item )
-        if fEXT in EXTlst:
-            rtnLst.append( item )
-    return rtnLst
 
 
 # ===== STAGE 1 ============================================================================================================================
 
+# == Stage 1 Vars ==
+
+
+
+# __ End Vars __
+
 def set_session_active( active = 1 ):
     """ Set the session active flag """
-    global ACTIVE_SESSION
+    global ACTIVE_SESSION , SESSION_PATH
     ACTIVE_SESSION = bool( active )
     
-def begin_session():
+def begin_session( inputPath ):
     """ Set all vars that we will need to run a session """
-    global LOG , METADATA , ARTISTS
-    LOG = LogMH()
-    dlTimer = Stopwatch()    
-    session = load_session( SESSION_PATH )
+    # 2. Instantiate a timer
+    dlTimer = Stopwatch()   
+    # 3. Construct session path
+    SESSION_PATH = strip_EXT( inputPath ) + "_session.txt"
+    # 4. Load session  &&  Activate
+    try:
+        session = load_session( SESSION_PATH )
+    except IOError:
+        touch( SESSION_PATH )
+        session = default_session()
+    session.SESSION_PATH = SESSION_PATH
     set_session_active( True )
-    # Unpickle session metadata
-    METADATA = unpickle_dict( ACTIVE_PICKLE_PATH ) 
-    if METADATA:
-        LOG.prnt( "Found cached metadata at" , ACTIVE_PICKLE_PATH , "with" , len( METADATA ) , "entries" )
+    # 4. Construct pickle path
+    session.ACTIVE_PICKLE_PATH = session.RAW_FILE_DIR + '/' + strip_EXT( str( os.path.split( inputPath )[-1] ) ) + "_metadata.pkl"
+    # 5. Unpickle session metadata
+    session.METADATA = unpickle_dict( session.ACTIVE_PICKLE_PATH ) 
+    if session.METADATA:
+        session.LOG.prnt( "Found cached metadata at" , session.ACTIVE_PICKLE_PATH , "with" , len( session.METADATA ) , "entries" )
     else:
-        LOG.prnt( "NO cached metadata at" , ACTIVE_PICKLE_PATH )
+        session.LOG.prnt( "NO cached metadata at" , session.ACTIVE_PICKLE_PATH )
     # Unpickle artist set
-    ARTISTS = unpickle_dict( ARTIST_PICKLE_PATH ) 
-    if ARTISTS:
-        LOG.prnt( "Found cached artist set at" , ARTIST_PICKLE_PATH , "with" , len( ARTISTS ) , "entries" )
+    session.ARTISTS = unpickle_dict( session.ARTIST_PICKLE_PATH ) 
+    if session.ARTISTS:
+        session.LOG.prnt( "Found cached artist set at" , session.ARTIST_PICKLE_PATH , "with" , len( session.ARTISTS ) , "entries" )
     else:
-        LOG.prnt( "NO cached artist set at" , ARTIST_PICKLE_PATH )
+        session.LOG.prnt( "NO cached artist set at" , session.ARTIST_PICKLE_PATH )
     #  1.1. Activate session
-    ACTIVE_SESSION = True
+    session.ACTIVE_SESSION = True
     #  2. Check Write locations
     dirsWritable = verify_session_writable( session )
     return session , dirsWritable , dlTimer
     
-def close_session( session ):
+def close_session( sssn ):
     """ Cache data and write logs """
     # 23. Pickle all data
-    struct_to_pkl( METADATA , ACTIVE_PICKLE_PATH )
-    struct_to_pkl( ARTISTS  , ARTIST_PICKLE_PATH )
+    struct_to_pkl( sssn.METADATA , sssn.ACTIVE_PICKLE_PATH )
+    struct_to_pkl( sssn.ARTISTS  , sssn.ARTIST_PICKLE_PATH )
     # 24. Save session && output log data
-    save_session( SESSION_PATH , session )
-    LOG.out_and_clear( os.path.join( LOG_DIR , "YouTube-Music-Log_" + nowTimeStampFine() + ".txt" ) )     
+    save_session( sssn )
+    sssn.LOG.out_and_clear( os.path.join( sssn.LOG_DIR , "YouTube-Music-Log_" + nowTimeStampFine() + ".txt" ) )     
     
 def Stage_1_Download_w_Data( inputFile ,
-                            minDelay_s = 20 , maxDelay_s = 180 ):
+                             minDelay_s = 20 , maxDelay_s = 180 ):
     """ Check environment for download , Fetch files and metadata , Save files and metadata """
     # NOTE: You may have to run this function several times, especially for long lists of URLs
-    global LOG , METADATA
     doSleep = False # ffmpeg conversion seems to be a sufficient wait time, especially for large files 
     # DEBUG
     dbugLim = False
     limit = 1
     count = 0
-    #  0. Indicate file
-    LOG.prnt( "Processing" , inputFile , "..." )
-    #  1. Load session
-    session , dirsWritable , dlTimer = begin_session()
-    numEntry = len( METADATA )
+    #  0. Load session
+    session , dirsWritable , dlTimer = begin_session( inputFile )
+    open_all_APIs( session )
+    #  1. Indicate file
+    session.LOG.prnt( "Processing" , inputFile , "..." )
+    #  2. How much metadat?   
+    numEntry = len( session.METADATA )
+    session.LOG.prnt( "Current metadata has" , numEntry , "entries." )
+    #  3. Determine if dirs writable
     if not dirsWritable:
+        session.LOG.prnt( "ERROR: Program does NOT have permission to modify the indicated directories!" )
         return False
+    else:
+        session.LOG.prnt( "Program has appropriate directory permissions." )
     #  3. Process input file
-    entries = process_video_list( "input/url_sources.txt" )
-    LOG.prnt( "Read input file with" , len( entries ) , "entries" )
-    inCount = len( entries )
-    #  4. Init downloaded
-    ydl = youtube_dl.YoutubeDL( YDL_OPTS )
-    #  5. For each entry
-    LOG.prnt( "## Media Files ##" )
-    for enDex , entry in enumerate( entries ):
-        #  6. If the debug file limit exceeded, exit loop
-        if dbugLim and ( not count < limit ):
-            break        
-        LOG.prnt( '#\n# Entry' , enDex+1 , 'of' , inCount , '#' )
-        enID = entry['id']
-        #  7. URL
-        enURL = entry['url']        
-        cacheMod = False        
-        try:
-            #  8. Attempt to fetch cached data for this entry
-            if( enID in METADATA ):
-                LOG.prnt( "Found cached data for" , enID )
-                enCache = METADATA[ enID ]
-            else:
-                enCache = None
-                cacheMod = True
-            #  9. Create Dir
-            enRawDir = os.path.join( RAW_FILE_DIR , enID )
-            if not os.path.isdir( enRawDir ):
-                try:  
-                    os.mkdir( enRawDir )
-                except OSError:  
-                    LOG.prnt(  "Creation of the directory %s failed" % enRawDir )
-                else:  
-                    LOG.prnt(  "Successfully created the directory %s " % enRawDir )            
-            # 10. Download Raw MP3 File
-            # 11. If this file does not have an entry, the raw file exists, and the file is ok, then download
-            if not ( enCache and enCache['fSuccess'] ):
-                cacheMod = True
-                LOG.prnt( "No file from" , entry['url'] , ", dowloading ..." )
-                dlTimer.start()
-                ydl.download( [ entry['url'] ] )  # This function MUST be passed a list!
-                enElapsed = dlTimer.elapsed()
-                LOG.prnt( "Downloading and Processing:" , enElapsed , "seconds" )
-                # 12. Locate and move the raw file
-                fNames = list_all_files_w_EXT( SOURCEDIR , [ 'MP3' ] )
-                if len( fNames ) > 0:
-                    # Assume that the first item is the newly-arrived file
-                    fSaved = fNames[0]
-                    # 13. Raw File End Destination
-                    enDest = os.path.join( enRawDir , fSaved )
-                    enCpSuccess = False # I. File Success
-                    try:
-                        shutil.move( fSaved , enDest )
-                        enCpSuccess = True
-                        LOG.prnt( "Move success!:" , fSaved , "--to->" , enDest )
-                    except Exception:
-                        enCpSuccess = False
-                else:
-                    LOG.prnt( "No downloaded MP3s detected!" )
-                    enDest = None
-                    enCpSuccess = False            
-            # 14. else skip download
-            else:
-                LOG.prnt( "Raw file from" , entry['url'] , "was previously cached at" , enCache['Timestamp'] )
-                enDest      = None
-                enCpSuccess = True
-                enElapsed   = None
-            # 15. Fetch Description Data
-            if not ( enCache and enCache['Metadata'] ):
-                cacheMod = True
-                enMeta = fetch_metadata_by_yt_video_ID( entry['id'] )
-            else:
-                enMeta = enCache['Metadata']
-            # 16. Verify that the downloaded file is as long as the original video
-            enDur = parse_ISO8601_timestamp( extract_video_duration( enMeta ) ) 
-            print "Duration:" , enDur
-            # 17. Fetch Comment Data
-            if not ( enCache and enCache['Threads'] ):
-                cacheMod = True
-                enComment = fetch_comment_threads_by_yt_ID( entry['id'] )
-            else:
-                enComment = enCache['Threads']
-            # 18. Get time and date for this file
-            enTime = nowTimeStampFine()
-            LOG.prnt( "Recorded Time:" , enTime )
-            # 19. Add file data to a dictionary
-            METADATA[ enID ] = {
-                'ID' :        enID ,
-                'RawPath' :   enDest if enDest else enCache['RawPath'] ,
-                'fSuccess' :  enCpSuccess ,
-                'ProcTime' :  enElapsed if enElapsed else enCache['ProcTime'] ,
-                'URL' :       enURL ,
-                'Metadata' :  enMeta ,
-                'Threads' :   enComment ,
-                'Timestamp' : enTime if cacheMod else enCache['Timestamp'] , 
-                'Duration' :  enDur
-            }
-            # 20. Sleep (if requested)
-            if doSleep:
-                sleepDur = randrange( minDelay_s , maxDelay_s+1 )
-                LOG.prnt( "Sleeping for" , sleepDur , "seconds" )
-                sleep( sleepDur )
-            # 21. Increment counter
-            count += 1
-            LOG.prnt( "# ~~~~~" )   
-        # Need to catch errors here so that the data from the already processed files in not lost
-        except Exception as err:
-            # 22. Add file data to a dictionary
-            METADATA[ enID ] = {
-                'ID' :        enID ,
-                'RawPath' :   None ,
-                'fSuccess' :  False ,
-                'ProcTime' :  None ,
-                'URL' :       enURL ,
-                'Metadata' :  None ,
-                'Threads' :   None ,
-                'Timestamp' : nowTimeStampFine() , 
-                'Duration' :  timestamp_dict( 0,0,0 )
-            }            
-            LOG.prnt( "ERROR: There was an error processing the item _ " , enID , "\n" , err )
+    lstMeta = init_metadata_from_list( inputFile )
+    inCount = len( lstMeta )
+    session.LOG.prnt( "Read input file with" , inCount , "entries" )
+    
+    
+    # FIXME: dict_A_add_B_new_only( dctA , dctB )
+    
+    ##  4. Init downloaded
+    #ydl = youtube_dl.YoutubeDL( YDL_OPTS )
+    ##  5. For each entry
+    #LOG.prnt( "## Media Files ##" )
+    #for enDex , entry in enumerate( entries ):
+        ##  6. If the debug file limit exceeded, exit loop
+        #if dbugLim and ( not count < limit ):
+            #break        
+        #LOG.prnt( '#\n# Entry' , enDex+1 , 'of' , inCount , '#' )
+        #enID = entry['id']
+        ##  7. URL
+        #enURL = entry['url']        
+        #cacheMod = False        
+        #try:
+            ##  8. Attempt to fetch cached data for this entry
+            #if( enID in METADATA ):
+                #LOG.prnt( "Found cached data for" , enID )
+                #enCache = METADATA[ enID ]
+            #else:
+                #enCache = None
+                #cacheMod = True
+            ##  9. Create Dir
+            #enRawDir = os.path.join( RAW_FILE_DIR , enID )
+            #if not os.path.isdir( enRawDir ):
+                #try:  
+                    #os.mkdir( enRawDir )
+                #except OSError:  
+                    #LOG.prnt(  "Creation of the directory %s failed" % enRawDir )
+                #else:  
+                    #LOG.prnt(  "Successfully created the directory %s " % enRawDir )            
+            ## 10. Download Raw MP3 File
+            ## 11. If this file does not have an entry, the raw file exists, and the file is ok, then download
+            #if not ( enCache and enCache['fSuccess'] ):
+                #cacheMod = True
+                #LOG.prnt( "No file from" , entry['url'] , ", dowloading ..." )
+                #dlTimer.start()
+                #ydl.download( [ entry['url'] ] )  # This function MUST be passed a list!
+                #enElapsed = dlTimer.elapsed()
+                #LOG.prnt( "Downloading and Processing:" , enElapsed , "seconds" )
+                ## 12. Locate and move the raw file
+                #fNames = list_all_files_w_EXT( SOURCEDIR , [ 'MP3' ] )
+                #if len( fNames ) > 0:
+                    ## Assume that the first item is the newly-arrived file
+                    #fSaved = fNames[0]
+                    ## 13. Raw File End Destination
+                    #enDest = os.path.join( enRawDir , fSaved )
+                    #enCpSuccess = False # I. File Success
+                    #try:
+                        #shutil.move( fSaved , enDest )
+                        #enCpSuccess = True
+                        #LOG.prnt( "Move success!:" , fSaved , "--to->" , enDest )
+                    #except Exception:
+                        #enCpSuccess = False
+                #else:
+                    #LOG.prnt( "No downloaded MP3s detected!" )
+                    #enDest = None
+                    #enCpSuccess = False            
+            ## 14. else skip download
+            #else:
+                #LOG.prnt( "Raw file from" , entry['url'] , "was previously cached at" , enCache['Timestamp'] )
+                #enDest      = None
+                #enCpSuccess = True
+                #enElapsed   = None
+            ## 15. Fetch Description Data
+            #if not ( enCache and enCache['Metadata'] ):
+                #cacheMod = True
+                #enMeta = fetch_metadata_by_yt_video_ID( entry['id'] )
+            #else:
+                #enMeta = enCache['Metadata']
+            ## 16. Verify that the downloaded file is as long as the original video
+            #enDur = parse_ISO8601_timestamp( extract_video_duration( enMeta ) ) 
+            #print "Duration:" , enDur
+            ## 17. Fetch Comment Data
+            #if not ( enCache and enCache['Threads'] ):
+                #cacheMod = True
+                #enComment = fetch_comment_threads_by_yt_ID( entry['id'] )
+            #else:
+                #enComment = enCache['Threads']
+            ## 18. Get time and date for this file
+            #enTime = nowTimeStampFine()
+            #LOG.prnt( "Recorded Time:" , enTime )
+            ## 19. Add file data to a dictionary
+            #METADATA[ enID ] = {
+                #'ID' :        enID ,
+                #'RawPath' :   enDest if enDest else enCache['RawPath'] ,
+                #'fSuccess' :  enCpSuccess ,
+                #'ProcTime' :  enElapsed if enElapsed else enCache['ProcTime'] ,
+                #'URL' :       enURL ,
+                #'Metadata' :  enMeta ,
+                #'Threads' :   enComment ,
+                #'Timestamp' : enTime if cacheMod else enCache['Timestamp'] , 
+                #'Duration' :  enDur
+            #}
+            ## 20. Sleep (if requested)
+            #if doSleep:
+                #sleepDur = randrange( minDelay_s , maxDelay_s+1 )
+                #LOG.prnt( "Sleeping for" , sleepDur , "seconds" )
+                #sleep( sleepDur )
+            ## 21. Increment counter
+            #count += 1
+            #LOG.prnt( "# ~~~~~" )   
+        ## Need to catch errors here so that the data from the already processed files in not lost
+        #except Exception as err:
+            ## 22. Add file data to a dictionary
+            #METADATA[ enID ] = {
+                #'ID' :        enID ,
+                #'RawPath' :   None ,
+                #'fSuccess' :  False ,
+                #'ProcTime' :  None ,
+                #'URL' :       enURL ,
+                #'Metadata' :  None ,
+                #'Threads' :   None ,
+                #'Timestamp' : nowTimeStampFine() , 
+                #'Duration' :  timestamp_dict( 0,0,0 )
+            #}            
+            #LOG.prnt( "ERROR: There was an error processing the item _ " , enID , "\n" , err )
+            
     # Pickle data and write files
     close_session( session )
 
@@ -977,196 +534,7 @@ def Stage_1_Download_w_Data( inputFile ,
 
 ARTIST_SET = set([])
 
-def comments_from_thread_cache( cmntThreads ):
-    """ Fetch the best comment text from the item cache , and cache the comments in each item """
-    commentList = []
-    for item in cmntThreads['items']:
-        textDisplay  = item['snippet']['topLevelComment']['snippet']['textDisplay']
-        textOriginal = item['snippet']['topLevelComment']['snippet']['textOriginal']
-        if len( textOriginal ) > len( textDisplay ):
-            commentList.append( textOriginal )
-        else:
-            commentList.append( textDisplay )
-    return commentList
 
-def scrape_and_check_timestamps_cmnts( reponseObj , cmntThreads ):
-    """ Look for timestamps in the comments """
-    # 1. Get list of comments
-    cmntList  = comments_from_thread_cache( cmntThreads )
-    duration  = duration_from_yt_response( reponseObj )
-    longest   = 0
-    rtnStamps = []
-    for comment in cmntList:
-        cmntLines = comment.splitlines()
-        stamps = get_timestamps_from_lines( cmntLines , duration )      
-        if len( stamps ) > longest:
-            rtnStamps = stamps
-    return rtnStamps
-
-def timestamps_from_cached_item( itemCacheDict ):
-    """ Recover timestamps from either the description or the comments """
-    wasInDesc = False
-    wasInCmnt = False
-    enMeta    = itemCacheDict['Metadata']
-    enThreads = itemCacheDict['Threads']
-    # 1. Attempt to scrape from the description
-    descStamps = scrape_and_check_timestamps_desc( enMeta )
-    # 2. Attempt to scrape from the comments
-    cmntStamps = scrape_and_check_timestamps_cmnts( enMeta , enThreads )
-    # 3. Choose the list of comments with the most entries
-    if len( descStamps ) > len( cmntStamps ):
-        return descStamps
-    else:
-        return cmntStamps
-    
-def repopulate_comments( cacheDict ):
-    """ Fetch comments for each of the cached items , Replacing old """
-    for enID , enCache in cacheDict.iteritems():
-        enComment = fetch_comment_threads_by_yt_ID( enID )
-        enCache['Threads'] = enComment
-        
-def repopulate_duration( cacheDict ):
-    """ Fetch duration for each of the cached items , Adding a new category """
-    for enID , enCache in cacheDict.iteritems():
-        enCache['Duration'] = parse_ISO8601_timestamp( extract_video_duration( enCache['Metadata'] ) )
-
-def get_video_title( ytCacheItem ):
-    """ Get the video title from the cached data item """
-    return ytCacheItem['items'][0]['snippet']['title']
-
-def levenshteinDistance( str1 , str2 ):
-    """ Compute the edit distance between strings , Return:
-        'ldist': Number of edits between the strings 
-        'ratio': Number of edits over the sum of the lengths of 'str1' and 'str2' """
-    # URL , Levenshtein Distance: https://rosettacode.org/wiki/Levenshtein_distance#Python
-    m = len( str1 )
-    n = len( str2 )
-    lensum = float( m + n )
-    d = []           
-    for i in range( m + 1 ):
-        d.append( [i] )        
-    del d[0][0]    
-    for j in range( n + 1 ):
-        d[0].append(j)       
-    for j in range( 1 , n+1 ):
-        for i in range( 1 , m+1 ):
-            if str1[ i-1 ] == str2[ j-1 ]:
-                d[i].insert( j , d[ i-1 ][ j-1 ] )           
-            else:
-                minimum = min( d[ i-1 ][ j ] + 1   , 
-                               d[ i ][ j-1 ] + 1   , 
-                               d[ i-1 ][ j-1 ] + 2 )
-                d[i].insert( j , minimum )
-    ldist = d[-1][-1] 
-    ratio = ( lensum - ldist ) / lensum
-    return { 'distance' : ldist , 'ratio' : ratio }
-
-def similarity_to_artists( candidateArtist , mxRtn = 10 ):
-    """ Return a list of increasing distance up to 'mxRtn' """
-    limRtn = False
-    if mxRtn:
-        limRtn = True
-    pQ = PriorityQueue()
-    if len( ARTISTS ):
-        for artist in ARTISTS:
-            pQ.push( artist , levenshteinDistance( artist , candidateArtist )['distance'] , hashable = artist )
-        itms , vals = pQ.unspool()
-        if len( itms ) > mxRtn:
-            return itms[:mxRtn]
-        else:
-            return itms
-    else:
-        return []
-
-def make_proper_track_meta( artistName , trackName , trackNum , stampBgnISO , stampEndISO , albumName ):
-    """ Return a standardized dictionary with enough info to chop the song from the raw file """
-    return {
-        'artist' :  artistName , 
-        'title' :   trackName ,
-        'track' :   trackNum ,
-        'timeBgn' : stampBgnISO ,
-        'timeEnd' : stampEndISO , 
-        'album' :   albumName
-    }
-
-_MENUTRACKLONG = \
-"""~ Options ~
-1. Choose from candidates
-2. Search known artists
-3. Manual Title
-4. Manual Track"""
-
-def resolve_track_long( trackData , trkDex ):
-    """ Propmt user for resolution on this track """
-    # NOTE: This function assumes multi-track data has been extracted
-    
-    def run_menu( cmpnnts , cnddts ):
-        """ Handle user input for long video resolution """
-        runMenu = True
-        while runMenu:
-            print _MENUTRACKLONG
-            usrChoice = int( raw_input( "Select Option and Press [Enter]:" ) )
-            if usrChoice == 1:
-                for canDex , candidate in enumerate( cnddts ):
-                    print candidate
-                    # FIXME : CODE CHOICE
-            elif usrChoice == 2:
-                pass # FIXME : CODE CHOICE
-            elif usrChoice == 3:
-                pass # FIXME : CODE CHOICE
-            elif usrChoice == 4:
-                pass # FIXME : CODE CHOICE
-            else:
-                print usrChoice , "is not a valid option!"
-                runMenu = True
-    
-    print trackData
-    components = extract_candidate_artist_and_track( trackData[ trkDex ]['balance'] )
-    candidates = GN_most_likely_artist_and_track( gnClient , gnUser , components ) 
-    print "Balance:" , trackData[ trkDex ]['balance']
-    for canDex , candidate in enumerate( candidates ):
-        print candidate
-        #raw_input( "Press [Enter]" )
-        
-        # FIXME: START HERE
-        
-        # ~ Options ~
-        # 1. Choose from candidates
-        # 2. Search known artists
-        # 3. Manual Title
-        # 4. Manual Track
-        
-        
-    # QUIT
-    exit()
-
-def track_time_bounds( enCache , tracklist ):
-    """ Define a beginning and ending time for each track, in-place, given the beginning of each track and the ending time of the video """
-    numTrax = len( tracklist )
-    mostDex = numTrax - 1
-    for trkDex , track in enumercate( tracklist ):
-        if trkDex < mostDex:
-            pass # FIXME : CODE CASE
-        else:
-            pass # FIXME : CODE CASE
-    
-
-def process_entry_tracklist( enCache , tracklist ):
-    """ Ask the user for help with assigning song and artist to the track , The result can be used to chop the raw file """
-    # NOTE: This function assumes that the tracklist has at least one antry
-    # NOTE: The output of this function must be usable for chopping
-    enID     = enCache['ID']
-    enTracks = enCache['Timestamp']
-    approvedTracks = []
-    print "Processing tracklist for" , enID , "..."
-    # 1. How many tracks did the initial pass find?
-    print "Cached tracklist has" , len( enTracks ) , "items."
-    # 2. For each track in the list
-    for trkDex , track in enumerate( tracklist ):
-        trackDict = resolve_track_long( tracklist , trkDex )
-        approvedTracks.append( trackDict )
-    # 3. Return approved tracklist
-    return approvedTracks
 
 def Stage_2_Separate_and_Tag():
     """ Process each of the downloaded raw files: 1. Separate into songs , 2. Apply appropriate ID3 tags , 3. Save """
@@ -1195,7 +563,7 @@ def Stage_2_Separate_and_Tag():
         return False
     # 4. For every cached entry
     shortCount = 0
-    LOG.prnt( "~~~" )
+    session.LOG.prnt( "~~~" )
     for enID , enCache in METADATA.iteritems():
         if not dbSuppressLog: LOG.prnt( "Processing" , enID , "..." )
         enMeta  = enCache['Metadata']
@@ -1245,9 +613,9 @@ def Stage_2_Separate_and_Tag():
             LOG.prnt( "Raw file from" , enCache['URL'] , ", Retrieval failed!" )
         if not dbSuppressLog: LOG.prnt( "~~~" )
     # I. Write log file
-    LOG.prnt( "Found stamps for" , stampCount , "of" , numEntry , "cached items" )
-    LOG.prnt( "Of video without stamps:" , shortCount , "were short" )
-    LOG.prnt( numEntry - ( stampCount + shortCount ) , "possibly without song data!" , 
+    session.LOG.prnt( "Found stamps for" , stampCount , "of" , numEntry , "cached items" )
+    session.LOG.prnt( "Of video without stamps:" , shortCount , "were short" )
+    session.LOG.prnt( numEntry - ( stampCount + shortCount ) , "possibly without song data!" , 
               ( numEntry - ( stampCount + shortCount ) ) / numEntry * 100.0 , "%" )
     # I. Pickle with new metadata
     # I. Write session vars
@@ -1263,7 +631,7 @@ if __name__ == "__main__":
     termArgs = sys.argv[1:] # Terminal arguments , if they exist
     
     # 1. Open API connections ()
-    if 1:
+    if 0:
         open_all_APIs( GOOG_KEY_PATH , GRNT_KEY_PATH )
         
     # ~~~ Stage 0: Testing ~~~
@@ -1286,12 +654,12 @@ if __name__ == "__main__":
                 struct_to_pkl( METADATA , ACTIVE_PICKLE_PATH )
     
     # ~~~ Stage 1: Downloading ~~~
-    if 0:
-        Stage_1_Download_w_Data( "input/url_sources.txt" ,
-                                minDelay_s = 30 , maxDelay_s = 60 )
+    if 1:
+        Stage_1_Download_w_Data( "input/url_src_02.txt" ,
+                                 minDelay_s = 30 , maxDelay_s = 60 )
     
     # ~~~ Stage 2: Processing ~~~
-    if 1:
+    if 0:
         Stage_2_Separate_and_Tag()
     
 
