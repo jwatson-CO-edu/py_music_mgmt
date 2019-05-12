@@ -14,37 +14,6 @@ James Watson, 2019 February
 Retrieve audio from YouTube videos
 """
 
-# = youtube-dl Logging =
-
-class MyLogger( object ):
-    """ Logging class for YT downloads """
-    # https://github.com/rg3/youtube-dl/blob/master/README.md#embedding-youtube-dl
-    global LOG
-    
-    def __init__( self ):
-        """ Put ther noisier output in separate logs for easier debugging """
-        self.dbgLog = LogMH()
-        self.wrnLog = LogMH()
-        
-    def debug( self , msg ):
-        """ Log debug output """
-        self.dbgLog.prnt( "DEBUG:" , msg )
-        
-    def warning( self , msg ):
-        """ Log warnings """
-        self.wrnLog.prnt( "WARN:" , msg )
-        
-    def error( self , msg ):
-        """ Log erros in the main log """
-        LOG.prnt( "ERROR:" , msg )
-
-def my_hook( d ):
-    # https://github.com/rg3/youtube-dl/blob/master/README.md#embedding-youtube-dl
-    if d[ 'status' ] == 'finished':
-        print( 'Done downloading, now converting ...' )
-
-# _ End Logging _
-
 
 # = Program Functions =
 
@@ -93,15 +62,6 @@ def init_metadata_from_list( fPath ):
             'id'  :    datum['id']              , # Same as above
             'FL_URL' : len( datum['url'] ) > 11 # _ Flag for whether a URL was loaded 
         }
-    return rtnDict
-
-def comma_sep_key_val_from_file( fPath ):
-    """ Read a file, treating each line as a key-val pair separated by a comma """
-    entryFunc = lambda txtLine : [ str( rawToken ).strip() for rawToken in txtLine.split( ',' ) ]
-    lines = parse_lines( fPath , entryFunc )
-    rtnDict = {}
-    for line in lines:
-        rtnDict[ line[0] ] = line[1]
     return rtnDict
 
 def remove_empty_kwargs( **kwargs ):
@@ -502,9 +462,8 @@ def GN_most_likely_artist_and_track( GN_client , GN_user , components ):
         print "Score for this result:" , score12
     return rtnScores
 
-def fetch_metadata_by_yt_video_ID( ytVideoID ):
+def fetch_metadata_by_yt_video_ID( youtube , METADATA_SPEC , ytVideoID ):
     """ Fetch and return the response object that results from a YouTube API search for 'ytVideoID' """
-    global youtube , METADATA_SPEC
     return videos_list_by_id(
         youtube ,
         part = METADATA_SPEC ,
