@@ -4,9 +4,9 @@
 # ~~ Future First ~~
 from __future__ import division # Future imports must be called before everything else, including triple-quote docs!
 
-__progname__ = "PROGRAM_NAME.py"
-__version__  = "YYYY.MM" 
-__desc__     = "A_ONE_LINE_DESCRIPTION_OF_THE_FILE"
+__progname__ = "rename_for_zip.py"
+__version__  = "2019.05" 
+__desc__     = "Cannot zip files with weird names"
 """
 James Watson , Template Version: 2019-05-12
 Built on Wing 101 IDE for Python 2.7
@@ -32,9 +32,11 @@ def prepend_dir_to_path( pathName ): sys.path.insert( 0 , pathName ) # Might nee
 # ~~~ Imports ~~~
 # ~~ Standard ~~
 from math import pi , sqrt
+import shutil
 # ~~ Special ~~
 import numpy as np
 # ~~ Local ~~
+from file_org_ops import safe_dir_name , makedirs_exist_ok
 
 # ~~ Constants , Shortcuts , Aliases ~~
 EPSILON = 1e-7
@@ -51,32 +53,10 @@ def __prog_signature__(): return __progname__ + " , Version " + __version__ # Re
 # === Main Program =========================================================================================================================
 
 
-# === Program Classes ===
-
-
-
-# ___ End Class ___
-
-
-# === Program Functions ===
-
-
-
-
-
-# __ End Func __
-
-
-# == Program Classes ==
-
-
-
-# ___ End Class ___
-
-
 # === Program Vars ===
 
-
+_OUTDIR = "output"
+_INPDIR = "Dervish"
 
 # ___ End Vars ___
 
@@ -86,6 +66,26 @@ def __prog_signature__(): return __progname__ + " , Version " + __version__ # Re
 if __name__ == "__main__":
     print __prog_signature__()
     termArgs = sys.argv[1:] # Terminal arguments , if they exist
+    
+    # 0. Create the output dir , if it does not exist
+    makedirs_exist_ok( _OUTDIR )
+    
+    # 1. For each file
+    for root , dirs , files in os.walk( _INPDIR , topdown = False ):
+        print "In dir" , root
+        for name in files:
+            # 2. Get the filename
+            inpPath = os.path.join( root , name )
+            print inpPath
+            # 3. Get the fixed filename
+            outName = safe_dir_name( name , defaultChar = '_' )
+            outPath = os.path.join( _OUTDIR , outName )
+            opStr   = str( inpPath ) + " --> " + str( outPath )
+            try:
+                shutil.move( inpPath , outPath )
+                print "PASS:" , opStr
+            except:
+                print "FAIL:" , opStr
     
 # ___ End Main ___
 
