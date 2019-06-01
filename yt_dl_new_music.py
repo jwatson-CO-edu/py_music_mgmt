@@ -157,9 +157,13 @@ from pygn.pygn import register , search
 print "Loaded 'pygn'! (GraceNote)"
 # ~~ Local ~~
 prepend_dir_to_path( SOURCEDIR )
-from marchhare.marchhare import ( parse_lines , ascii , sep , is_nonempty_list , pretty_print_dict , unpickle_dict , yesno ,
-                                  validate_dirs_writable , LogMH , Stopwatch , nowTimeStampFine , struct_to_pkl , strip_EXT , touch , )
+from marchhare.marchhare import ( parse_lines , ascii , sep , is_nonempty_list , 
+								  pretty_print_dict , unpickle_dict , yesno ,
+                                  validate_dirs_writable , LogMH , Stopwatch , nowTimeStampFine ,
+ 								  struct_to_pkl , strip_EXT , touch , dict_A_add_B_new_only , 
+                                  )
 from retrieve_yt import *
+from API_session import *
 
 # ~~ Constants , Shortcuts , Aliases ~~
 EPSILON = 1e-7
@@ -167,7 +171,8 @@ infty   = 1e309 # URL: http://stackoverflow.com/questions/1628026/python-infinit
 endl    = os.linesep
 
 # ~~ Script Signature ~~
-def __prog_signature__(): return __progname__ + " , Version " + __version__ # Return a string representing program name and verions
+# Return a string representing program name and verions
+def __prog_signature__(): return __progname__ + " , Version " + __version__ 
 
 # ___ End Init _____________________________________________________________________________________________________________________________
 
@@ -195,7 +200,8 @@ def Stage_1_Download_w_Data( inputFile ,
                              minDelay_s = 20 , maxDelay_s = 180 ):
     """ Check environment for download , Fetch files and metadata , Save files and metadata """
     # NOTE: You may have to run this function several times, especially for long lists of URLs
-    doSleep = False # ffmpeg conversion seems to be a sufficient wait time, especially for large files 
+	# ffmpeg conversion seems to be a sufficient wait time, especially for large files 
+    doSleep = False 
     # DEBUG
     dbugLim = False
     limit = 1
@@ -214,16 +220,18 @@ def Stage_1_Download_w_Data( inputFile ,
         return False
     else:
         session.LOG.prnt( "Program has appropriate directory permissions." )
-    #  3. Process input file
+    
+    #  4. Process input file
     lstMeta = init_metadata_from_list( inputFile )
+
     inCount = len( lstMeta )
     session.LOG.prnt( "Read input file with" , inCount , "entries" )
-    
-    
-    # FIXME: dict_A_add_B_new_only( dctA , dctB )
-    
-    ##  4. Init downloaded
-    #ydl = youtube_dl.YoutubeDL( YDL_OPTS )
+    #  5. Merge new metadata with existing
+    dict_A_add_B_new_only( session.METADATA , lstMeta )
+    metaCount = len( session.METADATA )
+    session.LOG.prnt( "Current playtlist has" , metaCount , "entries" )
+    #  6. Init downloaded
+    ydl = youtube_dl.YoutubeDL( session.YDL_OPTS )
     ##  5. For each entry
     #LOG.prnt( "## Media Files ##" )
     #for enDex , entry in enumerate( entries ):

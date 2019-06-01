@@ -6,7 +6,7 @@
 from __future__ import division # Future imports must be called before everything else, including triple-quote docs!
 
 # ~~ Local ~~
-from marchhare.marchhare import ( LogMH , parse_lines , ascii )
+from marchhare.marchhare import ( LogMH , parse_lines , ascii , SuccessTally , )
 
 """
 retrieve_yt.py
@@ -54,14 +54,18 @@ def init_metadata_from_list( fPath ):
     """ Get all the URLs from the prepared list """
     lineData = parse_lines( fPath , parse_video_entry )
     rtnDict  = {}
+    tally    = SuccessTally()
     # Metadata is first created here!
     for datum in lineData:
+        goodURL = len( datum['url'] ) > 11
+        tally.tally( goodURL )
         rtnDict[ datum['id'] ] = { # Keys are 11-char IDs , Ex: m0PvtQ53rqI
             'url' :    datum['url']             , # Full URL one would follow to watch the video in the browser
             'seq' :    datum['seq']             , # Sequence number given in the original input file, Doesn't really matter
             'id'  :    datum['id']              , # Same as above
-            'FL_URL' : len( datum['url'] ) > 11 # _ Flag for whether a URL was loaded 
+            'FL_URL' : goodURL # _ Flag for whether a URL was loaded 
         }
+        rtnDict[ 'PF_URL' ] = tally.get_stats()
     return rtnDict
 
 def remove_empty_kwargs( **kwargs ):

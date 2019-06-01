@@ -1,11 +1,20 @@
 
 # ~~~ Imports ~~~
 # ~~ Standard ~~
+import shutil , os
 from math import pi , sqrt
-import shutil
 from random import randrange
 from time import sleep
 from warnings import warn
+# ~~ Local ~~
+from marchhare.marchhare import ( Stopwatch , strip_EXT , yesno , unpickle_dict ,
+                                  ensure_dirs_writable , struct_to_pkl , nowTimeStampFine , 
+                                  )
+
+# ~~~ Init ~~~
+SOURCEDIR = os.path.dirname( os.path.abspath( '__file__' ) ) # URL, dir containing source file: http://stackoverflow.com/a/7783326
+PARENTDIR = os.path.dirname( SOURCEDIR )
+
 
 try:
     from urllib2 import urlopen
@@ -201,8 +210,8 @@ def save_session( session ):
     print "Session saved to" , session.SESSION_PATH
   
 def verify_session_writable( sssn ):
-    """ Make sure that we can write to the relevant directories """
-    allWrite = validate_dirs_writable(  
+    """ Make sure that we can write to the relevant directories , If DNE then create && check """
+    allWrite = ensure_dirs_writable(  
         os.path.join( SOURCEDIR , sssn.RAW_FILE_DIR )     ,
         os.path.join( SOURCEDIR , sssn.CHOPPED_SONG_DIR ) ,
         os.path.join( SOURCEDIR , sssn.PICKLE_DIR )       ,
