@@ -230,8 +230,13 @@ def Stage_1_Download_w_Data( inputFile ,
     dict_A_add_B_new_only( session.METADATA , lstMeta )
     metaCount = len( session.METADATA )
     session.LOG.prnt( "Current playtlist has" , metaCount , "entries" )
-    #  6. Init downloaded
-    ydl = youtube_dl.YoutubeDL( session.YDL_OPTS )
+    #  6. Init downloader
+    try:
+        ydl = youtube_dl.YoutubeDL( session.YDL_OPTS )
+        session.LOG.prnt( "Downloader initialized!" )
+    except:
+        session.LOG.prnt( "ERROR: Downloader could NOT be initialized!" )
+        return False
     ##  5. For each entry
     #LOG.prnt( "## Media Files ##" )
     #for enDex , entry in enumerate( entries ):
