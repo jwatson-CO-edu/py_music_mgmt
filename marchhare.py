@@ -748,6 +748,50 @@ class RollingList( list ):
 
 # _ End Algo Containers _
 
+
+# = Other Containers =
+
+class SuccessTally:
+    """ Class to counts success and failure """
+
+    def __init__( self ):
+        """ Init all counts zero """
+        self.nPass = 0
+        self.nFail = 0
+        self.N     = 0
+
+    def PASS( self ):
+        """ Increment passing and total """
+        self.N     += 1
+        self.nPass += 1
+
+    def FAIL( self ):
+        """ Increment failing and total """
+        self.N     += 1
+        self.nFail += 1
+
+    def tally( self , TorF ):
+        """ Increment pass if `TorF`, otherwise increment fail """
+        if TorF:
+            self.PASS()
+        else:
+            self.FAIL()
+
+    def get_stats( self ):
+        """ Return a dict with pass/fail tallies """
+        return {
+            'pass' :     self.nPass , 
+            'fail' :     self.nFail , 
+            'fracPass' : self.nPass * 1.0 / self.N ,
+            'fracFail' : self.nFail * 1.0 / self.N ,
+            'total' :    self.N , 
+            'PFratio' :  self.nPass * 1.0 / self.nFail if self.nFail > 0 else float( 'nan' )
+        }
+
+
+
+# _ End Other _
+
 def is_nonempty_list( obj ): return isinstance( obj , list , tuple ) and len( obj ) > 0 # Return true if 'obj' is a 'list' with length greater than 0  # <<< resenv
 
 # __ End Structures __
@@ -1055,6 +1099,7 @@ def validate_dirs_writable( *dirList ):
     # NOTE: This function exits on the first failed check and does not provide info for any subsequent element of 'dirList'
     # NOTE: Assume that a writable directory is readable
     for directory in dirList:
+        # ensure_dir( directory )
         if not os.path.isdir( directory ):
             print "Directory" , directory , "does not exist!"
             return False
@@ -1062,6 +1107,14 @@ def validate_dirs_writable( *dirList ):
             print "System does not have write permission for" , directory , "!"
             return False
     return True # All checks finished OK, return true
+
+def ensure_dirs_writable( *dirList ):
+    """ Return true if every directory argument both exists and is writable, otherwise return false """
+    # NOTE: This function exits on the first failed check and does not provide info for any subsequent element of 'dirList'
+    # NOTE: Assume that a writable directory is readable
+    for directory in dirList:
+        ensure_dir( directory )
+    return validate_dirs_writable( *dirList )
 
 # __ End Batch __
 
