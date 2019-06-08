@@ -195,8 +195,8 @@ def __prog_signature__(): return __progname__ + " , Version " + __version__
 # __ End Vars __
 
    
-    
-def Stage_1_Download_w_Data( inputFile ,
+     
+def Stage_1_Download_w_Data( inputFile , overridePath = None , 
                              minDelay_s = 20 , maxDelay_s = 180 ):
     """ Check environment for download , Fetch files and metadata , Save files and metadata """
     # NOTE: You may have to run this function several times, especially for long lists of URLs
@@ -207,7 +207,7 @@ def Stage_1_Download_w_Data( inputFile ,
     limit = 1
     count = 0
     #  0. Load session
-    session , dirsWritable , dlTimer = begin_session( inputFile )
+    session , dirsWritable , dlTimer = begin_session( inputFile , overridePath )
     open_all_APIs( session )
     #  1. Indicate file
     session.LOG.prnt( "Processing" , inputFile , "..." )
@@ -222,82 +222,21 @@ def Stage_1_Download_w_Data( inputFile ,
         session.LOG.prnt( "Program has appropriate directory permissions." )
     
     #  4. Process input file
-    lstMeta = init_metadata_from_list( inputFile )
-
-    inCount = len( lstMeta )
-    session.LOG.prnt( "Read input file with" , inCount , "entries" )
-    #  5. Merge new metadata with existing
-    dict_A_add_B_new_only( session.METADATA , lstMeta )
-    metaCount = len( session.METADATA )
-    session.LOG.prnt( "Current playtlist has" , metaCount , "entries" )
+    init_metadata_from_list( session , inputFile )
     #  6. Init downloader
     try:
         ydl = youtube_dl.YoutubeDL( session.YDL_OPTS )
         session.LOG.prnt( "Downloader initialized!" )
     except:
+        ydl = None
         session.LOG.prnt( "ERROR: Downloader could NOT be initialized!" )
         return False
-    ##  5. For each entry
-    #LOG.prnt( "## Media Files ##" )
-    #for enDex , entry in enumerate( entries ):
-        ##  6. If the debug file limit exceeded, exit loop
-        #if dbugLim and ( not count < limit ):
-            #break        
-        #LOG.prnt( '#\n# Entry' , enDex+1 , 'of' , inCount , '#' )
-        #enID = entry['id']
-        ##  7. URL
-        #enURL = entry['url']        
-        #cacheMod = False        
-        #try:
-            ##  8. Attempt to fetch cached data for this entry
-            #if( enID in METADATA ):
-                #LOG.prnt( "Found cached data for" , enID )
-                #enCache = METADATA[ enID ]
-            #else:
-                #enCache = None
-                #cacheMod = True
-            ##  9. Create Dir
-            #enRawDir = os.path.join( RAW_FILE_DIR , enID )
-            #if not os.path.isdir( enRawDir ):
-                #try:  
-                    #os.mkdir( enRawDir )
-                #except OSError:  
-                    #LOG.prnt(  "Creation of the directory %s failed" % enRawDir )
-                #else:  
-                    #LOG.prnt(  "Successfully created the directory %s " % enRawDir )            
-            ## 10. Download Raw MP3 File
-            ## 11. If this file does not have an entry, the raw file exists, and the file is ok, then download
-            #if not ( enCache and enCache['fSuccess'] ):
-                #cacheMod = True
-                #LOG.prnt( "No file from" , entry['url'] , ", dowloading ..." )
-                #dlTimer.start()
-                #ydl.download( [ entry['url'] ] )  # This function MUST be passed a list!
-                #enElapsed = dlTimer.elapsed()
-                #LOG.prnt( "Downloading and Processing:" , enElapsed , "seconds" )
-                ## 12. Locate and move the raw file
-                #fNames = list_all_files_w_EXT( SOURCEDIR , [ 'MP3' ] )
-                #if len( fNames ) > 0:
-                    ## Assume that the first item is the newly-arrived file
-                    #fSaved = fNames[0]
-                    ## 13. Raw File End Destination
-                    #enDest = os.path.join( enRawDir , fSaved )
-                    #enCpSuccess = False # I. File Success
-                    #try:
-                        #shutil.move( fSaved , enDest )
-                        #enCpSuccess = True
-                        #LOG.prnt( "Move success!:" , fSaved , "--to->" , enDest )
-                    #except Exception:
-                        #enCpSuccess = False
-                #else:
-                    #LOG.prnt( "No downloaded MP3s detected!" )
-                    #enDest = None
-                    #enCpSuccess = False            
-            ## 14. else skip download
-            #else:
-                #LOG.prnt( "Raw file from" , entry['url'] , "was previously cached at" , enCache['Timestamp'] )
-                #enDest      = None
-                #enCpSuccess = True
-                #enElapsed   = None
+    #  7. Create dirs for raw files
+    ensure_raw_dirs( session , session.RAW_FILE_DIR )
+    #  8. Download files
+    download_videos_as_MP3( session , dlTimer , ydl )
+    
+            
             ## 15. Fetch Description Data
             #if not ( enCache and enCache['Metadata'] ):
                 #cacheMod = True
@@ -472,7 +411,7 @@ if __name__ == "__main__":
         
     # ~~~ Stage 0: Testing ~~~
     if 0:
-        session = load_session( SESSION_PATH )
+        session = load_session( SESSION_PATH  )
         set_session_active( True )
         if os.path.isfile( ACTIVE_PICKLE_PATH ):
             METADATA = unpickle_dict( ACTIVE_PICKLE_PATH ) 
@@ -491,7 +430,7 @@ if __name__ == "__main__":
     
     # ~~~ Stage 1: Downloading ~~~
     if 1:
-        Stage_1_Download_w_Data( "input/url_src_02.txt" ,
+        Stage_1_Download_w_Data( "input/url_src_02.txt" , "input/outputOverride.txt" , 
                                  minDelay_s = 30 , maxDelay_s = 60 )
     
     # ~~~ Stage 2: Processing ~~~

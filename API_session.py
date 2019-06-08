@@ -225,7 +225,7 @@ def set_session_active( active = 1 ):
     global ACTIVE_SESSION , SESSION_PATH
     ACTIVE_SESSION = bool( active )
     
-def begin_session( inputPath ):
+def begin_session( inputPath , overridePath = None ):
     """ Set all vars that we will need to run a session """
     # 2. Instantiate a timer
     dlTimer = Stopwatch()   
@@ -239,6 +239,18 @@ def begin_session( inputPath ):
         session = default_session()
     session.SESSION_PATH = SESSION_PATH
     set_session_active( True )
+    # 5. If there was an override file provided, load
+    if overridePath:
+        sesnDict = comma_sep_key_val_from_file( overridePath );     
+        print "Loaded session file:" , overridePath
+        for key , val in sesnDict.iteritems():
+            try:
+                setattr( session , key , val )
+                print "Override: Set" , key , "to" , val
+            except:
+                print key , "is not a session variable!"
+    else:
+        print "There was no override file provided"
     # 4. Construct pickle path
     session.ACTIVE_PICKLE_PATH = session.RAW_FILE_DIR + '/' + strip_EXT( str( os.path.split( inputPath )[-1] ) ) + "_metadata.pkl"
     # 5. Unpickle session metadata

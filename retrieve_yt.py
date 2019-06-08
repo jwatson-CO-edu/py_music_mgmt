@@ -5,9 +5,12 @@
 # ~~ Future First ~~
 from __future__ import division # Future imports must be called before everything else, including triple-quote docs!
 
+# ~~ Standard ~~
+import os , shutil
 # ~~ Local ~~
-from marchhare.marchhare import ( LogMH , parse_lines , ascii , SuccessTally , )
-
+from marchhare.marchhare import ( LogMH , parse_lines , ascii , SuccessTally , dict_A_add_B_new_only ,
+                                  ensure_dir , )
+ 
 """
 retrieve_yt.py
 James Watson, 2019 February
@@ -35,22 +38,51 @@ def parse_video_entry( txtLine ):
 
 # === METADATA GUIDE =======================================================================================================================
 
-# {  ~ Dictionary: Keys are 11-char IDs , Ex: m0PvtQ53rqI ~
+# {  ~ Dictionary ~ : Keys are  
+#        * 11-char IDs , Ex: m0PvtQ53rqI
+#        * Counts and meta-meta , %foo 
+#          > Counts , Ex: %PF_PASSFAIL   
 # ...      
-#     [ ID ]
+#     ID : 11-char ID , Serves as the key for all per-video metadata
 #     {
-#         'id'  : __ Same as above
-#         'seq' : __ Sequence number given in the original input file, Doesn't really matter
-#         'url' : __ Full URL one would follow to watch the video in the browser
-#         'FL_URL' : Flag for whether a URL was loaded
+#         'id'  : ________ Same as above
+#         'seq' : ________ Sequence number given in the original input file, Doesn't really matter
+#         'url' : ________ Full URL one would follow to watch the video in the browser
+#         'FL_URL' : _____ Flag for whether a URL was loaded
+#         'rawDir' : _____ Directory holding the raw file or `None`
+#         'FL_RAWDIR' : __ Flag for whether a raw file directory exists
+#         'rawAudioPath' : Path to the downloaded file
+#         'FL_DLOK' : ____ Flag for whether the raw file was successfully downloaded and copied
 #     }
-# ...      
+# ...  
+#     '%PF_URL' : ____ Count of videos that have proper URLS
+#     '%PF_RAWDIRS' :_ Count of videos that have raw recording directories properly prepared
+#     '%PF_RAWFILES' : Count of videos that have raw recordings
 # }
 
 # ___ END METADATA _________________________________________________________________________________________________________________________
 
+def is_yt_ID( qID ):
+    """ Test whether `qID` is a YoutTube video ID """
+    # ID must be a string
+    if ( type( qID ) == str ):
+        # Disqualifiers
+        if ( len( qID ) == 0 ) or \
+           ( qID[0] == '%' ):
+            return False
+        # Qualifiers
+        if ( len( qID ) == 11 ):
+            return True
+        # Default
+        return False
+    else:
+        return False
+        
+def YTID_keys_from_dict( viDict ):
+    """ Return a list that is all the YouTube video IDs that appear as keys in `viDict` """
+    return [ ytid for ytid in viDict.keys() if is_yt_ID( ytid ) ]
 
-def init_metadata_from_list( fPath ):
+def init_metadata_from_list( sssn , fPath ):
     """ Get all the URLs from the prepared list """
     lineData = parse_lines( fPath , parse_video_entry )
     rtnDict  = {}
@@ -59,14 +91,132 @@ def init_metadata_from_list( fPath ):
     for datum in lineData:
         goodURL = len( datum['url'] ) > 11
         tally.tally( goodURL )
+        if not goodURL:
+            sssn.LOG.prnt( "ERROR , init_metadata_from_list: Could not find URL for" , 
+                        datum )
         rtnDict[ datum['id'] ] = { # Keys are 11-char IDs , Ex: m0PvtQ53rqI
             'url' :    datum['url']             , # Full URL one would follow to watch the video in the browser
             'seq' :    datum['seq']             , # Sequence number given in the original input file, Doesn't really matter
             'id'  :    datum['id']              , # Same as above
             'FL_URL' : goodURL # _ Flag for whether a URL was loaded 
         }
-        rtnDict[ 'PF_URL' ] = tally.get_stats()
-    return rtnDict
+        rtnDict[ '%PF_URL' ] = tally.get_stats()
+    inCount = len( rtnDict ) - 1
+    sssn.LOG.prnt( "Read input file with" , inCount , "entries" )
+    #  5. Merge new metadata with existing
+    dict_A_add_B_new_only( sssn.METADATA , rtnDict )
+    metaCount = len( YTID_keys_from_dict( sssn.METADATA ) )
+    sssn.LOG.prnt( "Current playtlist has" , metaCount , "entries" )
+
+def ensure_raw_dirs( sssn , RAW_FILE_DIR ):
+    """ Ensure there is a raw file directory for each video to be downloaded """
+    viDict = sssn.METADATA
+    IDs    = YTID_keys_from_dict( viDict )
+    tally  = SuccessTally()
+    for enID in IDs:
+        enRawDir = os.path.join( RAW_FILE_DIR , enID )
+        created = False
+        try:
+            ensure_dir( enRawDir )
+            created = True
+            sssn.METADATA[ enID ][ 'rawDir' ] = enRawDir
+        except Exception as ex:
+            sssn.LOG.prnt( "ERROR , ensure_raw_dirs: Could not create the directory" , enRawDir )
+            created = False
+            sssn.METADATA[ enID ][ 'rawDir' ] = None
+            print ex
+        sssn.METADATA[ enID ][ 'FL_RAWDIR' ] = created
+        tally.tally( created )
+    sssn.METADATA[ '%PF_RAWDIRS' ] = tally.get_stats()
+
+def download_videos_as_MP3( sssn , dlTimer , ydl ):
+    """ Download all the videos currently loaded in the session, skipping overfiles already saved """
+    haveCount = 0
+    skipCount = 0
+    failCount = 0
+    total     = 0
+    tally     = SuccessTally()
+    # 0. Retrieve the list of IDs
+    IDs    = YTID_keys_from_dict( sssn.METADATA )
+    # 0.5. For each video ID
+    for ID in IDs:
+        ready       = True
+        enDest      = None
+        enCpSuccess = False
+        # 1. Check that the video was not downloaded previously
+        # 2. Check that both the URL and the raw dir exist
+        ready = ( sssn.METADATA[ ID ][ 'FL_URL' ] ) and ( sssn.METADATA[ ID ][ 'FL_RAWDIR' ] )
+        if ready and \
+           ( ( 'FL_DLOK' not in sssn.METADATA[ ID ] ) or 
+             ( not sssn.METADATA[ ID ][ 'FL_DLOK' ] )     ):
+            # 3. Attempt download, keeping track of how long it took to retrieve
+            try:
+                currURL = sssn.METADATA[ ID ]['url']
+                sssn.LOG.prnt( "No file from" , currURL , ", dowloading ..." )
+                dlTimer.start()
+                ydl.download( [ currURL ] )  # This function MUST be passed a list!
+                enElapsed = dlTimer.elapsed()
+                sssn.LOG.prnt( "Downloading and Processing:" , enElapsed , "seconds" )
+                # NOTE: Not marking this ok until it is successfully moved
+            except Exception as ex:
+                ready = False
+                sssn.METADATA[ ID ][ 'FL_DLOK' ] = False
+                sssn.LOG.prnt( "ERROR , download_videos_as_MP3:" , 
+                                       "Could not download from " , currURL )
+                print ex
+            # 4. Find file and attempt move
+            if ready:
+                try:
+                    fNames = list_all_files_w_EXT( sssn.SOURCEDIR , [ 'MP3' ] )
+                    if len( fNames ) > 0:
+                        # Assume that the first item is the newly-arrived file
+                        fSaved = fNames[0]
+                        # 13. Raw File End Destination
+                        enDest = os.path.join( sssn.METADATA[ ID ][ 'rawDir' ] , fSaved )
+                        enCpSuccess = False # I. File Success
+                        try:
+                            shutil.move( fSaved , enDest )
+                            enCpSuccess = True
+                            sssn.LOG.prnt( "Move success!:" , fSaved , "--to->" , enDest )
+                            sssn.METADATA[ ID ][ 'rawAudioPath' ] = enDest
+                        except Exception as ex:
+                            enCpSuccess = False
+                            sssn.LOG.prnt( "ERROR , download_videos_as_MP3:" , 
+                                           "Could not move file from" , fSaved , "--to->" , enDest )
+                            print ex
+                        sssn.METADATA[ ID ][ 'FL_DLOK' ] = enCpSuccess
+                    else:
+                        sssn.METADATA[ ID ][ 'rawAudioPath' ] = None
+                        sssn.LOG.prnt( "ERROR , download_videos_as_MP3:" , 
+                                       "No downloaded MP3s detected for" , ID )
+                except:
+                    sssn.METADATA[ ID ][ 'FL_DLOK' ] = False
+            # 4. Log success and time , 
+        elif not ready:       
+            sssn.LOG.prnt( "ERROR , download_videos_as_MP3:" , 
+                           "Raw file directory is not ready for" , ID )
+            sssn.METADATA[ ID ][ 'FL_DLOK' ] = False
+        # 5. Tally success , Log file locations
+        tally.tally( sssn.METADATA[ ID ][ 'FL_DLOK' ] )
+        
+    # 5. Save success status
+    sssn.METADATA[ '%PF_RAWFILES' ] = tally.get_stats()
+        
+        
+        ## 10. Download Raw MP3 File
+            ## 11. If this file does not have an entry, the raw file exists, and the file is ok, then download
+            #if not ( enCache and enCache['fSuccess'] ):
+                #cacheMod = True
+                
+                ## 12. Locate and move the raw file
+                #            
+            ## 14. else skip download
+            #else:
+                #LOG.prnt( "Raw file from" , entry['url'] , "was previously cached at" , enCache['Timestamp'] )
+                #enDest      = None
+                #enCpSuccess = True
+                #enElapsed   = None      
+
 
 def remove_empty_kwargs( **kwargs ):
     """ Remove keyword arguments that are not set """

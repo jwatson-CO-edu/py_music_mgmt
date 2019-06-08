@@ -13,4 +13,5 @@ output/
 *.pyc
 */*.pyc
 */*/*.pyc
-
+*.mp3
+*.webm
