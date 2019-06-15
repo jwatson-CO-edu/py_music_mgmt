@@ -131,6 +131,7 @@ def ensure_raw_dirs( sssn , RAW_FILE_DIR ):
 
 def download_videos_as_MP3( sssn , dlTimer , ydl ):
     """ Download all the videos currently loaded in the session, skipping overfiles already saved """
+    # FIXME : DEFINE A FUNCTION TO ASSIGN FLAG AND TALLY T/F
     haveCount = 0
     skipCount = 0
     failCount = 0
@@ -144,60 +145,79 @@ def download_videos_as_MP3( sssn , dlTimer , ydl ):
         enDest      = None
         enCpSuccess = False
         # 1. Check that the video was not downloaded previously
+        DLed = 'FL_DLOK' in sssn.METADATA[ ID ] # Check if this function was run on this ID
+        if DLed: # If we have seens this ID, check if it was downloaded successfully
+            DLed = sssn.METADATA[ ID ][ 'FL_DLOK' ]
+        if DLed: 
+            sssn.LOG.prnt( "Raw file already exists for" , ID )
+            tally.tally( sssn.METADATA[ ID ][ 'FL_DLOK' ] )
+            continue
         # 2. Check that both the URL and the raw dir exist
         ready = ( sssn.METADATA[ ID ][ 'FL_URL' ] ) and ( sssn.METADATA[ ID ][ 'FL_RAWDIR' ] )
-        if ready and \
-           ( ( 'FL_DLOK' not in sssn.METADATA[ ID ] ) or 
-             ( not sssn.METADATA[ ID ][ 'FL_DLOK' ] )     ):
-            # 3. Attempt download, keeping track of how long it took to retrieve
+        # 3. If the raw file cannot be stored, skip
+        if not ready:
+            sssn.LOG.prnt( "ERROR , download_videos_as_MP3:" , 
+                           "Cannot store raw file for" , ID )
+            sssn.METADATA[ ID ][ 'FL_DLOK' ] = False
+            tally.tally( sssn.METADATA[ ID ][ 'FL_DLOK' ] )
+        else:
+            # 4. Attempt download, keeping track of how long it took to retrieve
             try:
                 currURL = sssn.METADATA[ ID ]['url']
                 sssn.LOG.prnt( "No file from" , currURL , ", dowloading ..." )
                 dlTimer.start()
                 ydl.download( [ currURL ] )  # This function MUST be passed a list!
                 enElapsed = dlTimer.elapsed()
-                sssn.LOG.prnt( "Downloading and Processing:" , enElapsed , "seconds" )
+                sssn.LOG.prnt( "Downloading and Processing, DL Time:" , enElapsed , "seconds" )
                 # NOTE: Not marking this ok until it is successfully moved
+            # 5. If the download failed, mark, log, and continue to next
             except Exception as ex:
-                ready = False
                 sssn.METADATA[ ID ][ 'FL_DLOK' ] = False
                 sssn.LOG.prnt( "ERROR , download_videos_as_MP3:" , 
                                        "Could not download from " , currURL )
                 print ex
-            # 4. Find file and attempt move
-            if ready:
-                try:
-                    fNames = list_all_files_w_EXT( sssn.SOURCEDIR , [ 'MP3' ] )
-                    if len( fNames ) > 0:
-                        # Assume that the first item is the newly-arrived file
-                        fSaved = fNames[0]
-                        # 13. Raw File End Destination
-                        enDest = os.path.join( sssn.METADATA[ ID ][ 'rawDir' ] , fSaved )
-                        enCpSuccess = False # I. File Success
-                        try:
-                            shutil.move( fSaved , enDest )
-                            enCpSuccess = True
-                            sssn.LOG.prnt( "Move success!:" , fSaved , "--to->" , enDest )
-                            sssn.METADATA[ ID ][ 'rawAudioPath' ] = enDest
-                        except Exception as ex:
-                            enCpSuccess = False
-                            sssn.LOG.prnt( "ERROR , download_videos_as_MP3:" , 
-                                           "Could not move file from" , fSaved , "--to->" , enDest )
-                            print ex
-                        sssn.METADATA[ ID ][ 'FL_DLOK' ] = enCpSuccess
-                    else:
-                        sssn.METADATA[ ID ][ 'rawAudioPath' ] = None
+                tally.tally( sssn.METADATA[ ID ][ 'FL_DLOK' ] )
+                continue
+            # 6. Find file and attempt move
+            try:
+                fNames = list_all_files_w_EXT( sssn.SOURCEDIR , [ 'MP3' ] )
+                if len( fNames ) > 0:
+                    # Assume that the first item is the newly-arrived file
+                    fSaved = fNames[0]
+                    # 13. Raw File End Destination
+                    enDest = os.path.join( sssn.METADATA[ ID ][ 'rawDir' ] , fSaved )
+                    enCpSuccess = False # I. File Success
+                    try:
+                        print( "About to move" , fSaved , "\nto\n" , enDest )
+                        shutil.move( fSaved , enDest )
+                        enCpSuccess = True
+                        sssn.LOG.prnt( "Move success!:" , fSaved , "--to->" , enDest )
+                        sssn.METADATA[ ID ][ 'rawAudioPath' ] = enDest
+                    except Exception as ex:
+                        enCpSuccess = False
                         sssn.LOG.prnt( "ERROR , download_videos_as_MP3:" , 
-                                       "No downloaded MP3s detected for" , ID )
-                except:
+                                       "Could not move file from" , fSaved , "--to->" , enDest )
+                        print ex
+                    sssn.METADATA[ ID ][ 'FL_DLOK' ] = enCpSuccess
+                    tally.tally( sssn.METADATA[ ID ][ 'FL_DLOK' ] )
+                else:
                     sssn.METADATA[ ID ][ 'FL_DLOK' ] = False
-            # 4. Log success and time , 
-        elif not ready:       
-            sssn.LOG.prnt( "ERROR , download_videos_as_MP3:" , 
-                           "Raw file directory is not ready for" , ID )
-            sssn.METADATA[ ID ][ 'FL_DLOK' ] = False
+                    sssn.METADATA[ ID ][ 'rawAudioPath' ] = None
+                    sssn.LOG.prnt( "ERROR , download_videos_as_MP3:" , 
+                                   "No downloaded MP3s detected for" , ID )
+                    tally.tally( sssn.METADATA[ ID ][ 'FL_DLOK' ] )
+            except Exception as ex:
+                sssn.LOG.prnt( "ERROR , download_videos_as_MP3:" , 
+                                       "There was a problem with" , ID )
+                print( ex )
+                sssn.METADATA[ ID ][ 'FL_DLOK' ] = False
+                tally.tally( sssn.METADATA[ ID ][ 'FL_DLOK' ] )
+                continue
+        # 4. Log success and time , 
+        # FIXME
+        
         # 5. Tally success , Log file locations
-        tally.tally( sssn.METADATA[ ID ][ 'FL_DLOK' ] )
+        
         
     # 5. Save success status
     sssn.METADATA[ '%PF_RAWFILES' ] = tally.get_stats()
