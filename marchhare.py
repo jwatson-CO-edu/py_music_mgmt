@@ -167,6 +167,17 @@ tick_progress.ticks = 0
 # __ End Time __
 
 
+# == System Helpers ==
+
+def confirm_or_crash( msg = "Text to Crash, Empty to Continue: " ):
+    """ If the input is anything other than empty, then Crash the program """
+    crash = raw_input( msg )
+    if len( crash ):
+        exit()
+
+# __ End System __
+
+
 # == Data Structures , Special Lists , and Iterable Operations ==
 
 def elemw( iterable , i ): 
