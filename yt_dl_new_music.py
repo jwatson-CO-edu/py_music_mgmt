@@ -208,6 +208,7 @@ def Stage_1_Download_w_Data( inputFile , overridePath = None ,
     count = 0
     #  0. Load session
     session , dirsWritable , dlTimer = begin_session( inputFile , overridePath )
+    confirm_session( session ) # Confirm that all the dirs have been constructed correctly
     open_all_APIs( session )
     #  1. Indicate file
     session.LOG.prnt( "Processing" , inputFile , "..." )

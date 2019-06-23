@@ -9,7 +9,7 @@ from warnings import warn
 # ~~ Local ~~
 from marchhare.marchhare import ( Stopwatch , strip_EXT , yesno , unpickle_dict ,
                                   ensure_dirs_writable , struct_to_pkl , nowTimeStampFine , 
-                                  )
+                                  confirm_or_crash , )
 
 # ~~~ Init ~~~
 SOURCEDIR = os.path.dirname( os.path.abspath( '__file__' ) ) # URL, dir containing source file: http://stackoverflow.com/a/7783326
@@ -158,6 +158,20 @@ def load_session( sessionPath ):
     session.ACTIVE_SESSION     = sesnDict['ACTIVE_SESSION'];        print "ACTIVE_SESSION:" , yesno( session.ACTIVE_SESSION )
     session.ARTIST_PICKLE_PATH = sesnDict['ARTIST_PICKLE_PATH'];    print "ARTIST_PICKLE_PATH:" , session.ARTIST_PICKLE_PATH
     return session
+    
+def confirm_session( session ):
+    """ Print the session vars, then ask for confirmation """
+    print
+    print "RAW_FILE_DIR:" ,         session.RAW_FILE_DIR
+    print "CHOPPED_SONG_DIR:" ,     session.CHOPPED_SONG_DIR
+    print "PICKLE_DIR:" ,           session.PICKLE_DIR 
+    print "ACTIVE_PICKLE_PATH:" ,   session.ACTIVE_PICKLE_PATH
+    print "LOG_DIR" ,               session.LOG_DIR
+    print "ACTIVE_SESSION:" ,       yesno( session.ACTIVE_SESSION )
+    print "ARTIST_PICKLE_PATH:" ,   session.ARTIST_PICKLE_PATH
+    confirm_or_crash( "Enter Text to Reject Session: " )
+    print
+    
 
 def open_all_APIs( sssn ):
     """ Open an API connection for {Google , GraceNote} """
@@ -183,14 +197,19 @@ def open_all_APIs( sssn ):
 def default_session():
     """ Set the session vars to reasonable values """
     session = Session()
-    session.RAW_FILE_DIR       = "output";                           print "RAW_FILE_DIR:" , cRAW_FILE_DIR
-    session.CHOPPED_SONG_DIR   = session.RAW_FILE_DIR + "/chopped";  print "CHOPPED_SONG_DIR:" , session.CHOPPED_SONG_DIR
-    session.PICKLE_DIR         = session.RAW_FILE_DIR;               print "PICKLE_DIR:" , session.PICKLE_DIR 
-    session.ACTIVE_PICKLE_PATH = "output/session.pkl";               print "ACTIVE_PICKLE_PATH:" , session.ACTIVE_PICKLE_PATH
-    session.LOG_DIR            = "logs";                             print "LOG_DIR" , session.LOG_DIR
-    session.ACTIVE_SESSION     = bool( int( 1 ) );                   print "ACTIVE_SESSION:" , yesno( session.ACTIVE_SESSION )
-    session.ARTIST_PICKLE_PATH = "output/artists.pkl";               print "ARTIST_PICKLE_PATH:" , session.ARTIST_PICKLE_PATH
+    session.RAW_FILE_DIR       = "output";                             print "RAW_FILE_DIR:" , cRAW_FILE_DIR
+    session.CHOPPED_SONG_DIR   = session.RAW_FILE_DIR + "/chopped";    print "CHOPPED_SONG_DIR:" , session.CHOPPED_SONG_DIR
+    session.PICKLE_DIR         = "input";                              print "PICKLE_DIR:" , session.PICKLE_DIR 
+    session.ACTIVE_PICKLE_PATH = session.PICKLE_DIR + "/session.pkl";  print "ACTIVE_PICKLE_PATH:" , session.ACTIVE_PICKLE_PATH
+    session.LOG_DIR            = "logs";                               print "LOG_DIR" , session.LOG_DIR
+    session.ACTIVE_SESSION     = bool( int( 1 ) );                     print "ACTIVE_SESSION:" , yesno( session.ACTIVE_SESSION )
+    session.ARTIST_PICKLE_PATH = session.PICKLE_DIR + "/artists.pkl";  print "ARTIST_PICKLE_PATH:" , session.ARTIST_PICKLE_PATH
     return session    
+    
+def construct_session( session ):
+    """ Ensure that the session makes sense """
+    session.CHOPPED_SONG_DIR = session.RAW_FILE_DIR + "/chopped"
+    
     
 def save_session( session ):
     """ Write session vars to the session file """
