@@ -81,10 +81,10 @@ def first_valid_dir( dirList ):
     rtnDir = False
     for drctry in dirList:
         if os.path.exists( drctry ):
-	    rtnDir = drctry 
-	    break
+            rtnDir = drctry 
+            break
     return rtnDir
-        
+
 def add_first_valid_dir_to_path(dirList):
     """ Add the first valid directory in 'dirList' to the system path """
     # In lieu of actually installing the library, just keep a list of all the places it could be in each environment
@@ -99,12 +99,12 @@ def add_first_valid_dir_to_path(dirList):
         raise ImportError("None of the specified directories were loaded") # Assume that not having this loaded is a bad thing
 # List all the places where the research environment could be
 #add_first_valid_dir_to_path( [ '/media/jwatson/FILEPILE/Utah_Research/Assembly_Planner/ResearchEnv',
-                               #'F:\Utah_Research\Assembly_Planner\ResearchEnv',
-                               #'/media/jwatson/FILEPILE/ME-6225_Motion-Planning/Assembly_Planner/ResearchEnv',
-                               #'/media/mawglin/FILEPILE/Python/ResearchEnv',
-                               #'/home/jwatson/regrasp_planning/researchenv',
-                               #'/media/jwatson/FILEPILE/Python/ResearchEnv',
-                               #'F:\Python\ResearchEnv'] )
+                                #'F:\Utah_Research\Assembly_Planner\ResearchEnv',
+                                #'/media/jwatson/FILEPILE/ME-6225_Motion-Planning/Assembly_Planner/ResearchEnv',
+                                #'/media/mawglin/FILEPILE/Python/ResearchEnv',
+                                #'/home/jwatson/regrasp_planning/researchenv',
+                                #'/media/jwatson/FILEPILE/Python/ResearchEnv',
+                                #'F:\Python\ResearchEnv'] )
 
 # ~~ Constants , Shortcuts , Aliases ~~
 import __builtin__ # URL, add global vars across modules: http://stackoverflow.com/a/15959638/893511
@@ -161,7 +161,7 @@ def validate_dirs_writable( *dirList ):
 def tokenize_with_wspace( rawStr , evalFunc = str ): 
     """ Return a list of tokens taken from 'rawStr' that is partitioned with whitespace, transforming each token with 'evalFunc' """
     return [ evalFunc( rawToken ) for rawToken in rawStr.split() ]
-    
+
 # == End Helper ==
 
 
@@ -198,21 +198,6 @@ def strip_the( artistName ):
 
 # [X] Generate Simplified folder names # safe path with safe filename
 
-def safe_dir_name( trialStr ):
-    """ Return a string stripped of all disallowed chars """
-    rtnStr = ""
-    if trialStr: # if a string was received 
-	for char in trialStr: # for each character of the input string
-	    if char not in DISALLOWEDCHARS and not char.isspace(): # If the character is not disallowed and is not whitespace
-		try:
-		    char = char.encode( 'ascii' , 'ignore' ) # Ignore conv errors but inconsistent # http://stackoverflow.com/a/2365444/893511
-		    rtnStr += char # Append the char to the proper directory name
-		except:
-		    rtnStr += choice( ASCII_ALPHANUM ) # Random ASCII character so that completely unreadable names are not overwritten
-	return rtnStr
-    else:
-	return None
-    
 def safe_artist_name( artistName ):
     """ Return a version of the artist name that has neither the definite article nor any disallowed chars """
     artistName = strip_the( artistName )
@@ -232,54 +217,54 @@ def safe_file_name( fName ):
 def fetch_library_metadata( searchPath ):
     """ Get information about all the files in the 'libraryPath' , this will be used to generate file management actions """
     # The goal of this function is to get the information for everything in 'searchPath' we need for all follow-up file operations
-    
+
     allRecords = []
-    
+
     # Walk the 'searchPath'
     for dirName , subdirList , fileList in os.walk( searchPath ): # for each subdir in 'searchPath', including 'searchPath'
-	for fName in fileList: # for each file in this subdir    
-	    
-	    record = {} # Create a dictionary to store everything we find out about the file
+        for fName in fileList: # for each file in this subdir    
 
-	    # Information to get:
-	    # ~ File Metadata ~
-	    record[ 'folder' ] = dirName # ------------------------------------ Containing Directory
-	    record[ 'fileName' ] = fName # ------------------------------------ filename
-	    fullPath = os.path.join( dirName , fName )
-	    record[ 'fullPath' ] = fullPath # --------------------------------- full path
-	    record[ 'EXT' ] = os.path.splitext( fName )[1][1:].upper() # -------- extension
-	    # creation date # This is not consistent across OS
-	    record[ 'modDate' ] = os.path.getmtime( fullPath ) # -------------- modification date 
-	    record[ 'modDateReadable' ] = \
-	        format_epoch_timestamp( record[ 'modDate' ] ) # --------------- modification date (human readable)
-	    record[ 'size' ] = os.path.getsize( fullPath ) # ------------------ size on disk
-	    # ~ Song Metadata ~
-	    try:
-		audiofile = eyed3.core.load( fullPath ) # Load the file
-		audiofileTag = audiofile.tag # Instantiate an audio metadata object
-	    except:
-		audiofileTag = None
-	    if audiofileTag: # if the metadata was able to be loaded
-		record[ 'artist' ] = audiofileTag.artist # -------------------- MP3 Artist
-		record[ 'title' ] = audiofileTag.title # ---------------------- MP3 Title
-		record[ 'album' ] = audiofileTag.album # ---------------------- MP3 Album
-		record[ 'albumArtist' ] = audiofileTag.album_artist # --------- Album Artist
-		record[ 'total_seconds' ] = audiofile.info.time_secs # -------- MP3 Length
-		record[ 'mm:ss' ] = ( int( audiofile.info.time_secs / 60 ) , 
-		                      audiofile.info.time_secs % 60 )# -------- Time in mm:ss
-	    else: # else could not load MP3 tags , Load dummy data
-		record[ 'artist' ] = 'Various' # ------------------------------ MP3 Artist
-		record[ 'title' ] = None # ------------------------------------ MP3 Title
-		record[ 'album' ] = None # ------------------------------------ MP3 Album
-		record[ 'albumArtist' ] = None # ------------------------------ Album Artist
-		record[ 'total_seconds' ] = None # ---------------------------- MP3 Length
-		record[ 'mm:ss' ] = ( None , None ) # ------------------------- Time in mm:ss
-	    # ~ Generated Metadata ~
-	    record[ 'artistSafe' ] = safe_artist_name( record[ 'artist' ] ) # - MP3 Artist (NTFS Safe)
-	    record[ 'fileNameSafe' ] = safe_file_name( record[ 'fileName' ] ) # File Name (NTFS Safe)
-	    
-	    allRecords.append( record )
-	    
+            record = {} # Create a dictionary to store everything we find out about the file
+
+            # Information to get:
+            # ~ File Metadata ~
+            record[ 'folder' ] = dirName # ------------------------------------ Containing Directory
+            record[ 'fileName' ] = fName # ------------------------------------ filename
+            fullPath = os.path.join( dirName , fName )
+            record[ 'fullPath' ] = fullPath # --------------------------------- full path
+            record[ 'EXT' ] = os.path.splitext( fName )[1][1:].upper() # -------- extension
+            # creation date # This is not consistent across OS
+            record[ 'modDate' ] = os.path.getmtime( fullPath ) # -------------- modification date 
+            record[ 'modDateReadable' ] = \
+                format_epoch_timestamp( record[ 'modDate' ] ) # --------------- modification date (human readable)
+            record[ 'size' ] = os.path.getsize( fullPath ) # ------------------ size on disk
+            # ~ Song Metadata ~
+            try:
+                audiofile = eyed3.core.load( fullPath ) # Load the file
+                audiofileTag = audiofile.tag # Instantiate an audio metadata object
+            except:
+                audiofileTag = None
+            if audiofileTag: # if the metadata was able to be loaded
+                record[ 'artist' ] = audiofileTag.artist # -------------------- MP3 Artist
+                record[ 'title' ] = audiofileTag.title # ---------------------- MP3 Title
+                record[ 'album' ] = audiofileTag.album # ---------------------- MP3 Album
+                record[ 'albumArtist' ] = audiofileTag.album_artist # --------- Album Artist
+                record[ 'total_seconds' ] = audiofile.info.time_secs # -------- MP3 Length
+                record[ 'mm:ss' ] = ( int( audiofile.info.time_secs / 60 ) , 
+                                      audiofile.info.time_secs % 60 )# -------- Time in mm:ss
+            else: # else could not load MP3 tags , Load dummy data
+                record[ 'artist' ] = 'Various' # ------------------------------ MP3 Artist
+                record[ 'title' ] = None # ------------------------------------ MP3 Title
+                record[ 'album' ] = None # ------------------------------------ MP3 Album
+                record[ 'albumArtist' ] = None # ------------------------------ Album Artist
+                record[ 'total_seconds' ] = None # ---------------------------- MP3 Length
+                record[ 'mm:ss' ] = ( None , None ) # ------------------------- Time in mm:ss
+            # ~ Generated Metadata ~
+            record[ 'artistSafe' ] = safe_artist_name( record[ 'artist' ] ) # - MP3 Artist (NTFS Safe)
+            record[ 'fileNameSafe' ] = safe_file_name( record[ 'fileName' ] ) # File Name (NTFS Safe)
+
+            allRecords.append( record )
+
     return allRecords
 
 # [X] Generate a movement plan , per file
@@ -289,40 +274,40 @@ MISCFOLDERNAME = "Various" # Name of the folder for files without a readable art
 
 def create_move_plan( recordList , libraryPath ):
     """ Given a 'recordList' created by 'fetch_library_metadata' generate a movement plan , per file """
-    
+
     plannedMoves = []
-    
+
     for record in recordList:
-	# 1.   Get the file type
-	ext = record[ 'EXT' ]
-	# 1.1. The action depends on the file type
-	if ext not in EXTIGNORE: 
-	    if ext == 'MP3':
-		# 2.   Get the artist and proper file name , Determine the proper folder for this file
-		try:
-		    properDir = os.path.join( libraryPath , record[ 'artistSafe' ] ) # The file should be stored under the safe artist name
-		except Exception: # Could not retrieve a safe artist , send to MISC
-		    # print "DEBUG:" , libraryPath , MISCFOLDERNAME
-		    properDir = os.path.join( libraryPath , MISCFOLDERNAME ) 
-	    else: # For non-MP3 files , the file should be in a folder that is the capitalized extension
-		properDir = os.path.join( libraryPath , ext )	    
-	    # 4.   Determine whether the file is in the right folder
-	    correctLoc = record[ 'folder' ] == properDir
-	    # 4.1. If the file is not in the right folder , move and perhaps rename
-	    if not correctLoc: # If the file is not in the proper directory , move and perhaps rename
-		# 4.1. If the file is not in the right folder , specify a move action    
-		plannedMoves.append( { 'op': 'mv' , # move operation
-		                       'orgn': record[ 'fullPath' ] , # from the current path
-		                       'orginDir' : record[ 'folder' ] ,
-		                       'dest': os.path.join( properDir , record[ 'fileNameSafe' ] ) , 
-		                       'destDir': properDir } ) # to the proper dir with a safe name
-	    elif not record[ 'fileNameSafe' ] == record[ 'fileName' ]:
-		plannedMoves.append( { 'op': 'nm' , 
-		                       'orgn': record[ 'fullPath' ] , 
-		                       'orginDir' : record[ 'folder' ] , # Origin and destination folders are the same in this case
-		                       'dest': os.path.join( record[ 'folder' ] , record[ 'fileNameSafe' ] ) , # Renamed in the same folder
-		                       'destDir': record[ 'folder' ] } )
-	    # else the file is both in the proper dir and has a safe name , no action
+        # 1.   Get the file type
+        ext = record[ 'EXT' ]
+        # 1.1. The action depends on the file type
+        if ext not in EXTIGNORE: 
+            if ext == 'MP3':
+                # 2.   Get the artist and proper file name , Determine the proper folder for this file
+                try:
+                    properDir = os.path.join( libraryPath , record[ 'artistSafe' ] ) # The file should be stored under the safe artist name
+                except Exception: # Could not retrieve a safe artist , send to MISC
+                    # print "DEBUG:" , libraryPath , MISCFOLDERNAME
+                    properDir = os.path.join( libraryPath , MISCFOLDERNAME ) 
+            else: # For non-MP3 files , the file should be in a folder that is the capitalized extension
+                properDir = os.path.join( libraryPath , ext )	    
+            # 4.   Determine whether the file is in the right folder
+            correctLoc = record[ 'folder' ] == properDir
+            # 4.1. If the file is not in the right folder , move and perhaps rename
+            if not correctLoc: # If the file is not in the proper directory , move and perhaps rename
+                # 4.1. If the file is not in the right folder , specify a move action    
+                plannedMoves.append( { 'op': 'mv' , # move operation
+                                       'orgn': record[ 'fullPath' ] , # from the current path
+                                       'orginDir' : record[ 'folder' ] ,
+                                       'dest': os.path.join( properDir , record[ 'fileNameSafe' ] ) , 
+                                       'destDir': properDir } ) # to the proper dir with a safe name
+            elif not record[ 'fileNameSafe' ] == record[ 'fileName' ]:
+                plannedMoves.append( { 'op': 'nm' , 
+                                       'orgn': record[ 'fullPath' ] , 
+                                       'orginDir' : record[ 'folder' ] , # Origin and destination folders are the same in this case
+                                       'dest': os.path.join( record[ 'folder' ] , record[ 'fileNameSafe' ] ) , # Renamed in the same folder
+                                       'destDir': record[ 'folder' ] } )
+            # else the file is both in the proper dir and has a safe name , no action
     return plannedMoves
 
 # [X] Check and execute directory creation plans
@@ -331,59 +316,59 @@ def create_move_plan( recordList , libraryPath ):
 def execute_move_plan( movePlan , verbose = False ): # Set simulate to 'True' to disable actual file operations
     """ Carry out all dir creation / file move / file rename operations determined by 'create_move_plan' , return operation status """
     opReport = deepcopy( movePlan ) # operation status , Create a deep copy of the move plan so that it can be annotated as we go
-    
+
     def log_status( reportList , op ,  index , success , msg , verbose ):
-	""" Local helper function to add success/failure data to the record of each attempted operation """
-	reportList[ index ][ 'success' ] = success
-	reportList[ index ][ 'statusMsg' ] = msg
-	if verbose:
-	    print op[ 'op' ] , op[ 'orgn' ] , "Success?" , reportList[ index ][ 'success' ] , "Msg:" , reportList[ index ][ 'statusMsg' ]    
-    
+        """ Local helper function to add success/failure data to the record of each attempted operation """
+        reportList[ index ][ 'success' ] = success
+        reportList[ index ][ 'statusMsg' ] = msg
+        if verbose:
+            print op[ 'op' ] , op[ 'orgn' ] , "Success?" , reportList[ index ][ 'success' ] , "Msg:" , reportList[ index ][ 'statusMsg' ]    
+
     for opDex , operation in enumerate( movePlan ):
-	opReport[ opDex ][ 'opNum' ] = opDex
-	if operation[ 'op' ] == 'mv': # MOVE operation
-	    dirSuccess = False
-	    # Check that the origin file exists
-	    if os.path.isfile( operation[ 'orgn' ] ):
-		try:
-		    # Check that the destination directory exists
-		    if not os.path.isdir( operation[ 'destDir' ] ):
-			# If the dest dir does not exist , create it
-			try: # http://stackoverflow.com/a/5032238/7186022
-			    os.makedirs( operation[ 'destDir' ] )
-			    dirSuccess = True
-			except OSError as exception:
-			    if exception.errno != errno.EEXIST: # For any other error than an already existent directory , raise
-				raise
-		    else: # else the directory already exists , make sure to set the flag to allow move
-			dirSuccess = True
-		except Exception as err:
-		    dirSuccess = False
-		if dirSuccess: # If the directory exists
-		    # Move the file , else simulate
-		    shutil.move( operation[ 'orgn' ] , operation[ 'dest' ] )
-		    # Check that the file was successfully moved and report status		
-		    if os.path.isfile( operation[ 'dest' ] ):
-			log_status( opReport , operation , opDex , True , "SUCCESS" , verbose )
-		    else: # else could not find file at the intended destination
-			log_status( opReport , operation , opDex , False , "FAIL: FILE NOT MOVED" , verbose )			
-		else: # else the directory was not found and was not created
-		    log_status( opReport , operation , opDex , False , "FAIL: DIRECTORY NOT CREATED" , verbose )    
-	    else: # else the file was not found at the origin location
-		log_status( opReport , operation , opDex , False , "FAIL: ORIGIN FILE DNE" , verbose )    
-	elif operation[ 'op' ] == 'nm': # RENAME operation
-	    # Check that the target file exists
-	    if os.path.isfile( operation[ 'orgn' ] ):
-		os.rename( operation[ 'orgn' ] , operation[ 'dest' ] )
-		if os.path.isfile( operation[ 'dest' ] ):
-		    log_status( opReport , operation , opDex , True , "SUCCESS" , verbose )
-		else:
-		    log_status( opReport , operation , opDex , False , "FAIL: FILE NOT RENAMED" , verbose )	    
-	    else:
-		log_status( opReport , operation , opDex , False , "FAIL: ORIGIN FILE DNE" , verbose )
-	else: # else an unrecognized operation was requested , notify
-	    print "execute_move_plan: Operations type" , operation[ 'op' ] , "is not recognized!"
-	    log_status( opReport , operation , opDex , False , "FAIL: OPERATION NOT RECOGNIZED" , verbose )
+        opReport[ opDex ][ 'opNum' ] = opDex
+        if operation[ 'op' ] == 'mv': # MOVE operation
+            dirSuccess = False
+            # Check that the origin file exists
+            if os.path.isfile( operation[ 'orgn' ] ):
+                try:
+                    # Check that the destination directory exists
+                    if not os.path.isdir( operation[ 'destDir' ] ):
+                        # If the dest dir does not exist , create it
+                        try: # http://stackoverflow.com/a/5032238/7186022
+                            os.makedirs( operation[ 'destDir' ] )
+                            dirSuccess = True
+                        except OSError as exception:
+                            if exception.errno != errno.EEXIST: # For any other error than an already existent directory , raise
+                                raise
+                    else: # else the directory already exists , make sure to set the flag to allow move
+                        dirSuccess = True
+                except Exception as err:
+                    dirSuccess = False
+                if dirSuccess: # If the directory exists
+                    # Move the file , else simulate
+                    shutil.move( operation[ 'orgn' ] , operation[ 'dest' ] )
+                    # Check that the file was successfully moved and report status		
+                    if os.path.isfile( operation[ 'dest' ] ):
+                        log_status( opReport , operation , opDex , True , "SUCCESS" , verbose )
+                    else: # else could not find file at the intended destination
+                        log_status( opReport , operation , opDex , False , "FAIL: FILE NOT MOVED" , verbose )			
+                else: # else the directory was not found and was not created
+                    log_status( opReport , operation , opDex , False , "FAIL: DIRECTORY NOT CREATED" , verbose )    
+            else: # else the file was not found at the origin location
+                log_status( opReport , operation , opDex , False , "FAIL: ORIGIN FILE DNE" , verbose )    
+        elif operation[ 'op' ] == 'nm': # RENAME operation
+            # Check that the target file exists
+            if os.path.isfile( operation[ 'orgn' ] ):
+                os.rename( operation[ 'orgn' ] , operation[ 'dest' ] )
+                if os.path.isfile( operation[ 'dest' ] ):
+                    log_status( opReport , operation , opDex , True , "SUCCESS" , verbose )
+                else:
+                    log_status( opReport , operation , opDex , False , "FAIL: FILE NOT RENAMED" , verbose )	    
+            else:
+                log_status( opReport , operation , opDex , False , "FAIL: ORIGIN FILE DNE" , verbose )
+        else: # else an unrecognized operation was requested , notify
+            print "execute_move_plan: Operations type" , operation[ 'op' ] , "is not recognized!"
+            log_status( opReport , operation , opDex , False , "FAIL: OPERATION NOT RECOGNIZED" , verbose )
     return opReport
 
 # [X] Check and execute directory deletion plans
@@ -391,14 +376,14 @@ def execute_move_plan( movePlan , verbose = False ): # Set simulate to 'True' to
 def del_empty_subdirs( searchDir ):
     """ Delete all the empty subdirectories under 'searchDir', URL: http://stackoverflow.com/a/22015788/7186022 """
     for dirpath , _ , _ in os.walk( searchDir, topdown = False ):  # Walk the directory from the bottom up
-	if dirpath == searchDir: # Do not attempt to delete the top level
-	    break
-	try:
-	    if len( os.listdir( dirpath ) ) == 0: # If there are no files or subfolders in the directory
-		os.rmdir( dirpath )
-	    # else , the directory is not empty , do not attempt deletion
-	except OSError as ex:
-	    print "Rejected" , ex
+        if dirpath == searchDir: # Do not attempt to delete the top level
+            break
+        try:
+            if len( os.listdir( dirpath ) ) == 0: # If there are no files or subfolders in the directory
+                os.rmdir( dirpath )
+            # else , the directory is not empty , do not attempt deletion
+        except OSError as ex:
+            print "Rejected" , ex
 
 # == Test Functions ==
 
@@ -406,15 +391,15 @@ def gather_files( searchPath ):
     """ Find all the singular files under 'searchPath' (recursive) and move them directly to 'searchPath' , undoes organiztion """
     # Walk the 'searchPath'
     for dirName , subdirList , fileList in os.walk( searchPath ): # for each subdir in 'srchDir', including 'srchDir'
-	if dirName != LOGDIR:
-	    for fName in fileList: # for each file in this subdir  
-		if os.path.splitext( fName )[1][1:].upper() not in EXTIGNORE:
-		    fullPath = os.path.join( dirName , fName )
-		    if os.path.isfile( fullPath ):
-			print "Moving" , fullPath , "to" , os.path.join( searchPath , fName )
-			shutil.move( fullPath , os.path.join( searchPath , fName ) )
-	else:
-	    print "Skipping the logging directory ..."
+        if dirName != LOGDIR:
+            for fName in fileList: # for each file in this subdir  
+                if os.path.splitext( fName )[1][1:].upper() not in EXTIGNORE:
+                    fullPath = os.path.join( dirName , fName )
+                    if os.path.isfile( fullPath ):
+                        print "Moving" , fullPath , "to" , os.path.join( searchPath , fName )
+                        shutil.move( fullPath , os.path.join( searchPath , fName ) )
+        else:
+            print "Skipping the logging directory ..."
 
 # == End Test ==
 
@@ -426,7 +411,7 @@ nowTimeStamp = lambda: datetime.now().strftime('%Y-%m-%d_%H-%M-%S') # http://sta
 def fname_timestamp_with_prefix( prefix , ext ):
     """ Return a timestamped filename with a 'prefix'ed name and the specified file 'ext'ension """
     if ext[0] == '.': # If the user passed the extension with the period , then remove it
-	ext = ext[1:]
+        ext = ext[1:]
     return prefix + nowTimeStamp() + '.' + ext # Return the file
 
 def remove_XML_header( pString ):
@@ -445,12 +430,12 @@ def records_to_XML_string( recordsList , outPath = None ):
     """ Convert a 'recordsList' to a string representing an XML document """
     rtnStr = """<?xml version="1.0" encoding="UTF-8" ?>""" + endl + """<log>""" + endl
     for record in recordsList:
-	rtnStr += remove_XML_header( dicttoxml( record , custom_root = 'record' ) ) + endl
+        rtnStr += remove_XML_header( dicttoxml( record , custom_root = 'record' ) ) + endl
     rtnStr += """</log>"""
     if outPath: # If the user provided an output path , write the XML string to a file
-	outFile = open( outPath , 'w' )
-	outFile.write( rtnStr )
-	outFile.close()
+        outFile = open( outPath , 'w' )
+        outFile.write( rtnStr )
+        outFile.close()
     return rtnStr
 
 # == End Archival ==
@@ -467,20 +452,20 @@ def menu_loop():
     menuRun = True
 
     while( menuRun ):
-	sep( __prog_signature__() )
-	print "The library dir is set to:  " , LIBDIR
-	print "The scanning dir is set to: " , SCANDIR
-	print "The logging dir is set to:  " , LOGDIR
-	print "The current mode is:        " , mode
-	if not os.path.isdir( LOGDIR ):
-	    try:
-		os.makedirs( LOGDIR )
-	    except:
-		print "Could not create the logging directory!"
-	accessible = validate_dirs_writable( LIBDIR , SCANDIR , LOGDIR )
-	print "Directories are accessible:" , accessible
-	print \
-	      """ ~~ MENU ~~ 
+        sep( __prog_signature__() )
+        print "The library dir is set to:  " , LIBDIR
+        print "The scanning dir is set to: " , SCANDIR
+        print "The logging dir is set to:  " , LOGDIR
+        print "The current mode is:        " , mode
+        if not os.path.isdir( LOGDIR ):
+            try:
+                os.makedirs( LOGDIR )
+            except:
+                print "Could not create the logging directory!"
+        accessible = validate_dirs_writable( LIBDIR , SCANDIR , LOGDIR )
+        print "Directories are accessible:" , accessible
+        print \
+              """ ~~ MENU ~~ 
 	      0. Quit
 	      1. Change Mode
 	      2. Execute: Scan -> Repair -> Clean
@@ -488,113 +473,113 @@ def menu_loop():
 	      4. Change Scanning Directory
 	      5. Change Logging Directory 
 	      6. Flatten Library ( Gather files , Delete dirs )"""
-	try:
-	    response = int( raw_input( "Menu Choice >> " ) )
-	except ValueError:
-	    print "ERROR: Please enter a number corresponding to the desired menu choice!"
-	    
-	if   response == 0: 
-	    menuRun = False
-	    print "EXIT"
-	    break
-	
-	elif response == 1:
-	    sep( "Change Mode" , 1 )
-	    choices = list( modeEnum.iteritems() )
-	    for i in xrange( len( choices ) ):
-		print str(i) + ": " + str( choices[i][0] ) + " , " + str( choices[i][0] )
-	    choice = None
-	    validChoice = False
-	    while choice.__class__.__name__ != 'int' and not validChoice:
-		try:
-		    choice = int( raw_input( "Choose a mode and press enter: " ) )
-		    if choice > -1 and choice < len( choices ):
-			validChoice = True
-		    else:
-			print choice , "is not a valid option, try again."
-		except:
-		    print "ERROR: Could not parse user selection"
-	    mode = modeEnum[ choices[ choice ][0] ] # Set the mode to the user choice
-	    print "Mode was set to" , mode
-	
-	elif response == 2:
-	    sep( "Execute: Scan -> Repair -> Clean" , 1 )
-	    if not accessible: # If the user does not have access to any one of the relevant directory
-		print "ALERT: This action is barred! User does not have write permission to relevant directories or directories DNE!"
-	    else:
-		# Scan , Plan , Move
-		fileInfo = fetch_library_metadata( SCANDIR ) # For a repair , the 'SCANDIR' and 'LIBDIR' should be the same
-		moves = create_move_plan( fileInfo , LIBDIR )
-		execution = execute_move_plan( moves , verbose = True )
-		# Log everything 
-		records_to_XML_string( fileInfo  , outPath = os.path.join( LOGDIR , fname_timestamp_with_prefix( "fileLog" , 'txt' ) ) )
-		records_to_XML_string( moves     , outPath = os.path.join( LOGDIR , fname_timestamp_with_prefix( "planLog" , 'txt' ) ) ) 
-		records_to_XML_string( execution , outPath = os.path.join( LOGDIR , fname_timestamp_with_prefix( "execLog" , 'txt' ) ) )
-		# Erase empty dirs in the 'SCANDIR' (It's possible we removed a large number of files from this dir)
-		del_empty_subdirs( SCANDIR )
-	    
-	elif response == 3:
-	    sep( "Change Library Directory" , 1 )
-	    nuPath = tokenize_with_wspace( raw_input( "Enter the components of the library path, separated by spaces.\n>> " ) )
-	    try:
-		nuPath = os.path.join( nuPath )
-		if os.path.isdir( nuPath ):
-		    if validate_dirs_writable( nuPath ):
-			LIBDIR = nuPath
-		    else:
-			print "ERROR: You do not have write permission to this path!"
-		else:
-		    print "ERROR: Not a path!"
-	    except Exception as err:
-		print "ERROR: Could not change directory" , endl , err
-		    
-	elif response == 4:
-	    sep( "Change Scanning Directory" , 1 )
-	    nuPath = tokenize_with_wspace( raw_input( "Enter the components of the library path, separated by spaces.\n>> " ) )
-	    try:
-		nuPath = os.path.join( nuPath )
-		if os.path.isdir( nuPath ):
-		    if validate_dirs_writable( nuPath ):
-			SCANDIR = nuPath
-		    else:
-			print "ERROR: You do not have write permission to this path!"
-		else:
-		    print "ERROR: Not a path!"
-	    except Exception as err:
-		print "ERROR: Could not change directory" , endl , err
-		
-	elif response == 5:
-	    sep( "Change Logging Directory" , 1 ) 
-	    nuPath = tokenize_with_wspace( raw_input( "Enter the components of the library path, separated by spaces.\n>> " ) )
-	    try:
-		nuPath = os.path.join( nuPath )
-		if os.path.isdir( nuPath ):
-		    if validate_dirs_writable( nuPath ):
-			LOGDIR = nuPath
-		    else:
-			print "ERROR: You do not have write permission to this path!"
-		else:
-		    print "ERROR: Not a path!"
-	    except Exception as err:
-		print "ERROR: Could not change directory" , endl , err
-		
-	elif response == 6:
-	    sep( "Flatten Library" , 1 )
-	    print "Gathering files ..."
-	    gather_files( LIBDIR )
-	    print "Erasing empty dirs ..."
-	    del_empty_subdirs( LIBDIR )
-	    print "Complete!"
-	    
-	else:
-	    print "ERROR: Please enter a number corresponding to the desired menu choice!"    
+        try:
+            response = int( raw_input( "Menu Choice >> " ) )
+        except ValueError:
+            print "ERROR: Please enter a number corresponding to the desired menu choice!"
+
+        if   response == 0: 
+            menuRun = False
+            print "EXIT"
+            break
+
+        elif response == 1:
+            sep( "Change Mode" , 1 )
+            choices = list( modeEnum.iteritems() )
+            for i in xrange( len( choices ) ):
+                print str(i) + ": " + str( choices[i][0] ) + " , " + str( choices[i][0] )
+            choice = None
+            validChoice = False
+            while choice.__class__.__name__ != 'int' and not validChoice:
+                try:
+                    choice = int( raw_input( "Choose a mode and press enter: " ) )
+                    if choice > -1 and choice < len( choices ):
+                        validChoice = True
+                    else:
+                        print choice , "is not a valid option, try again."
+                except:
+                    print "ERROR: Could not parse user selection"
+            mode = modeEnum[ choices[ choice ][0] ] # Set the mode to the user choice
+            print "Mode was set to" , mode
+
+        elif response == 2:
+            sep( "Execute: Scan -> Repair -> Clean" , 1 )
+            if not accessible: # If the user does not have access to any one of the relevant directory
+                print "ALERT: This action is barred! User does not have write permission to relevant directories or directories DNE!"
+            else:
+                # Scan , Plan , Move
+                fileInfo = fetch_library_metadata( SCANDIR ) # For a repair , the 'SCANDIR' and 'LIBDIR' should be the same
+                moves = create_move_plan( fileInfo , LIBDIR )
+                execution = execute_move_plan( moves , verbose = True )
+                # Log everything 
+                records_to_XML_string( fileInfo  , outPath = os.path.join( LOGDIR , fname_timestamp_with_prefix( "fileLog" , 'txt' ) ) )
+                records_to_XML_string( moves     , outPath = os.path.join( LOGDIR , fname_timestamp_with_prefix( "planLog" , 'txt' ) ) ) 
+                records_to_XML_string( execution , outPath = os.path.join( LOGDIR , fname_timestamp_with_prefix( "execLog" , 'txt' ) ) )
+                # Erase empty dirs in the 'SCANDIR' (It's possible we removed a large number of files from this dir)
+                del_empty_subdirs( SCANDIR )
+
+        elif response == 3:
+            sep( "Change Library Directory" , 1 )
+            nuPath = tokenize_with_wspace( raw_input( "Enter the components of the library path, separated by spaces.\n>> " ) )
+            try:
+                nuPath = os.path.join( nuPath )
+                if os.path.isdir( nuPath ):
+                    if validate_dirs_writable( nuPath ):
+                        LIBDIR = nuPath
+                    else:
+                        print "ERROR: You do not have write permission to this path!"
+                else:
+                    print "ERROR: Not a path!"
+            except Exception as err:
+                print "ERROR: Could not change directory" , endl , err
+
+        elif response == 4:
+            sep( "Change Scanning Directory" , 1 )
+            nuPath = tokenize_with_wspace( raw_input( "Enter the components of the library path, separated by spaces.\n>> " ) )
+            try:
+                nuPath = os.path.join( nuPath )
+                if os.path.isdir( nuPath ):
+                    if validate_dirs_writable( nuPath ):
+                        SCANDIR = nuPath
+                    else:
+                        print "ERROR: You do not have write permission to this path!"
+                else:
+                    print "ERROR: Not a path!"
+            except Exception as err:
+                print "ERROR: Could not change directory" , endl , err
+
+        elif response == 5:
+            sep( "Change Logging Directory" , 1 ) 
+            nuPath = tokenize_with_wspace( raw_input( "Enter the components of the library path, separated by spaces.\n>> " ) )
+            try:
+                nuPath = os.path.join( nuPath )
+                if os.path.isdir( nuPath ):
+                    if validate_dirs_writable( nuPath ):
+                        LOGDIR = nuPath
+                    else:
+                        print "ERROR: You do not have write permission to this path!"
+                else:
+                    print "ERROR: Not a path!"
+            except Exception as err:
+                print "ERROR: Could not change directory" , endl , err
+
+        elif response == 6:
+            sep( "Flatten Library" , 1 )
+            print "Gathering files ..."
+            gather_files( LIBDIR )
+            print "Erasing empty dirs ..."
+            del_empty_subdirs( LIBDIR )
+            print "Complete!"
+
+        else:
+            print "ERROR: Please enter a number corresponding to the desired menu choice!"    
 
 # == End Interaction ==
 
 # == Main ==================================================================================================================================
 
 if __name__ == "__main__":
-    
+
     # ~~ Locate Music Library ~~
     #          Drive letter separator for Windows --v
     LIBRARY_LOCATIONS = [ "/media/mawglin/MUSIC/Music", 
@@ -604,9 +589,9 @@ if __name__ == "__main__":
     SCANDIR = first_valid_dir( SCANDIR_LOCATIONS )
     print LIBDIR
     LOGDIR = os.path.join( LIBDIR , "Logs" )
-    
+
     menu_loop()
-    
+
 
 # == End Main ==============================================================================================================================
 
