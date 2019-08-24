@@ -14,7 +14,7 @@ PARENTDIR = os.path.dirname( SOURCEDIR )
 def prepend_dir_to_path( pathName ): sys.path.insert( 0 , pathName ) # Might need this to fetch a lib in a parent directory
 prepend_dir_to_path( SOURCEDIR )
 from marchhare.marchhare import ( LogMH , parse_lines , ascii , SuccessTally , dict_A_add_B_new_only ,
-                                  ensure_dir , install_constants )
+                                  ensure_dir , install_constants , get_EXT )
  
 """
 retrieve_yt.py

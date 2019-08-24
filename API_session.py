@@ -114,7 +114,8 @@ class Session:
          
         # ~ Session Vars ~
         self.ACTIVE_SESSION = False
-        self.SESSION_PATH   = "session.txt"        
+        self.SESSION_PATH   = "session.txt"     
+        self.SOURCEDIR      = SOURCEDIR
         
         # ~ Binary Output ~
         self.RAW_FILE_DIR     = ""
