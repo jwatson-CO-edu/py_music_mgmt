@@ -12,7 +12,7 @@ NOTE: This file is the 3.6 replacement for the 2.7 "marchhare.py"
 
 # ~~~ Imports ~~~
 # ~~ Standard ~~
-import os
+import os , __builtin__ , operator
 from math import pi , sqrt
 # ~~ Special ~~
 import numpy as np
@@ -23,6 +23,22 @@ EPSILON = 1e-7
 infty   = 1e309 # URL: http://stackoverflow.com/questions/1628026/python-infinity-any-caveats#comment31860436_1628026
 endl    = os.linesep
 sqt2    = sqrt(2)
+
+# === PATH AND ENVIRONMENT ===========================================================================================================
+
+def install_constants():
+    """ Add the constants that you use the most """
+    __builtin__.EPSILON = 1e-7 # ------ Assume floating point errors below this level
+    __builtin__.infty   = 1e309 # ----- URL: http://stackoverflow.com/questions/1628026/python-infinity-any-caveats#comment31860436_1628026
+    __builtin__.endl    = os.linesep #- Line separator
+    __builtin__.pyEq    = operator.eq # Default python equality
+    __builtin__.piHalf  = pi/2
+    
+
+# __ End Environment __
+
+# ___ END PATH & ENV _________________________________________________________________________________________________________________
+
 
 # === FILE OPERATIONS ======================================================================================================================
 
