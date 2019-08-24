@@ -15,7 +15,7 @@ Helper functions
 
 # ~~ Libraries ~~
 # ~ Standard Libraries ~
-import sys , os , datetime , cPickle , heapq , time , operator
+import sys , os , datetime , cPickle , heapq , time , operator, __builtin__
 from math import trunc , pi  
 from random import choice
 from warnings import warn
@@ -32,6 +32,17 @@ piHalf = pi/2
 
 # __ End Init ______________________________________________________________________________________________________________________________
 
+# == Environment Manipulation ==
+
+def install_constants():
+    """ Add the constants that you use the most """
+    __builtin__.EPSILON = 1e-7 # ------ Assume floating point errors below this level
+    __builtin__.infty   = 1e309 # ----- URL: http://stackoverflow.com/questions/1628026/python-infinity-any-caveats#comment31860436_1628026
+    __builtin__.endl    = os.linesep #- Line separator
+    __builtin__.pyEq    = operator.eq # Default python equality
+    __builtin__.piHalf  = pi/2    
+
+# __ End Environment __
 
 # == PATH Manipulation ==
 
@@ -912,7 +923,10 @@ def yesno( pBool ):
 def ensure_dir( dirName ):
     """ Create the directory if it does not exist """
     if not os.path.exists( dirName ):
-        os.makedirs( dirName )
+        try:
+            os.makedirs( dirName )
+        except Exception as err:
+            print "ensure_dir: Could not create" , dirName , '\n' , err
         
 def is_container_too_big( container , mxSize = int(1e4) ):
     """ Check the length of the container and warn if we should be using a database """
