@@ -61,12 +61,12 @@ def comma_sep_key_val_from_file( fPath ):
 class MyLogger( object ):
     """ Logging class for YT downloads """
     # https://github.com/rg3/youtube-dl/blob/master/README.md#embedding-youtube-dl
-    global LOG
     
     def __init__( self ):
         """ Put ther noisier output in separate logs for easier debugging """
         self.dbgLog = LogMH()
         self.wrnLog = LogMH()
+        self.errLog = LogMH()
         
     def debug( self , msg ):
         """ Log debug output """
@@ -78,7 +78,7 @@ class MyLogger( object ):
         
     def error( self , msg ):
         """ Log erros in the main log """
-        LOG.prnt( "ERROR:" , msg )
+        self.errLog.prnt( "ERROR:" , msg )
 
 def my_hook( d ):
     # https://github.com/rg3/youtube-dl/blob/master/README.md#embedding-youtube-dl
@@ -244,12 +244,18 @@ def set_session_active( active = 1 ):
     global ACTIVE_SESSION , SESSION_PATH
     ACTIVE_SESSION = bool( active )
     
+def construct_session_path( inputPath ):
+    return strip_EXT( os.path.expanduser( inputPath ) ) + "_session.txt"
+
+def construct_pickle_path( RAW_FILE_DIR , inputPath ):
+    return RAW_FILE_DIR + '/' + strip_EXT( str( os.path.split( inputPath )[-1] ) ) + "_metadata.pkl"
+    
 def begin_session( inputPath , overridePath = None ):
     """ Set all vars that we will need to run a session """
     # 2. Instantiate a timer
     dlTimer = Stopwatch()   
     # 3. Construct session path
-    SESSION_PATH = strip_EXT( inputPath ) + "_session.txt"
+    SESSION_PATH = construct_session_path( inputPath )
     # 4. Load session  &&  Activate
     try:
         session = load_session( SESSION_PATH )
@@ -260,7 +266,7 @@ def begin_session( inputPath , overridePath = None ):
     set_session_active( True )
     # 5. If there was an override file provided, load
     if overridePath:
-        sesnDict = comma_sep_key_val_from_file( overridePath );     
+        sesnDict = comma_sep_key_val_from_file( os.path.expanduser( overridePath ) );     
         print "Loaded session file:" , overridePath
         for key , val in sesnDict.iteritems():
             try:
@@ -271,7 +277,7 @@ def begin_session( inputPath , overridePath = None ):
     else:
         print "There was no override file provided"
     # 4. Construct pickle path
-    session.ACTIVE_PICKLE_PATH = session.RAW_FILE_DIR + '/' + strip_EXT( str( os.path.split( inputPath )[-1] ) ) + "_metadata.pkl"
+    session.ACTIVE_PICKLE_PATH = construct_pickle_path( session.RAW_FILE_DIR , inputPath )
     # 5. Unpickle session metadata
     session.METADATA = unpickle_dict( session.ACTIVE_PICKLE_PATH ) 
     if session.METADATA:

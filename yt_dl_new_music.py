@@ -118,6 +118,7 @@ SOURCEDIR = os.path.dirname( os.path.abspath( '__file__' ) ) # URL, dir containi
 PARENTDIR = os.path.dirname( SOURCEDIR )
 # ~~ Path Utilities ~~
 def prepend_dir_to_path( pathName ): sys.path.insert( 0 , pathName ) # Might need this to fetch a lib in a parent directory
+prepend_dir_to_path( SOURCEDIR )
 
 # ~~~ Imports ~~~
 # ~~ Standard ~~
@@ -156,7 +157,6 @@ import pygn
 from pygn.pygn import register , search
 print "Loaded 'pygn'! (GraceNote)"
 # ~~ Local ~~
-prepend_dir_to_path( SOURCEDIR )
 from marchhare.marchhare import ( parse_lines , ascii , sep , is_nonempty_list , 
 								  pretty_print_dict , unpickle_dict , yesno ,
                                   validate_dirs_writable , LogMH , Stopwatch , nowTimeStampFine ,

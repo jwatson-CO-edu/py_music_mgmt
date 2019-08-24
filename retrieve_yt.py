@@ -6,10 +6,15 @@
 from __future__ import division # Future imports must be called before everything else, including triple-quote docs!
 
 # ~~ Standard ~~
-import os , shutil
+import os , shutil , traceback , sys
 # ~~ Local ~~
+SOURCEDIR = os.path.dirname( os.path.abspath( '__file__' ) ) # URL, dir containing source file: http://stackoverflow.com/a/7783326
+PARENTDIR = os.path.dirname( SOURCEDIR )
+# ~~ Path Utilities ~~
+def prepend_dir_to_path( pathName ): sys.path.insert( 0 , pathName ) # Might need this to fetch a lib in a parent directory
+prepend_dir_to_path( SOURCEDIR )
 from marchhare.marchhare import ( LogMH , parse_lines , ascii , SuccessTally , dict_A_add_B_new_only ,
-                                  ensure_dir , )
+                                  ensure_dir , install_constants )
  
 """
 retrieve_yt.py
@@ -17,6 +22,8 @@ James Watson, 2019 February
 Retrieve audio from YouTube videos
 """
 
+# ~~~ INIT ~~~
+install_constants()
 
 # = Program Functions =
 
@@ -129,9 +136,8 @@ def ensure_raw_dirs( sssn , RAW_FILE_DIR ):
         tally.tally( created )
     sssn.METADATA[ '%PF_RAWDIRS' ] = tally.get_stats()
 
-def download_videos_as_MP3( sssn , dlTimer , ydl ):
+def download_videos_as_MP3( sssn , dlTimer , ydl , limitN = None ):
     """ Download all the videos currently loaded in the session, skipping overfiles already saved """
-    # FIXME : DEFINE A FUNCTION TO ASSIGN FLAG AND TALLY T/F
     haveCount = 0
     skipCount = 0
     failCount = 0
@@ -139,8 +145,10 @@ def download_videos_as_MP3( sssn , dlTimer , ydl ):
     tally     = SuccessTally()
     # 0. Retrieve the list of IDs
     IDs    = YTID_keys_from_dict( sssn.METADATA )
+    numIDs = len( IDs )
     # 0.5. For each video ID
-    for ID in IDs:
+    for IDex , ID in enumerate( IDs ):
+        print "\n~~~ Downloading and Converting" , IDex+1 , "of" , numIDs , "~~~\n" 
         ready       = True
         enDest      = None
         enCpSuccess = False
@@ -176,6 +184,7 @@ def download_videos_as_MP3( sssn , dlTimer , ydl ):
                 sssn.LOG.prnt( "ERROR , download_videos_as_MP3:" , 
                                        "Could not download from " , currURL )
                 print ex
+                traceback.print_exc()
                 tally.tally( sssn.METADATA[ ID ][ 'FL_DLOK' ] )
                 continue
             # 6. Find file and attempt move
@@ -210,6 +219,7 @@ def download_videos_as_MP3( sssn , dlTimer , ydl ):
                 sssn.LOG.prnt( "ERROR , download_videos_as_MP3:" , 
                                        "There was a problem with" , ID )
                 print( ex )
+                traceback.print_exc()
                 sssn.METADATA[ ID ][ 'FL_DLOK' ] = False
                 tally.tally( sssn.METADATA[ ID ][ 'FL_DLOK' ] )
                 continue
