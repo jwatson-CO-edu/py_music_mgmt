@@ -1146,10 +1146,21 @@ def ensure_dirs_writable( *dirList ):
 
 # == String Processing ==
 
-def ascii( strInput ): 
+def ascii( strInput , errChar = '_' ): 
     """ Return an ASCII representation of the string or object, ignoring elements that do not have an ASCII representation """
     if type( strInput ) in ( unicode , str ):
-        return str( strInput.encode( 'ascii' , 'ignore' ) )
+        try:
+            return str( strInput.encode( 'ascii' , 'ignore' ) )
+        except:
+            # The 'ignore' option is somehow not strong enough of a protection sometimes,
+            strOut = str( strInput )
+            rtnStr = ""
+            for char in strOut:
+                if ord( char ) < 127:
+                    rtnStr += char
+                else:
+                    rtnStr += errChar
+            return rtnStr        
     else:
         return str( strInput ).encode( 'ascii' , 'ignore' )
 
