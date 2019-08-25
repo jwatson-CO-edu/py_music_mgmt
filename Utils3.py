@@ -12,7 +12,7 @@ NOTE: This file is the 3.6 replacement for the 2.7 "marchhare.py"
 
 # ~~~ Imports ~~~
 # ~~ Standard ~~
-import os , __builtin__ , operator
+import os , builtins , operator
 from math import pi , sqrt
 # ~~ Special ~~
 import numpy as np
@@ -28,14 +28,11 @@ sqt2    = sqrt(2)
 
 def install_constants():
     """ Add the constants that you use the most """
-    __builtin__.EPSILON = 1e-7 # ------ Assume floating point errors below this level
-    __builtin__.infty   = 1e309 # ----- URL: http://stackoverflow.com/questions/1628026/python-infinity-any-caveats#comment31860436_1628026
-    __builtin__.endl    = os.linesep #- Line separator
-    __builtin__.pyEq    = operator.eq # Default python equality
-    __builtin__.piHalf  = pi/2
-    
-
-# __ End Environment __
+    builtins.EPSILON = 1e-7 # ------ Assume floating point errors below this level
+    builtins.infty   = 1e309 # ----- URL: http://stackoverflow.com/questions/1628026/python-infinity-any-caveats#comment31860436_1628026
+    builtins.endl    = os.linesep #- Line separator
+    builtins.pyEq    = operator.eq # Default python equality
+    builtins.piHalf  = pi/2
 
 # ___ END PATH & ENV _________________________________________________________________________________________________________________
 
@@ -119,6 +116,26 @@ def get_tokenizer_with_char( separator = ',' ,  evalFunc = str ):
 # ___ END FILE _____________________________________________________________________________________________________________________________
 
 
+# === STRING OPERATIONS ==============================================================================================================
+
+def format_dec_list( numList , places = 2 ): 
+    """ Return a string representing a list of decimal numbers limited to 'places' """
+    rtnStr = "[ "
+    for nDex , num in enumerate( numList ):
+        if isinstance( numList , np.ndarray ):
+            scalar = num.item()
+        else:
+            scalar = num 
+        if nDex < len(numList) - 1:
+            rtnStr += ('{0:.' + str( places ) + 'g}').format( scalar ) + ' , '
+        else:
+            rtnStr += ('{0:.' + str( places ) + 'g}').format( scalar )
+    rtnStr += " ]"
+    return rtnStr
+
+# ___ END STRING _____________________________________________________________________________________________________________________
+
+
 # === CONTAINER FUNCTIONS ==================================================================================================================
     
 def size( struct ):
@@ -134,7 +151,46 @@ def size( struct ):
             break
     return dims
 
+def concat_arr( *arrays ):
+    """ Concatenate all 'arrays' , any of which can be either a Python list or a Numpy array """
+    # URL , Test if any in an iterable belongs to a certain class : https://stackoverflow.com/a/16705879
+    if any( isinstance( arr , np.ndarray ) for arr in arrays ): # If any of the 'arrays' are Numpy , work for all cases , 
+        if len( arrays ) == 2: # Base case 1 , simple concat    # but always returns np.ndarray
+            return np.concatenate( ( arrays[0] , arrays[1] ) )
+        elif len( arrays ) > 2: # If there are more than 2 , concat the first two and recur
+            return concat_arr( 
+                np.concatenate( ( arrays[0] , arrays[1] ) ) , 
+                *arrays[2:] 
+            )
+        else: # Base case 2 , there is only one arg , return it
+            return arrays[0]
+    if len( arrays ) > 1: # else no 'arrays' are Numpy 
+        rtnArr = arrays[0]
+        for arr in arrays[1:]: # If there are more than one , just use addition operator in a line
+            rtnArr += arr
+        return rtnArr
+    else: # else there was only one , return it
+        return arrays[0] 
+
 # ___ END CONTAINER ________________________________________________________________________________________________________________________
+
+
+# === ITERABLE STRUCTURES ============================================================================================================
+
+def incr_min_step( bgn , end , stepSize ):
+    """ Return a list of numbers from 'bgn' to 'end' (inclusive), separated by at LEAST 'stepSize'  """
+    # NOTE: The actual step size will be the size that produces an evenly-spaced list of trunc( (end - bgn) / stepSize ) elements
+    return np.linspace( bgn , end , num = trunc( (end - bgn) / stepSize ) , endpoint=True )
+
+def incr_max_step( bgn , end , stepSize ):
+    """ Return a list of numbers from 'bgn' to 'end' (inclusive), separated by at MOST 'stepSize'  """
+    numSteps = ( end - bgn ) / ( stepSize * 1.0 )
+    rtnLst = [ bgn + i * stepSize for i in xrange( trunc(numSteps) + 1 ) ]
+    if numSteps % 1 > 0: # If there is less than a full 'stepSize' between the last element and the end
+        rtnLst.append( end )
+    return rtnLst
+
+# ___ END ITERABLE ___________________________________________________________________________________________________________________
 
 
 # === Testing ==============================================================================================================================

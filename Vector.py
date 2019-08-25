@@ -15,14 +15,14 @@ Vectors , Turns , Frames , and common operations in 2D geometry
 """
 
 # ~ Standard Libraries ~
-import os , operator
+import os , operator , sys
 from math import pi
 from copy import deepcopy
 from random import random
 # ~ Special Libraries ~
 import numpy as np
 # ~ Local Libraries ~
-from MathKit import eq_margin , round_small , eq
+from marchhare.MathKit import eq_margin , round_small , eq
 
 # set_dbg_lvl(1) # Transformation of objects contained in Frames
 
@@ -396,7 +396,7 @@ def matx_2D_pretty_print( matx ):
         else:
             dsplyStr += " ]"
     dsplyStr += " ]"
-    print dsplyStr
+    print( dsplyStr )
 
 
 # __ End Printing __

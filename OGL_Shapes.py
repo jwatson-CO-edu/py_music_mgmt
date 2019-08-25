@@ -34,9 +34,11 @@ from pyglet.gl import ( GL_LINES , glColor3ub , GL_TRIANGLES , glTranslated , GL
                         GL_DEPTH_TEST , glMatrixMode , GL_PROJECTION , glLoadIdentity , gluPerspective ,
                         GL_MODELVIEW , gluLookAt , GL_POINTS , glPointSize )
 # ~ Local ~
-from marchhare.VectorMath.HomogXforms import xform_points
+from marchhare.VectorMath.HomogXforms import xform_points_np
 
-from math_kit import vec_mag , vec_unit , concat_arr , vec_proj , vec_angle_between
+from marchhare.Vector import vec_mag , vec_unit , vec_proj , vec_angle_between
+from marchhare.VectorMath.Vector3D import vec_sphr
+from marchhare.Utils3 import concat_arr
 
 _DEBUG = False
 
@@ -83,7 +85,7 @@ class OGLDrawable( object ):
         
     def xform_lab( self ):
         """ Transform all of the relative points into absolute points """
-        self.labVerts = xform_points( self.vertices , self.xform )
+        self.labVerts = xform_points_np( self.vertices , self.xform )
         self.labVerts = self.labVerts.flatten()
         
     def set_color( self , clrTpl ):

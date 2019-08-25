@@ -95,6 +95,10 @@ def xform_points( pointsList , xform ):
     """ Apply a homogeneous transformation to a 3D vector """
     return [ apply_homog( xform , pnt ) for pnt in pointsList ]
 
+def xform_points_np( pointsList , xform ):
+    """ Apply a homogeneous transformation to a 3D vector """
+    return np.array( [ apply_homog( xform , pnt ) for pnt in pointsList ] )
+
 def homog_xform( E , r ): 
     """ Return the combination of rotation matrix 'E' and displacement vector 'r' as a 4x4 homogeneous transformation matrix """
     return np.vstack( ( np.hstack( (  E               , [ [ r[0] ] , [ r[1] ] , [ r[2] ] ]  ) ) ,
