@@ -14,7 +14,7 @@ PARENTDIR = os.path.dirname( SOURCEDIR )
 def prepend_dir_to_path( pathName ): sys.path.insert( 0 , pathName ) # Might need this to fetch a lib in a parent directory
 prepend_dir_to_path( SOURCEDIR )
 from marchhare.marchhare import ( LogMH , parse_lines , ascii , SuccessTally , dict_A_add_B_new_only ,
-                                  ensure_dir , install_constants , get_EXT )
+                                  ensure_dir , install_constants , get_EXT , nowTimeStampFine )
  
 """
 retrieve_yt.py
@@ -148,7 +148,7 @@ def download_videos_as_MP3( sssn , dlTimer , ydl , limitN = None ):
     numIDs = len( IDs )
     # 0.5. For each video ID
     for IDex , ID in enumerate( IDs ):
-        print "\n~~~ Downloading and Converting" , IDex+1 , "of" , numIDs , "~~~\n" 
+        print "\n~~~ Downloading and Converting" , IDex+1 , "of" , numIDs , "at" , nowTimeStampFine() , "~~~\n" 
         ready       = True
         enDest      = None
         enCpSuccess = False
