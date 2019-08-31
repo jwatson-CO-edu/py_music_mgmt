@@ -191,6 +191,12 @@ class MeshVFN:
         self.V = V
         self.F = F
         self.N = N
+        
+def tri_normal_CCW( p1 , p2 , p3 ):
+    """ Return the normal of a triangle with CCW points: `p1` , `p2` , `p3` """
+    vec1 = np.subtract( p2 , p1 )
+    vec2 = np.subtract( p3 , p2 )
+    return vec_unit( np.cross( vec1 , vec3 ) )
     
 def segment_intersects_VFN( segment , V , F , N ):
     """ Determine if 'segment' intersects any of the triangles defined by the graphics-style V-F-N matrices 
