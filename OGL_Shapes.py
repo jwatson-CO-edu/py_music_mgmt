@@ -7,12 +7,13 @@ OGL_Shapes.py
 James Watson , 2019 August
 Primitive shapes and meshes to display in Pyglet / OpenGL 
 
-Dependencies: numpy , pyglet
+Dependencies: numpy , pyglet , MARCHHARE
 """
 
 """
 ~~~~~ Development Plan ~~~~~
 
+[ ] Add transform notes to the template, should only really be done when using the default mode
 [ ] Vector array optimization ( See Drawable )
 
 """
@@ -392,6 +393,14 @@ class OGL_App( pyglet.window.Window ):
         self.nearClipZ  = 0.1 # distance from the viewer to the near clipping plane (always positive)
         self.farClipZ   = 200 # distance from the viewer to the far clipping plane (always positive)
         
+        self.customDraw = False
+        self.drawFunc   = None
+        
+    def set_custom_draw( self , func ):
+        """ Set a custom draw function """
+        self.customDraw = True
+        self.drawFunc   = func
+        
     def set_camera( self , cameraLocationPnt , lookAtPoint , upDirection ):
         """ Specify the camera view """
         if ( len( cameraLocationPnt ) != 3 or len( lookAtPoint ) != 3 or len( upDirection ) != 3 ):
@@ -506,13 +515,20 @@ class OGL_App( pyglet.window.Window ):
             
     def on_draw( self ):
         """ Repaint the window , per-frame activity """
+        # 0. Erase last frame
         self.clear()
+        # 1. Set up camera in projection mode
         self.setup_3D()
-        # print "DEBUG:" , "There are" , len( self.renderlist ) , "items in 'self.renderlist'"
-        for obj in self.renderlist:
-            obj.draw()
+        # 2. Draw geometry in model mode
+        # Option 1: Draw each object in sequence (Note that this option does not easily allow nested transforms)
+        if not self.customDraw:
+            for obj in self.renderlist:
+                obj.draw()
+        # Option 2: Invoke a user-defined function (Allows aribtrary complexity including transforms)
+        else:
+            self.drawFunc()
         if self.showFPS:
-            print( "FPS:" , pyglet.clock.get_fps() ) # Print the framerate 
+                print( "FPS:" , pyglet.clock.get_fps() ) # Print the framerate
 
 # __ End OGL_App __
 

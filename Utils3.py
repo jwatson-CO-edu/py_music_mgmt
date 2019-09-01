@@ -172,6 +172,15 @@ def concat_arr( *arrays ):
     else: # else there was only one , return it
         return arrays[0] 
 
+def build_sublists_by_cadence( flatList , cadence ): 
+    """ Return a list in which each element is a list of consecutive 'flatList' elements of length 'cadence' elements if elements remain """
+    rtnList = []
+    for flatDex , flatElem in enumerate( flatList ):
+        if flatDex % cadence == 0:
+            rtnList.append( [] )
+        rtnList[-1].append( flatElem )
+    return rtnList
+
 # ___ END CONTAINER ________________________________________________________________________________________________________________________
 
 

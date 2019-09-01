@@ -1,9 +1,9 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Template Version: 2017-06-18
 
 # ~~ Future First ~~
-from __future__ import division # Future imports must be called before everything else, including triple-quote docs!
+#from __future__ import division # Future imports must be called before everything else, including triple-quote docs!
 
 """@module MeshVFN.py
 @brief Mesh processing in Python
@@ -344,6 +344,15 @@ def tri_list_to_matx_V_F_N( v0List , v1List , v2List , normals = None ):
         else:
             N.append( normals[i] )
     return [ list( elem ) for elem in V ] , F , N # Cast the vertices to lists and return them and the faces ( already nested lists )
+
+def VF_to_N( verts , facets ):
+    """ Given a list of vertices and a list of facets, return N perpendicular to each facet """
+    N = []
+    for f_i in facets:
+        p_i = [ verts[j] for j in f_i ]
+        N.append( tri_normal( p_i[0] , p_i[1] , p_i[2] ) )
+    return N
+    
 
 ## facet_adjacency_matx
 # @brief Construct an adjacency matrix for all facets , NOTE: Adjacency is defined by sharing a side , sharing one vertex is not adjacent
