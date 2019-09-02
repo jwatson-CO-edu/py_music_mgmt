@@ -15,22 +15,22 @@ Vectors, Turns, Frames, and common operations in 2D geometry
 """
 
 # ~ Standard Libraries ~
+import operator
 from math import sqrt , cos , sin , acos , pi , atan2 , e
 # ~ Special Libraries ~
-import Tkinter
+import tkinter
 import numpy as np
 from scipy.spatial import ConvexHull
 # ~ Local Libraries ~
 if __name__ == "__main__":
     import sys , os
     sys.path.append( os.path.dirname( os.path.dirname( os.path.abspath( __file__ ) ) ) )
-from marchhare import PriorityQueue , elemw , format_dec_list , print_list, tandem_sorted
-from MathKit import wrap_bounds_fraction , roundint , eq , round_small 
-from Vector import vec_mag , vec_unit , vec_proj , vec_round_small , vec_copy , vec_from_seg , vec_avg , vec_dif_mag , is_vector , bbox_from_points , vec_copy_deep
+from marchhare.Utils3 import PriorityQueue , elemw , format_dec_list , pretty_list, tandem_sorted , install_constants
+from marchhare.MathKit import wrap_bounds_fraction , roundint , eq , round_small 
+from marchhare.Vector import vec_mag , vec_unit , vec_proj , vec_round_small , vec_copy , vec_from_seg , vec_avg , vec_dif_mag , is_vector , bbox_from_points , vec_copy_deep
 
 # ~~ Constants , Shortcuts , Aliases ~~
-EPSILON = 1e-7
-infty = 1e309 # URL: http://stackoverflow.com/questions/1628026/python-infinity-any-caveats#comment31860436_1628026
+install_constants()
 
 # == Coordinate Transform 2D ==
 
@@ -778,7 +778,7 @@ class Frame2D( Pose2D ):
             self.labPose.position = vec_copy( pos )
         else:
             raise ValueError( "Frame2D.set_pos: " + str(frame) + " does not designate a known frame!")
-	
+    
     def set_theta( self , pTheta , frame = "rel" ):
         """ Set the orientation of the polygon, relative to the containing frame """
         if frame == "rel":
@@ -813,7 +813,7 @@ class Frame2D( Pose2D ):
     def move( self , vec ):
         """ Move the center of the polygon, relative to the containing frame """
         self.position = np.add( self.position , vec_copy( vec ) )
-	
+    
     def rotate( self , pTheta ):
         """ Set the orientation of the polygon, relative to the containing frame """
         self.orientation.theta = self.orientation.theta + pTheta  # This causes the Turn to recalc
@@ -877,7 +877,7 @@ class Frame2D( Pose2D ):
             for pDex in frameHull.vertices:
                hullPts.append( frameHull.points[ pDex ] ) 
         except Exception as ex: # URL, generic excpetions: http://stackoverflow.com/a/9824050
-            print "Encountered" , type( ex ).__name__  ,  "with args:" , ex.args , "with full text:" , str( ex )
+            print( "Encountered" , type( ex ).__name__  ,  "with args:" , ex.args , "with full text:" , str( ex ) )
             
         return hullPts # Will return an empty list if there was an error creating the hull
     
@@ -935,7 +935,7 @@ class Frame2D( Pose2D ):
             for pDex in frameHull.vertices:
                hullPts.append( frameHull.points[ pDex ] ) 
         except Exception as ex: # URL, generic excpetions: http://stackoverflow.com/a/9824050
-            print "Encountered" , type( ex ).__name__  ,  "with args:" , ex.args , "with full text:" , str( ex )
+            print( "Encountered" , type( ex ).__name__  ,  "with args:" , ex.args , "with full text:" , str( ex ) )
             
         return hullPts # Will return an empty list if there was an error creating the hull
         
@@ -971,25 +971,25 @@ class Frame2D( Pose2D ):
         if len( massCenters ) > 0:
             return vec_round_small( centroid_discrete_masses( massCenters , totalMass ) )
         else:
-            print "Frame2D.contained_centroid_rel: This frame contains no polygons for centroid calculation"
+            print( "Frame2D.contained_centroid_rel: This frame contains no polygons for centroid calculation" )
             return None
         
     def set_supports_for_hull( self , activeOnly = True ):
         # self.transform_contents() # Assume this has already been done
         """ Load this frame with relative support information """
         self.relCentroid = self.contained_centroid_rel( activeOnly = activeOnly ) # Get the relative centroid for this collection of shapes
-        print "DEBUG , found the centroid" , self.relCentroid
+        print( "DEBUG , found the centroid" , self.relCentroid )
         self.allVerts = self.vertex_set_rel( activeOnly = activeOnly )
-        print "DEBUG , found the vertices" , self.allVerts
+        print( "DEBUG , found the vertices" , self.allVerts )
         self.hullVerts = self.hull_of_contents_rel( activeOnly ) # Calc the convex hull of all the contained parts
-        print "DEBUG , Hull has the vertices" , self.hullVerts
+        print( "DEBUG , Hull has the vertices" , self.hullVerts )
         self.supports = sides_from_vertices( self.hullVerts )
-        print "DEBUG , found the suports" , self.supports 
+        print( "DEBUG , found the suports" , self.supports )
         self.stabilities = planar_poly_stability( self.hullVerts , self.relCentroid )
-        print "DEBUG , determined stabilties" , self.stabilities
+        print( "DEBUG , determined stabilties" , self.stabilities )
         # self.hullPutdowns = [ support_to_Pose( supportSeg ).copy_round_small() for supportSeg in self.supports ] # This will create a pose whether it is stable or not
         self.hullPutdowns = [ support_to_Pose( supportSeg ) for supportSeg in self.supports ] # This will create a pose whether it is stable or not
-        print "DEBUG , found the poses" , ; print_list( self.hullPutdowns )
+        print( "DEBUG , found the poses" , pretty_list( self.hullPutdowns ) )
         self.sort_putdowns() # This will sort all the appropriate lists in tandem!
     
     def sort_putdowns( self ):
@@ -1176,7 +1176,7 @@ class Segment( object ):
     
     def old_dummy_transform(self, pntList, scale): # candidate super fuction
         """ Dummy coordinate transformation, to be replaced with whatever the application calls for """
-        print "OLD DUMMY CALLED , FIND OUT WHY!"
+        print( "OLD DUMMY CALLED , FIND OUT WHY!" )
         rtnList = []
         for pnt in pntList:
             rtnList.extend( pnt )

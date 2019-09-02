@@ -14,16 +14,12 @@ General purpose graph classes and methods
 import collections , sys 
 # ~ Special ~
 # ~ Local ~
-from marchhare import Counter , Stack
+from marchhare.Utils3 import Counter , Stack , install_constants
 
 
-print "Loading special vars ..." , 
-import os
-EPSILON = 1e-7
-infty = 1e309 # URL: http://stackoverflow.com/questions/1628026/python-infinity-any-caveats#comment31860436_1628026
-endl = os.linesep
-DISPLAYPLACES = 5 # Display 5 decimal places by default
-print "Loaded!"
+print( "Loading special vars ..." , end=" " )
+install_constants()
+print( "Loaded!" )
 
 # === Data Structures ===
 
@@ -91,7 +87,7 @@ class TaggedLookup( list ):
             rtnObj = self.lookupByTag[pTag]
         except KeyError:
             if self.verbose:
-                print "Object with tag",pTag,"DNE in this problem"
+                print( "Object with tag" , pTag , "DNE in this problem" )
         return rtnObj
         
     def tag_exists( self , tag ):
@@ -104,7 +100,7 @@ class TaggedLookup( list ):
             return self.lookupByAls[pAls]
         except KeyError:
             if self.verbose:
-                print "Object with alias",pAls,"DNE in this problem"
+                print( "Object with alias" , pAls , "DNE in this problem" )
             return None
         
     def als_exists( self , als ):
@@ -272,7 +268,7 @@ class SimpleNode:
         try:
             self.children.remove( childRef )
         except ValueError:
-            print "WARN , Node.remove_child_by_ref: Reference" , childRef , "DNE in list of successors!"
+            print( "WARN , Node.remove_child_by_ref: Reference" , childRef , "DNE in list of successors!" )
         
     def __str__( self ):
         """ Return a string representation of the TreeNode """
@@ -388,7 +384,7 @@ class Graph( TaggedObject ):
         if ( tail and head ):
             self.edges.append( tail.connect_to( head , pDir , weight ) )
         else:
-            print "WARN , Graph.connect_by_als: One of" , tailAls , "or" , headAls , "DNE in this Graph"
+            print( "WARN , Graph.connect_by_als: One of" , tailAls , "or" , headAls , "DNE in this Graph" )
         
     def get_node_list( self ):
         """ Return a list of nodes in this graph """
