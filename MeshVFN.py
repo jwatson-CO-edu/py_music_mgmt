@@ -352,7 +352,14 @@ def VF_to_N( verts , facets ):
         p_i = [ verts[j] for j in f_i ]
         N.append( tri_normal( p_i[0] , p_i[1] , p_i[2] ) )
     return N
-    
+
+def sparse_VF_to_dense_VF( verts , facets ):
+    """ Return vertices including degenerate duplicates """
+    V_d = [] 
+    for f_i in facets:
+        V_d.append( [ verts[j][:] for j in f_i ] )
+    F_d = list( range( int( len( V_d )/3 ) ) )
+    return V_d , F_d
 
 ## facet_adjacency_matx
 # @brief Construct an adjacency matrix for all facets , NOTE: Adjacency is defined by sharing a side , sharing one vertex is not adjacent
