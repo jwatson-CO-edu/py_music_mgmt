@@ -355,11 +355,33 @@ def VF_to_N( verts , facets ):
 
 def sparse_VF_to_dense_VF( verts , facets ):
     """ Return vertices including degenerate duplicates """
-    V_d = [] 
+    V_d = []
+    k   = 0
+    F_d = []
+    print( "There are" , len( facets ) , "facets" )
     for f_i in facets:
-        V_d.append( [ verts[j][:] for j in f_i ] )
-    F_d = list( range( int( len( V_d )/3 ) ) )
+        V_d.extend( [ verts[j][:] for j in f_i ] )
+        F_d.append( [] )
+        for j in range( 3 ):
+            F_d[-1].append( k )
+            k += 1
+    print( "There are" , len( V_d ) , "dense vertices" )
     return V_d , F_d
+
+def dense_flat_N_from_dense_VF( V_d , F_d ):
+    """ Return normals suitable for painting a mesh already defined with completely independent triangles """
+    # NOTE: This function assumes that all the normals are perpendicular to their repsective faces
+    N_d = []
+    print( len( V_d ) )
+    print( len( V_d ) )
+    for f_i in F_d:
+        print( f_i )
+        tri = [ V_d[ f_i[j] ][:] for j in range(3) ]
+        print( tri )
+        N_i = tri_normal( *tri )
+        for i in range(3):
+            N_d.append( N_i )
+    return N_d
 
 ## facet_adjacency_matx
 # @brief Construct an adjacency matrix for all facets , NOTE: Adjacency is defined by sharing a side , sharing one vertex is not adjacent
