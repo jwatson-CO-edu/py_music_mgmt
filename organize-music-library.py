@@ -198,21 +198,6 @@ def strip_the( artistName ):
 
 # [X] Generate Simplified folder names # safe path with safe filename
 
-def safe_dir_name( trialStr ):
-    """ Return a string stripped of all disallowed chars """
-    rtnStr = ""
-    if trialStr: # if a string was received 
-        for char in trialStr: # for each character of the input string
-            if char not in DISALLOWEDCHARS and not char.isspace(): # If the character is not disallowed and is not whitespace
-                try:
-                    char = char.encode( 'ascii' , 'ignore' ) # Ignore conv errors but inconsistent # http://stackoverflow.com/a/2365444/893511
-                    rtnStr += char # Append the char to the proper directory name
-                except:
-                    rtnStr += choice( ASCII_ALPHANUM ) # Random ASCII character so that completely unreadable names are not overwritten
-        return rtnStr
-    else:
-        return None
-
 def safe_artist_name( artistName ):
     """ Return a version of the artist name that has neither the definite article nor any disallowed chars """
     artistName = strip_the( artistName )
