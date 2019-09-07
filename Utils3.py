@@ -26,12 +26,13 @@ _AUTOLOAD_CONST = True
 def install_constants():
     """ Add the constants that you use the most """
     # NOTE: No, I don't feel guilty for adding keywords to Python in this way
-    builtins.EPSILON = 1e-7 # ------ Assume floating point errors below this level
-    builtins.infty   = 1e309 # ----- URL: http://stackoverflow.com/questions/1628026/python-infinity-any-caveats#comment31860436_1628026
-    builtins.endl    = os.linesep #- Line separator
-    builtins.pyEq    = operator.eq # Default python equality
-    builtins.piHalf  = pi/2
-    print( "Constants now available in `builtins`" )
+    if 'EPSILON' not in dir( builtins ):
+        builtins.EPSILON = 1e-7 # ------ Assume floating point errors below this level
+        builtins.infty   = 1e309 # ----- URL: http://stackoverflow.com/questions/1628026/python-infinity-any-caveats#comment31860436_1628026
+        builtins.endl    = os.linesep #- Line separator
+        builtins.pyEq    = operator.eq # Default python equality
+        builtins.piHalf  = pi/2
+        print( "Constants now available in `builtins`" )
 
 if _AUTOLOAD_CONST:
     install_constants()

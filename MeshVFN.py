@@ -353,33 +353,34 @@ def VF_to_N( verts , facets ):
         N.append( tri_normal( p_i[0] , p_i[1] , p_i[2] ) )
     return N
 
-def sparse_VF_to_dense_VF( verts , facets ):
-    """ Return vertices including degenerate duplicates """
+def sparse_VF_to_dense_VF( verts , facets , cadence = 3 ):
+    """ Return vertices including degenerate duplicates , `cadence` is the number of points defining a facet (in {3,4}) """
+    _DEBUG = False
     V_d = []
     k   = 0
     F_d = []
-    print( "There are" , len( facets ) , "facets" )
+    if _DEBUG: print( "There are" , len( facets ) , "facets" )
     for f_i in facets:
         V_d.extend( [ verts[j][:] for j in f_i ] )
         F_d.append( [] )
-        for j in range( 3 ):
+        for j in range( cadence ):
             F_d[-1].append( k )
             k += 1
-    print( "There are" , len( V_d ) , "dense vertices" )
+    if _DEBUG: print( "There are" , len( V_d ) , "dense vertices" )
     return V_d , F_d
 
-def dense_flat_N_from_dense_VF( V_d , F_d ):
-    """ Return normals suitable for painting a mesh already defined with completely independent triangles """
+def dense_flat_N_from_dense_VF( V_d , F_d , cadence = 3 ):
+    """ Return normals suitable for painting a mesh already defined with completely independent facets , `cadence` in {3,4} """
     # NOTE: This function assumes that all the normals are perpendicular to their repsective faces
+    _DEBUG = False
     N_d = []
-    print( len( V_d ) )
-    print( len( V_d ) )
+    if _DEBUG: print( len( V_d ) )
     for f_i in F_d:
-        print( f_i )
+        if _DEBUG: print( f_i )
         tri = [ V_d[ f_i[j] ][:] for j in range(3) ]
-        print( tri )
+        if _DEBUG: print( tri )
         N_i = tri_normal( *tri )
-        for i in range(3):
+        for i in range( cadence ):
             N_d.append( N_i )
     return N_d
 
