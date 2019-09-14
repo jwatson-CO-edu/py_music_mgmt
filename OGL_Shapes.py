@@ -27,6 +27,7 @@ Dependencies: numpy , pyglet , MARCHHARE
 # ~ Standard ~
 import sys , os
 from math import sqrt , atan2 , sin , cos , pi
+from random import randrange
 # ~ Special ~
 import numpy as np
 import pyglet # --------- Package for OpenGL
@@ -34,6 +35,8 @@ import pyglet # --------- Package for OpenGL
 from pyglet.gl import ( GL_LINES , glColor3ub , GL_TRIANGLES , glTranslated , GL_QUADS , glRotated , glClearColor , glEnable ,
                         GL_DEPTH_TEST , glMatrixMode , GL_PROJECTION , glLoadIdentity , gluPerspective ,
                         GL_MODELVIEW , gluLookAt , GL_POINTS , glPointSize )
+from pyglet.window import key
+
 # ~ Local ~
 from marchhare.VectorMath.HomogXforms import xform_points_np
 
@@ -53,6 +56,10 @@ def origin_xform():
           [ 0 , 0 , 1 , 0 ] ,
           [ 0 , 0 , 0 , 1 ] ]
     )
+
+def rand_color():
+    """ Return a random (R,G,B) tuple in the range 0-255 """
+    return (randrange(0,256),randrange(0,256),randrange(0,256),)
 
 # ____ End Helper ____
 
@@ -367,6 +374,47 @@ class CameraOrbit:
     def angle_dec( self ): self.ps -= self.dPsi
     def zoom_in( self ): self.r -= self.dR
     def zoom_out( self ): self.r += self.dR
+    
+    def attach_controls( self , window ):
+        @window.event
+        def on_key_press( symbol , modifiers ):
+            # Handle Keyboard Events
+            if symbol == key.LEFT:
+                self.orbit_neg()
+                if _DEBUG: print( "Theta:" , cam.th )
+            
+            if symbol == key.RIGHT:
+                self.orbit_pos()
+                if _DEBUG: print( "Theta:" , cam.th )
+            
+            if symbol == key.UP:
+                self.angle_inc()
+                if _DEBUG: print( "Psi:" , cam.ps )
+            
+            if symbol == key.DOWN:
+                self.angle_dec()
+                if _DEBUG: print( "Psi:" , cam.ps )
+            
+            # Alphabet keys:
+            elif symbol == key.O:
+                self.zoom_out()
+                if _DEBUG: print( "d:" , cam.r )
+                
+            elif symbol == key.P:
+                self.zoom_in()
+                if _DEBUG: print( "d:" , cam.r )
+
+            # Number keys:
+            elif symbol == key._1:
+                pass
+
+            # Number keypad keys:
+            elif symbol == key.NUM_1:
+                pass
+
+            # Modifiers:
+            if modifiers & key.MOD_CTRL:
+                pass
 
 # __ End Render __
 
@@ -376,7 +424,7 @@ class CameraOrbit:
 class OGL_App( pyglet.window.Window ):
     """ Bookkeepping for Pyglet rendering """
     
-    def __init__( self , objList = [] , caption = 'Pyglet Rendering Window' , dispWidth = 640 , dispHeight = 480 , 
+    def __init__( self , drawSpec = [] , caption = 'Pyglet Rendering Window' , dispWidth = 640 , dispHeight = 480 , 
                   clearColor = [ 0.7 , 0.7 , 0.8 , 1 ] ):
         """ Instantiate the environment with a list of objhects to render """
         super( OGL_App , self ).__init__( resizable = True , caption = caption ,  width = dispWidth , height = dispHeight )
@@ -386,15 +434,22 @@ class OGL_App( pyglet.window.Window ):
         self.camera = [  2 ,  2 ,  2 , # eyex    , eyey    , eyez    : Camera location , point (world) , XYZ
                          0 ,  0 ,  0 , # centerx , centery , centerz : Center of the camera focus , point (world) , XYZ
                          0 ,  0 ,  1 ] # upx     , upy     , upz     : Direction of "up" in the world frame , vector , XYZ
-        self.renderlist = objList
+        
+        # Determine if we are drawing a list of objects or using a custom function
+        if type( drawSpec ).__name__ == 'function':
+            self.customDraw = True
+            self.drawFunc   = drawSpec
+            self.renderlist = None
+        else:
+            self.renderlist = objList
+            self.customDraw = False
+            self.drawFunc   = None
+        
         self.showFPS    = False
         self.yFOV       = 70 # FOV, in degrees, in the y direction.
         self.aspect     = self.width / float( self.height )  # The aspect ratio is the ratio of x (width) to y (height)
         self.nearClipZ  = 0.1 # distance from the viewer to the near clipping plane (always positive)
         self.farClipZ   = 200 # distance from the viewer to the far clipping plane (always positive)
-        
-        self.customDraw = False
-        self.drawFunc   = None
         
     def set_custom_draw( self , func ):
         """ Set a custom draw function """
