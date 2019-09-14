@@ -38,8 +38,7 @@ from pyglet.gl import ( GL_LINES , glColor3ub , GL_TRIANGLES , glTranslated , GL
 from pyglet.window import key
 
 # ~ Local ~
-from marchhare.VectorMath.HomogXforms import xform_points_np
-
+from marchhare.VectorMath.HomogXforms import xform_points_np , set_position
 from marchhare.Vector import vec_mag , vec_unit , vec_proj , vec_angle_between
 from marchhare.VectorMath.Vector3D import vec_sphr
 from marchhare.Utils3 import concat_arr
@@ -50,12 +49,7 @@ _DEBUG = False
 
 def origin_xform():
     """ Return the homogeneous coordinates of the origin """
-    return np.array(
-        [ [ 1 , 0 , 0 , 0 ] ,
-          [ 0 , 1 , 0 , 0 ] ,
-          [ 0 , 0 , 1 , 0 ] ,
-          [ 0 , 0 , 0 , 1 ] ]
-    )
+    return np.eye(4).astype(float)
 
 def rand_color():
     """ Return a random (R,G,B) tuple in the range 0-255 """
@@ -188,6 +182,10 @@ class CartAxes( OGLDrawable ):
         self.colors  = ( ( 255 ,   0 ,   0 ) ,  # ----------------------- All of the colors used to paint the object
                          (   0 , 255 ,   0 ) ,  # R = X , G = Y , B = Z
                          (   0 ,   0 , 255 )  ) # by convention
+        
+    def set_pos( self , pos ):
+        """ Set the position of the Axes """
+        set_position( self.xform , pos )
         
     def draw( self ):
         """ Draw the axes """
