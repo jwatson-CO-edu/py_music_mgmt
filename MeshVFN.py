@@ -1,9 +1,9 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Template Version: 2017-06-18
 
 # ~~ Future First ~~
-from __future__ import division # Future imports must be called before everything else, including triple-quote docs!
+#from __future__ import division # Future imports must be called before everything else, including triple-quote docs!
 
 """@module MeshVFN.py
 @brief Mesh processing in Python
@@ -27,12 +27,12 @@ from stl import mesh # https://pypi.python.org/pypi/numpy-stl/ # pip install num
 from scipy.spatial import ConvexHull
 import numpy as np
 # ~ Local ~
-from marchhare import tandem_sorted , incr_max_step , iter_contains_None 
-from MathKit import round_small
-from Vector import vec_avg , matx_zeros , vec_angle_between , vec_unit # , matx_2D_pretty_print
-from VectorMath.Vector2D import point_in_poly_w , d_point_to_segment_2D_signed
-from VectorMath.Vector3D import point_basis_change , transform_to_frame , pnt_proj_to_plane
-from Graph import TaggedLookup
+from marchhare.Utils3 import tandem_sorted , incr_max_step , iter_contains_None 
+from marchhare.MathKit import round_small
+from marchhare.Vector import vec_avg , matx_zeros , vec_angle_between , vec_unit # , matx_2D_pretty_print
+from marchhare.VectorMath.Vector2D import point_in_poly_w , d_point_to_segment_2D_signed
+from marchhare.VectorMath.Vector3D import point_basis_change , transform_to_frame , pnt_proj_to_plane
+from marchhare.Graph import TaggedLookup
 
 # ~~ Constants , Shortcuts , Aliases ~~
 EPSILON = 1e-7 # ------ Assume floating point errors below this level
@@ -260,7 +260,7 @@ def volume_centroid_of_points_convex( R3PointsList , numSlices = 100 ):
             sliceHull = ConvexHull( zSlc ) # zSlices[index] )#, qhull_options='Qm' ) # Not 100% certain 'Qm' is needed?
             sliceBounds[-1] = bounding_points_from_hull( sliceHull )
         except Exception as err:
-            print "Encountered" , type( err ).__name__ , "on index", index , "with args:", err.args,"with full text:",str( err )
+            print( "Encountered" , type( err ).__name__ , "on index", index , "with args:", err.args,"with full text:",str( err ) )
         #index += 1
 
     # Compute the cross sectional area, compute the center of the slice
@@ -344,6 +344,45 @@ def tri_list_to_matx_V_F_N( v0List , v1List , v2List , normals = None ):
         else:
             N.append( normals[i] )
     return [ list( elem ) for elem in V ] , F , N # Cast the vertices to lists and return them and the faces ( already nested lists )
+
+def VF_to_N( verts , facets ):
+    """ Given a list of vertices and a list of facets, return N perpendicular to each facet """
+    N = []
+    for f_i in facets:
+        p_i = [ verts[j] for j in f_i ]
+        N.append( tri_normal( p_i[0] , p_i[1] , p_i[2] ) )
+    return N
+
+def sparse_VF_to_dense_VF( verts , facets , cadence = 3 ):
+    """ Return vertices including degenerate duplicates , `cadence` is the number of points defining a facet (in {3,4}) """
+    _DEBUG = False
+    V_d = []
+    k   = 0
+    F_d = []
+    if _DEBUG: print( "There are" , len( facets ) , "facets" )
+    for f_i in facets:
+        V_d.extend( [ verts[j][:] for j in f_i ] )
+        F_d.append( [] )
+        for j in range( cadence ):
+            F_d[-1].append( k )
+            k += 1
+    if _DEBUG: print( "There are" , len( V_d ) , "dense vertices" )
+    return V_d , F_d
+
+def dense_flat_N_from_dense_VF( V_d , F_d , cadence = 3 ):
+    """ Return normals suitable for painting a mesh already defined with completely independent facets , `cadence` in {3,4} """
+    # NOTE: This function assumes that all the normals are perpendicular to their repsective faces
+    _DEBUG = False
+    N_d = []
+    if _DEBUG: print( len( V_d ) )
+    for f_i in F_d:
+        if _DEBUG: print( f_i )
+        tri = [ V_d[ f_i[j] ][:] for j in range(3) ]
+        if _DEBUG: print( tri )
+        N_i = tri_normal( *tri )
+        for i in range( cadence ):
+            N_d.append( N_i )
+    return N_d
 
 ## facet_adjacency_matx
 # @brief Construct an adjacency matrix for all facets , NOTE: Adjacency is defined by sharing a side , sharing one vertex is not adjacent

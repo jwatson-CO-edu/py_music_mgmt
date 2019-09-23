@@ -15,7 +15,7 @@ Helper functions
 
 # ~~ Libraries ~~
 # ~ Standard Libraries ~
-import sys , os , datetime , cPickle , heapq , time , operator
+import sys , os , datetime , cPickle , heapq , time , operator, __builtin__
 from math import trunc , pi  
 from random import choice
 from warnings import warn
@@ -32,6 +32,17 @@ piHalf = pi/2
 
 # __ End Init ______________________________________________________________________________________________________________________________
 
+# == Environment Manipulation ==
+
+def install_constants():
+    """ Add the constants that you use the most """
+    __builtin__.EPSILON = 1e-7 # ------ Assume floating point errors below this level
+    __builtin__.infty   = 1e309 # ----- URL: http://stackoverflow.com/questions/1628026/python-infinity-any-caveats#comment31860436_1628026
+    __builtin__.endl    = os.linesep #- Line separator
+    __builtin__.pyEq    = operator.eq # Default python equality
+    __builtin__.piHalf  = pi/2    
+
+# __ End Environment __
 
 # == PATH Manipulation ==
 
@@ -165,6 +176,17 @@ tick_progress.sequence = [ "'" , "-" , "," , "_" , "," , "-" , "'" , "`" , "`" ]
 tick_progress.ticks = 0
 
 # __ End Time __
+
+
+# == System Helpers ==
+
+def confirm_or_crash( msg = "Text to Crash, Empty to Continue: " ):
+    """ If the input is anything other than empty, then Crash the program """
+    crash = raw_input( msg )
+    if len( crash ):
+        exit()
+
+# __ End System __
 
 
 # == Data Structures , Special Lists , and Iterable Operations ==
@@ -772,6 +794,50 @@ class RollingList( list ):
 
 # _ End Algo Containers _
 
+
+# = Other Containers =
+
+class SuccessTally:
+    """ Class to counts success and failure """
+
+    def __init__( self ):
+        """ Init all counts zero """
+        self.nPass = 0
+        self.nFail = 0
+        self.N     = 0
+
+    def PASS( self ):
+        """ Increment passing and total """
+        self.N     += 1
+        self.nPass += 1
+
+    def FAIL( self ):
+        """ Increment failing and total """
+        self.N     += 1
+        self.nFail += 1
+
+    def tally( self , TorF ):
+        """ Increment pass if `TorF`, otherwise increment fail """
+        if TorF:
+            self.PASS()
+        else:
+            self.FAIL()
+
+    def get_stats( self ):
+        """ Return a dict with pass/fail tallies """
+        return {
+            'pass' :     self.nPass , 
+            'fail' :     self.nFail , 
+            'fracPass' : self.nPass * 1.0 / self.N ,
+            'fracFail' : self.nFail * 1.0 / self.N ,
+            'total' :    self.N , 
+            'PFratio' :  self.nPass * 1.0 / self.nFail if self.nFail > 0 else float( 'nan' )
+        }
+
+
+
+# _ End Other _
+
 def is_nonempty_list( obj ): return isinstance( obj , list , tuple ) and len( obj ) > 0 # Return true if 'obj' is a 'list' with length greater than 0  # <<< resenv
 
 # __ End Structures __
@@ -881,7 +947,10 @@ def yesno( pBool ):
 def ensure_dir( dirName ):
     """ Create the directory if it does not exist """
     if not os.path.exists( dirName ):
-        os.makedirs( dirName )
+        try:
+            os.makedirs( dirName )
+        except Exception as err:
+            print "ensure_dir: Could not create" , dirName , '\n' , err
         
 def is_container_too_big( container , mxSize = int(1e4) ):
     """ Check the length of the container and warn if we should be using a database """
@@ -1079,6 +1148,7 @@ def validate_dirs_writable( *dirList ):
     # NOTE: This function exits on the first failed check and does not provide info for any subsequent element of 'dirList'
     # NOTE: Assume that a writable directory is readable
     for directory in dirList:
+        # ensure_dir( directory )
         if not os.path.isdir( directory ):
             print "Directory" , directory , "does not exist!"
             return False
@@ -1087,15 +1157,34 @@ def validate_dirs_writable( *dirList ):
             return False
     return True # All checks finished OK, return true
 
+def ensure_dirs_writable( *dirList ):
+    """ Return true if every directory argument both exists and is writable, otherwise return false """
+    # NOTE: This function exits on the first failed check and does not provide info for any subsequent element of 'dirList'
+    # NOTE: Assume that a writable directory is readable
+    for directory in dirList:
+        ensure_dir( directory )
+    return validate_dirs_writable( *dirList )
+
 # __ End Batch __
 
 
 # == String Processing ==
 
-def ascii( strInput ): 
+def ascii( strInput , errChar = '_' ): 
     """ Return an ASCII representation of the string or object, ignoring elements that do not have an ASCII representation """
     if type( strInput ) in ( unicode , str ):
-        return str( strInput.encode( 'ascii' , 'ignore' ) )
+        try:
+            return str( strInput.encode( 'ascii' , 'ignore' ) )
+        except:
+            # The 'ignore' option is somehow not strong enough of a protection sometimes,
+            strOut = str( strInput )
+            rtnStr = ""
+            for char in strOut:
+                if ord( char ) < 127:
+                    rtnStr += char
+                else:
+                    rtnStr += errChar
+            return rtnStr        
     else:
         return str( strInput ).encode( 'ascii' , 'ignore' )
 

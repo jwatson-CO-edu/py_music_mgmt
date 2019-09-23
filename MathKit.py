@@ -221,7 +221,7 @@ def avg( *args ):
     """ Average of args, where args can be numbers, a list, or nested lists """
     total , N = accumulate( args ) # Accumulate a straight sum
     if N == 0:
-        print "avg: Undefined for 0 items!"
+        print( "avg: Undefined for 0 items!" )
         return None
     return float( total ) / N # return mean
     
@@ -229,19 +229,19 @@ def variance(*args): # >>> resenv
     """ Variance of args, where args can be numbers, a list of numbers, or nested lists of numbere """
     total , N = accumulate( args ) # calc mean
     if N == 0:
-        print "variance: Undefined for 0 items!"
+        print( "variance: Undefined for 0 items!" )
         return None
-    print total , 
+    print( total , end = " " )
     mu = float(total) / N
     totSqDiffs , N = accumulate( args , lambda x: ( x - mu )**2 ) # calc the per-item variance
-    print totSqDiffs
+    print( totSqDiffs )
     return ( 1.0 / N ) * totSqDiffs # return variance
 
 def std_dev( *args ):
     """ Standard deviation of args, where args can be numbers, a list of numbers, or nested lists of numbere """
     var = variance( *args )
     if var == None:
-        print "std_dev: Undefined for 0 items!"
+        print( "std_dev: Undefined for 0 items!" )
         return None
     return sqrt( var )
     

@@ -19,9 +19,9 @@ import numpy as np
 # import marchhare.marchhare
 
 from marchhare.Vector import vec_mag , vec_unit , vec_proj , np_add , vec_round_small , vec_angle_between , vec_eq , vec_copy , vec_linspace , vec_NaN
-from HomogXforms import *
+from marchhare.VectorMath.HomogXforms import *
 from marchhare.MathKit import ver , eq , round_small , decimal_part , copysign
-from marchhare.marchhare import format_dec_list , incr_max_step
+from marchhare.Utils3 import format_dec_list , incr_max_step
 
 
 # ~~ Constants , Shortcuts , Aliases ~~
@@ -73,6 +73,13 @@ def sphr_2_cart_YUP( sphrCoords ):
         sphrCoords[0] * cos( sphrCoords[2] ) , # ---------------------- y
         sphrCoords[0] * cos( sphrCoords[1] ) * sin( sphrCoords[2] ) # - z
     ]
+
+def vec_sphr( r , th , ps ):
+    """ Return a vertex in spherical coordinates , Theta axis is Z+ """
+    # Based on code provided by Willem A. (Vlakkies) Schreüder
+    return [ r * cos( th ) * cos( ps ) , 
+             r * sin( th ) * cos( ps ) , 
+             r * sin( ps ) ]
     
 # = Mouselook Angles =
 
@@ -184,6 +191,12 @@ class MeshVFN:
         self.V = V
         self.F = F
         self.N = N
+        
+def tri_normal_CCW( p1 , p2 , p3 ):
+    """ Return the normal of a triangle with CCW points: `p1` , `p2` , `p3` """
+    vec1 = np.subtract( p2 , p1 )
+    vec2 = np.subtract( p3 , p2 )
+    return vec_unit( np.cross( vec1 , vec3 ) )
     
 def segment_intersects_VFN( segment , V , F , N ):
     """ Determine if 'segment' intersects any of the triangles defined by the graphics-style V-F-N matrices 
@@ -604,16 +617,16 @@ def principal_rotation_test():
     newBasisY = vec_unit([ 1.0 ,  0.0 ,  0.0])
     newBasisZ = vec_unit([ 0.0 ,  1.0 ,  1.0])
     if check_orthonormal( newBasisX , newBasisY , newBasisZ ):
-        print "New bases are orthonormal"
+        print( "New bases are orthonormal" )
         principalQuat = Quaternion.principal_rot_Quat(newBasisX,newBasisY,newBasisZ)
         testBasisX = principalQuat.apply_to( [1,0,0] )
         testBasisY = principalQuat.apply_to( [0,1,0] )
         testBasisZ = principalQuat.apply_to( [0,0,1] )
-        print "New basis X" , newBasisX , "and transformed basis X" , testBasisX , "are equal:" , vec_eq(newBasisX,testBasisX)
-        print "New basis Y" , newBasisY , "and transformed basis Y" , testBasisY , "are equal:" , vec_eq(newBasisY,testBasisY)
-        print "New basis Z" , newBasisZ , "and transformed basis Z" , testBasisZ , "are equal:" , vec_eq(newBasisZ,testBasisZ)
+        print( "New basis X" , newBasisX , "and transformed basis X" , testBasisX , "are equal:" , vec_eq(newBasisX,testBasisX) )
+        print( "New basis Y" , newBasisY , "and transformed basis Y" , testBasisY , "are equal:" , vec_eq(newBasisY,testBasisY) )
+        print( "New basis Z" , newBasisZ , "and transformed basis Z" , testBasisZ , "are equal:" , vec_eq(newBasisZ,testBasisZ) )
     else:
-        print "New bases are not orthonormal"
+        print( "New bases are not orthonormal" )
 #principal_rotation_test()
 
 # == End Quaternion ==

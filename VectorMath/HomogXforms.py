@@ -70,7 +70,7 @@ def rot_matx_ang_axs( theta , k  ):
     
 def ang_axs_from_rot_matx( R ):
     """ Return the angle 'theta' and axis 'k' for the given 3x3 rotation matrix 'R' """
-    # NOTE : This function returns only one solution out of 2 possible , these solution are equivalen with opposite
+    # NOTE : This function returns only one solution out of 2 possible , these solution are equivalent
     theta = acos( ( np.trace( R ) - 1.0 ) / 2.0 )
     k = np.multiply( [ R[2][1] - R[1][2] , 
                        R[0][2] - R[2][0] , 
@@ -91,10 +91,18 @@ def apply_homog( homogMat , vec3 ):
     """ Apply a homogeneous transformation to a 3D vector """
     return ( np.dot( homogMat , [ vec3[0] , vec3[1] , vec3[2] , 1 ] ) )[:3]
 
+def xform_points( pointsList , xform ):
+    """ Apply a homogeneous transformation to a 3D vector """
+    return [ apply_homog( xform , pnt ) for pnt in pointsList ]
+
+def xform_points_np( pointsList , xform ):
+    """ Apply a homogeneous transformation to a 3D vector """
+    return np.array( [ apply_homog( xform , pnt ) for pnt in pointsList ] )
+
 def homog_xform( E , r ): 
     """ Return the combination of rotation matrix 'E' and displacement vector 'r' as a 4x4 homogeneous transformation matrix """
-    return np.vstack( ( np.hstack( (  E                              , [ [ r[0] ] , [ r[1] ] , [ r[2] ] ]  ) ) ,
-                        np.hstack( (  [ 0 , 0 , 0 ]                  , [ 1 ]                               ) ) ) )
+    return np.vstack( ( np.hstack( (  E               , [ [ r[0] ] , [ r[1] ] , [ r[2] ] ]  ) ) ,
+                        np.hstack( (  [ 0 , 0 , 0 ]   , [ 1 ]                               ) ) ) )
 
 def skew_sym_cross( vecR ):
     """ Return the skew symmetic matrix for the equivalent cross operation: [r_cross][v] = cross( r , v ) """
@@ -112,5 +120,9 @@ def get_basis_vectors_for_xform( xform ):
     yBasis = apply_homog( xform , [0,1,0] )
     zBasis = apply_homog( xform , [0,0,1] )
     return xBasis , yBasis , zBasis
+
+def set_position( xform , pos ):
+    """ Set the translation portion of the `xform` to `pos` """
+    xform[0:3,3] = pos[:]
         
 # __ End Homogeneous __
