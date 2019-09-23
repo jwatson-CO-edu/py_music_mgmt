@@ -721,6 +721,30 @@ class Counter( dict ):
             trial += 1
         return None
 
+class Incr:
+    """ Keeps tracks of calls """
+    
+    def __init__( self ):
+        """ Set the counter to zero """
+        self.count = 0
+    
+    def reset( self ):
+        """ Set the counter to zero """
+        self.__init__()
+    
+    def __call__( self ):
+        """ Increment the counter """
+        self.count += 1
+        return self.count
+        
+    def __str__( self ):
+        """ Return the count as a string """
+        return str( self.count )
+    
+    def set_count( self , i ):
+        """ Manually set the counter """
+        self.count = int( i )
+
 class RollingList( list ): 
     """ A rolling window based on 'list' """ 
 
