@@ -3,3 +3,4 @@ eyed3
 google-api-python-client
 google-pasta
 oauth2client
+beautifulsoup4
