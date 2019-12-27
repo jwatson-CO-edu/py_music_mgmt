@@ -362,11 +362,40 @@ class Stack(list):
         """ Push 'elem' onto the Stack """
         self.append( elem )
 
+    def top( self ):
+        """ Return the top of the stack """
+        return self[-1]
+
     # 'Stack.pop' is inherited from 'list'
 
     def is_empty(self):
         """ Returns true if the Stack has no elements """
         return len(self) == 0
+        
+class RollingList( list ): 
+    """ A rolling window based on 'list' """ 
+
+    def __init__( self , winLen , *args ):
+        """ Normal 'list' init """
+        list.__init__( self , [ 0 for i in range( winLen ) ] , *args )
+
+    def append( self , item ):
+        """ Append an item to the back of the list """
+        list.append( self , item )
+        del self[0]
+
+    def prepend( self , item ):
+        """ Prepend an item to the front of the list """
+        self.insert( 0 , item )
+        del self[-1]
+
+    def get_average( self ):
+        """ Get the rolling average , NOTE: Calling this function after inserting non-numeric or non-scalar elements will result in an error """
+        return sum( self ) * 1.0 / len( self )
+
+    def item_list( self ):
+        """ Return a copy of the RollingList as a list """
+        return self[:]   
 
 # ___ END CONTAINER CLASS ____________________________________________________________________________________________________________
 

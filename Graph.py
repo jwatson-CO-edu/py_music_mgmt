@@ -255,25 +255,30 @@ class SimpleNode:
     
     def __init__( self , data = None , parent = None ):
         self.data          = data # - Configuration
-        self.children      = [] # --- Successors , possibly leading to the goal configuration
+        self.successors    = [] # --- Successors , possibly leading to the goal configuration
         self.parent        = parent # Parent , for constructing path back to the start configuration
 
-    def add_child( self , child ):
+    def add_successor( self , child ):
         """ Add a successor node """
         # NOTE: No correctness checks are made before adding
-        self.children.append( child )
+        child.parent = self
+        self.successors.append( child )
         
-    def remove_child_by_ref( self , childRef ):
+    def remove_successor( self , childRef ):
         """ Remove the object referred to by 'childRef' from 'self.children' , if 'childRef' DNE then fail gracefully """
         try:
-            self.children.remove( childRef )
+            childRef.parent = None
+            self.successors.remove( childRef )
         except ValueError:
-            print( "WARN , Node.remove_child_by_ref: Reference" , childRef , "DNE in list of successors!" )
+            print( "WARN , PlannerNode.remove_successor: Reference" , childRef , "DNE in list of successors!" )
+
+    def is_leaf( self ):
+        """ Return True if there are no Successors, Otherwise return False """
+        return len( self.successors ) == 0
         
     def __str__( self ):
         """ Return a string representation of the TreeNode """
         return "Node@" + str( id( self ) )
-
 # __ End SimpleNode __
         
 

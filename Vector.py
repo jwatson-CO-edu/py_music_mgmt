@@ -162,6 +162,7 @@ def vec_eq_test_w_margin( margin = EPSILON ):
 
 def vec_linspace( vec1 , vec2 , numPts ):
     """ Return a list of 'numPts' points (vectors) evenly spaced from 'vec1' to 'vec2', inclusive """
+    # NOTE: This function assumes that 'bgnPnt' and 'endPnt' have the same dimensionality
     diff = np.subtract( vec2 , vec1 ) # Vector from point 1 to point 2
     direction = vec_unit( diff ) # Direction of the vector between the two
     span = vec_mag( diff ) # the Euclidian distance between the two points
