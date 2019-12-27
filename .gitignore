@@ -16,3 +16,5 @@ output/
 *.webm
 *.part
 *.ytdl
+example/pygn/
+pygn/

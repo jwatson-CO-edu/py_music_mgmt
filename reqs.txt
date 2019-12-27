@@ -1,0 +1,6 @@
+eyed3
+google-api-python-client
+    google-auth
+    google-auth-httplib2
+    google-pasta
+oauth2client

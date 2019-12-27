@@ -128,6 +128,54 @@ def get_tokenizer_with_char( separator = ',' ,  evalFunc = str ):
         return [ evalFunc( rawToken ) for rawToken in rawStr.split( separator ) ]
     return rtnFunc
 
+def strip_EXT( fName ):
+    """ Return the filepath before the extension """
+    return os.path.splitext( fName )[0]
+
+def struct_to_pkl( struct , pklPath ): 
+    """ Serialize a 'struct' to 'pklPath' """
+    f = open( pklPath , 'wb') # open a file for binary writing to receive pickled data
+    cPickle.dump( struct , f ) # changed: pickle.dump --> cPickle.dump
+    f.close()
+
+def load_pkl_struct( pklPath ): 
+    """ Load a pickled object and return it, return None if error """
+    fileLoaded = False
+    rtnStruct = None
+    try:
+        f = open( pklPath , 'rb')
+        fileLoaded = True
+    except Exception as err:
+        print( "load_pkl_struct: Could not open file,",pklPath,",",err )
+    if fileLoaded:
+        try:
+            rtnStruct = cPickle.load( f )
+        except Exception as err:
+            print( "load_pkl_struct: Could not unpickle file,",pklPath,",",err )
+        f.close()
+    return rtnStruct
+
+def unpickle_dict( filename ):
+    """ Return the dictionary stored in the file , Otherwise return an empty dictionary if there were no items """
+    try:
+        infile = open( filename , 'rb' )
+        rtnDict = cPickle.load( infile )
+        is_container_too_big( rtnDict )
+        if len( rtnDict ) > 0:
+            return rtnDict
+        else:
+            return {}
+    except IOError:
+        return {}
+
+def ensure_dirs_writable( *dirList ):
+    """ Return true if every directory argument both exists and is writable, otherwise return false """
+    # NOTE: This function exits on the first failed check and does not provide info for any subsequent element of 'dirList'
+    # NOTE: Assume that a writable directory is readable
+    for directory in dirList:
+        ensure_dir( directory )
+    return validate_dirs_writable( *dirList )
+
 # ___ END FILE _____________________________________________________________________________________________________________________________
 
 
@@ -158,6 +206,16 @@ def pretty_list( pList ):
         else:
             prnStr += str( elem ) + " ]"
     return prnStr
+
+def yesno( pBool ):
+    """ Return YES if True, Otherwise return NO """
+    return ( "YES" if pBool else "NO" )
+
+nowTimeStamp = lambda: datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S') # http://stackoverflow.com/a/5215012/893511
+""" Return a formatted timestamp string, useful for logging and debugging """
+
+nowTimeStampFine = lambda: datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S-%f') # http://stackoverflow.com/a/5215012/893511
+""" Return a formatted timestamp string, useful for logging and debugging """
 
 # ___ END STRING _____________________________________________________________________________________________________________________
 
@@ -477,6 +535,110 @@ class Stopwatch( object ):
         return time.time() - self.strtTime    
 
 # ___ End Timing ___________________________________________________________________________________________________________________________
+
+
+# === System Helpers ===================================================================================================
+
+def confirm_or_crash( msg = "Text to Crash, Empty to Continue: " ):
+    """ If the input is anything other than empty, then Crash the program """
+    crash = raw_input( msg )
+    if len( crash ):
+        exit()
+        
+# = class LogMH =
+
+class LogMH:
+    """ Text buffer object to hold script output, with facilities to write contents """
+
+    def __init__( self ):
+        """ String to store logs """
+        self.totalStr = ""
+
+    def prnt( self , *args ):
+        """ Print args and store them in a string """
+        for arg in args:
+            self.totalStr += ascii( arg ) + " "
+            print( ascii( arg ) , end=" " )
+        print
+        self.totalStr += endl
+
+    def sep( self , title = "" , width = 6 , char = '=' , strOut = False ):
+        """ Print a separating title card for debug """
+        LINE = width * char
+        self.prnt( LINE + ' ' + title + ' ' + LINE )
+        if strOut:
+            return LINE + ' ' + title + ' ' + LINE
+
+    def write( self , *args ):
+        """ Store 'args' in the accumulation string without printing """
+        numArgs = len( args )
+        for i , arg in enumerate( args ):
+            self.totalStr += ascii( arg ) + ( " " if i < numArgs-1 else "" )
+
+    def out_and_clear( self , outPath ):
+        """ Write the contents of 'totalStr' to a file and clear """
+        outFile = file( outPath , 'w' )
+        outFile.write( self.totalStr )
+        outFile.close()
+        self.clear()
+
+    def clear( self ):
+        """ Clear the contents of 'accum.totalStr' """
+        self.totalStr = ""
+
+# _ End LogMH _
+
+# ___ End System _______________________________________________________________________________________________________
+
+
+# === Parsing ==========================================================================================================
+
+def strip_endlines_from_lines( lines ):
+    """ Remove the endlines from a list of lines read from a file """
+    rtnLines = []
+    for line in lines:
+        currLine = ''
+        for char in line:
+            if char != '\n' and char != '\r':
+                currLine += char
+        rtnLines.append( currLine )
+    return rtnLines
+
+def strip_comments_from_lines( lines ):
+    """ Remove everything after each # """
+    # NOTE: This function does not take into account a '#' within a string
+    rtnLines = []
+    for line in lines:
+        rtnLines.append( str( line.split( '#' , 1 )[0] ) )
+    return rtnLines
+
+def purge_empty_lines( lines ):
+    """ Given a list of lines , Remove all lines that are only whitespace """
+    rtnLines = []
+    for line in lines:
+        if ( not line.isspace() ) and ( len( line ) > 0 ):
+            rtnLines.append( line )
+    return rtnLines
+
+def parse_lines( fPath , parseFunc ):
+    """ Parse lines with 'parseFunc' while ignoring Python-style # comments """
+    # NOTE: This function does not take into account a '#' within a string
+    rtnExprs = []
+    # 1. Fetch all the lines
+    lines = lines_from_file( fPath )
+    # 2. Scrub comments from lines
+    lines = strip_comments_from_lines( lines )
+    # 3. Purge empty lines
+    lines = purge_empty_lines( lines )
+    # 3.5. Remove newlines
+    lines = strip_endlines_from_lines( lines )
+    # 4. For each of the remaining lines , Run the parse function and save the results
+    for line in lines:
+        rtnExprs.append( parseFunc( line ) )
+    # 5. Return expressions that are the results of processing the lines
+    return rtnExprs
+
+# ___ End Parsing ______________________________________________________________________________________________________
 
 
 # === Testing ==============================================================================================================================
