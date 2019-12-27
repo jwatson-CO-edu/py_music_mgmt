@@ -12,7 +12,7 @@ NOTE: This file is the 3.6 replacement for the 2.7 "marchhare.py"
 
 # ~~~ Imports ~~~
 # ~~ Standard ~~
-import os , builtins , operator , time
+import os , builtins , operator , time , pickle
 from math import pi , sqrt
 # ~~ Special ~~
 import numpy as np
@@ -135,7 +135,7 @@ def strip_EXT( fName ):
 def struct_to_pkl( struct , pklPath ): 
     """ Serialize a 'struct' to 'pklPath' """
     f = open( pklPath , 'wb') # open a file for binary writing to receive pickled data
-    cPickle.dump( struct , f ) # changed: pickle.dump --> cPickle.dump
+    pickle.dump( struct , f ) 
     f.close()
 
 def load_pkl_struct( pklPath ): 
@@ -149,7 +149,7 @@ def load_pkl_struct( pklPath ):
         print( "load_pkl_struct: Could not open file,",pklPath,",",err )
     if fileLoaded:
         try:
-            rtnStruct = cPickle.load( f )
+            rtnStruct = pickle.load( f )
         except Exception as err:
             print( "load_pkl_struct: Could not unpickle file,",pklPath,",",err )
         f.close()
@@ -159,7 +159,7 @@ def unpickle_dict( filename ):
     """ Return the dictionary stored in the file , Otherwise return an empty dictionary if there were no items """
     try:
         infile = open( filename , 'rb' )
-        rtnDict = cPickle.load( infile )
+        rtnDict = pickle.load( infile )
         is_container_too_big( rtnDict )
         if len( rtnDict ) > 0:
             return rtnDict
@@ -167,6 +167,28 @@ def unpickle_dict( filename ):
             return {}
     except IOError:
         return {}
+    
+def validate_dirs_writable( *dirList ):
+    """ Return true if every directory argument both exists and is writable, otherwise return false """
+    # NOTE: This function exits on the first failed check and does not provide info for any subsequent element of 'dirList'
+    # NOTE: Assume that a writable directory is readable
+    for directory in dirList:
+        # ensure_dir( directory )
+        if not os.path.isdir( directory ):
+            print( "Directory" , directory , "does not exist!" )
+            return False
+        if not os.access( directory , os.W_OK ): # URL, Check write permission: http://stackoverflow.com/a/2113511/893511
+            print( "System does not have write permission for" , directory , "!" )
+            return False
+    return True # All checks finished OK, return true    
+    
+def ensure_dir( dirName ):
+    """ Create the directory if it does not exist """
+    if not os.path.exists( dirName ):
+        try:
+            os.makedirs( dirName )
+        except Exception as err:
+            print( "ensure_dir: Could not create" , dirName , '\n' , err )
 
 def ensure_dirs_writable( *dirList ):
     """ Return true if every directory argument both exists and is writable, otherwise return false """
