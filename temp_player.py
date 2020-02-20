@@ -1,4 +1,4 @@
-# temp_player.py
+ # temp_player.py
 # A music player for when both your Windows machine and your youtube are tied up
 
 # https://linuxconfig.org/how-to-play-audio-with-vlc-in-python
@@ -25,6 +25,7 @@ if __name__ == '__main__':
     
     # Construct the music directory
     MUSICDIR = first_valid_dir( [
+        os.path.join( "/media/" , getpass.getuser() , "BIG_MUSIC/Music" ) ,
         os.path.join( "/media/" , getpass.getuser() , "MUSIC/Music" ) ,
         os.path.join( "/media/" , getpass.getuser() , "MAINBACKUP/corsair_backup/Music" ) ,
     ] )
