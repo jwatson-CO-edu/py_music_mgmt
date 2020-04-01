@@ -128,6 +128,10 @@ def get_tokenizer_with_char( separator = ',' ,  evalFunc = str ):
         return [ evalFunc( rawToken ) for rawToken in rawStr.split( separator ) ]
     return rtnFunc
 
+def get_EXT( fName ):
+    """ Return the capitalized file extension at the end of a path without the period """
+    return os.path.splitext( fName )[-1][1:].upper()
+
 def strip_EXT( fName ):
     """ Return the filepath before the extension """
     return os.path.splitext( fName )[0]
@@ -519,6 +523,26 @@ def elemw( iterable , i ):
 # ___ END ITERABLE ___________________________________________________________________________________________________________________
 
 
+# === Data Structures ==================================================================================================
+
+def merge_two_dicts( x , y ):
+    """ Merge 2 dictionaries """
+    # URL , Merge dictionaries:  https://stackoverflow.com/a/26853961
+    z = x.copy()   # start with x's keys and values
+    z.update( y )    # modifies z with y's keys and values & returns None
+    return z
+
+def dict_A_add_B_new_only( dctA , dctB ):
+    """ Add the key-value pairs of 'dctB' to 'dctA', in place, for keys that do NOT already exist in 'dctA' """
+    B = dctB.copy()
+    for key , val in B.iteritems():
+        if key not in dctA:
+            dctA[ key ] = val
+    return dctA
+
+# ___ End Data Structs. ________________________________________________________________________________________________
+
+
 # === Timing / Benchmarking ============================================================================================
 
 class HeartRate: # NOTE: This fulfills a purpose similar to the rospy rate
@@ -554,7 +578,44 @@ class Stopwatch( object ):
         return self.stopTime - self.strtTime
 
     def elapsed( self ):
-        return time.time() - self.strtTime    
+        return time.time() - self.strtTime
+    
+class SuccessTally:
+    """ Class to counts success and failure """
+
+    def __init__( self ):
+        """ Init all counts zero """
+        self.nPass = 0
+        self.nFail = 0
+        self.N     = 0
+
+    def PASS( self ):
+        """ Increment passing and total """
+        self.N     += 1
+        self.nPass += 1
+
+    def FAIL( self ):
+        """ Increment failing and total """
+        self.N     += 1
+        self.nFail += 1
+
+    def tally( self , TorF ):
+        """ Increment pass if `TorF`, otherwise increment fail """
+        if TorF:
+            self.PASS()
+        else:
+            self.FAIL()
+
+    def get_stats( self ):
+        """ Return a dict with pass/fail tallies """
+        return {
+            'pass' :     self.nPass , 
+            'fail' :     self.nFail , 
+            'fracPass' : self.nPass * 1.0 / self.N ,
+            'fracFail' : self.nFail * 1.0 / self.N ,
+            'total' :    self.N , 
+            'PFratio' :  self.nPass * 1.0 / self.nFail if self.nFail > 0 else float( 'nan' )
+        }
 
 # ___ End Timing ___________________________________________________________________________________________________________________________
 
@@ -659,6 +720,24 @@ def parse_lines( fPath , parseFunc ):
         rtnExprs.append( parseFunc( line ) )
     # 5. Return expressions that are the results of processing the lines
     return rtnExprs
+
+def ascii( strInput , errChar = '_' ): 
+    """ Return an ASCII representation of the string or object, ignoring elements that do not have an ASCII representation """
+    if type( strInput ) in ( unicode , str ):
+        try:
+            return str( strInput.encode( 'ascii' , 'ignore' ) )
+        except:
+            # The 'ignore' option is somehow not strong enough of a protection sometimes,
+            strOut = str( strInput )
+            rtnStr = ""
+            for char in strOut:
+                if ord( char ) < 127:
+                    rtnStr += char
+                else:
+                    rtnStr += errChar
+            return rtnStr        
+    else:
+        return str( strInput ).encode( 'ascii' , 'ignore' )
 
 # ___ End Parsing ______________________________________________________________________________________________________
 

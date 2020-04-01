@@ -7,9 +7,9 @@ from random import randrange
 from time import sleep
 from warnings import warn
 # ~~ Local ~~
-from marchhare.marchhare import ( Stopwatch , strip_EXT , yesno , unpickle_dict ,
-                                  ensure_dirs_writable , struct_to_pkl , nowTimeStampFine , 
-                                  confirm_or_crash , )
+from marchhare.Utils3 import ( Stopwatch , strip_EXT , yesno , unpickle_dict ,
+                               ensure_dirs_writable , struct_to_pkl , nowTimeStampFine , 
+                               confirm_or_crash , )
 
 # ~~~ Init ~~~
 SOURCEDIR = os.path.dirname( os.path.abspath( '__file__' ) ) # URL, dir containing source file: http://stackoverflow.com/a/7783326
@@ -31,21 +31,21 @@ import youtube_dl
 try:
     from apiclient.discovery import build
     from apiclient.errors import HttpError
-    print "Loaded 'apiclient'! (Google)"
+    print( "Loaded 'apiclient'! (Google)" )
 except:
     try:
         from googleapiclient.discovery import build
         from googleapiclient.errors import HttpError
-        print "Loaded 'googleapiclient'!"
+        print( "Loaded 'googleapiclient'!" )
     except:
         print( "COULD NOT IMPORT API UNDER EITHER ALIAS" )
 import oauth2client  
-print "Loaded 'oauth2client'!"
+print( "Loaded 'oauth2client'!" )
 import pygn
 from pygn.pygn import register , search
-print "Loaded 'pygn'! (GraceNote)"
+print( "Loaded 'pygn'! (GraceNote)" )
 
-from marchhare.marchhare import ( LogMH , parse_lines )
+from marchhare.Utils3 import ( LogMH , parse_lines )
 
 def comma_sep_key_val_from_file( fPath ):
     """ Read a file, treating each line as a key-val pair separated by a comma """
@@ -150,28 +150,28 @@ class Session:
 def load_session( sessionPath ):
     """ Read session file and populate session vars """
     session = Session()
-    sesnDict = comma_sep_key_val_from_file( sessionPath );          print "Loaded session file:" , sessionPath
-    session.RAW_FILE_DIR       = sesnDict['RAW_FILE_DIR'];          print "RAW_FILE_DIR:" , session.RAW_FILE_DIR
-    session.CHOPPED_SONG_DIR   = sesnDict['CHOPPED_SONG_DIR'];      print "CHOPPED_SONG_DIR:" , session.CHOPPED_SONG_DIR
-    session.PICKLE_DIR         = sesnDict['PICKLE_DIR'];            print "PICKLE_DIR:" , session.PICKLE_DIR 
-    session.ACTIVE_PICKLE_PATH = sesnDict['ACTIVE_PICKLE_PATH'];    print "ACTIVE_PICKLE_PATH:" , session.ACTIVE_PICKLE_PATH
-    session.LOG_DIR            = sesnDict['LOG_DIR'];               print "LOG_DIR" , session.LOG_DIR
-    session.ACTIVE_SESSION     = sesnDict['ACTIVE_SESSION'];        print "ACTIVE_SESSION:" , yesno( session.ACTIVE_SESSION )
-    session.ARTIST_PICKLE_PATH = sesnDict['ARTIST_PICKLE_PATH'];    print "ARTIST_PICKLE_PATH:" , session.ARTIST_PICKLE_PATH
+    sesnDict = comma_sep_key_val_from_file( sessionPath );          print( "Loaded session file:" , sessionPath )
+    session.RAW_FILE_DIR       = sesnDict['RAW_FILE_DIR'];          print( "RAW_FILE_DIR:" , session.RAW_FILE_DIR )
+    session.CHOPPED_SONG_DIR   = sesnDict['CHOPPED_SONG_DIR'];      print( "CHOPPED_SONG_DIR:" , session.CHOPPED_SONG_DIR )
+    session.PICKLE_DIR         = sesnDict['PICKLE_DIR'];            print( "PICKLE_DIR:" , session.PICKLE_DIR )
+    session.ACTIVE_PICKLE_PATH = sesnDict['ACTIVE_PICKLE_PATH'];    print( "ACTIVE_PICKLE_PATH:" , session.ACTIVE_PICKLE_PATH )
+    session.LOG_DIR            = sesnDict['LOG_DIR'];               print( "LOG_DIR" , session.LOG_DIR )
+    session.ACTIVE_SESSION     = sesnDict['ACTIVE_SESSION'];        print( "ACTIVE_SESSION:" , yesno( session.ACTIVE_SESSION ) )
+    session.ARTIST_PICKLE_PATH = sesnDict['ARTIST_PICKLE_PATH'];    print( "ARTIST_PICKLE_PATH:" , session.ARTIST_PICKLE_PATH )
     return session
     
 def confirm_session( session ):
     """ Print the session vars, then ask for confirmation """
-    print
-    print "RAW_FILE_DIR:" ,         session.RAW_FILE_DIR
-    print "CHOPPED_SONG_DIR:" ,     session.CHOPPED_SONG_DIR
-    print "PICKLE_DIR:" ,           session.PICKLE_DIR 
-    print "ACTIVE_PICKLE_PATH:" ,   session.ACTIVE_PICKLE_PATH
-    print "LOG_DIR" ,               session.LOG_DIR
-    print "ACTIVE_SESSION:" ,       yesno( session.ACTIVE_SESSION )
-    print "ARTIST_PICKLE_PATH:" ,   session.ARTIST_PICKLE_PATH
+    print()
+    print( "RAW_FILE_DIR:" ,         session.RAW_FILE_DIR )
+    print( "CHOPPED_SONG_DIR:" ,     session.CHOPPED_SONG_DIR )
+    print( "PICKLE_DIR:" ,           session.PICKLE_DIR )
+    print( "ACTIVE_PICKLE_PATH:" ,   session.ACTIVE_PICKLE_PATH )
+    print( "LOG_DIR" ,               session.LOG_DIR )
+    print( "ACTIVE_SESSION:" ,       yesno( session.ACTIVE_SESSION ) )
+    print( "ARTIST_PICKLE_PATH:" ,   session.ARTIST_PICKLE_PATH )
     confirm_or_crash( "Enter Text to Reject Session: " )
-    print
+    print()
     
 
 def open_all_APIs( sssn ):
@@ -190,21 +190,21 @@ def open_all_APIs( sssn ):
         sssn.gnClient = sssn.gnKey[ 'clientID' ] #_ Enter your Client ID here '*******-************************'
         sssn.gnUser   = register( sssn.gnClient ) # Registration should not be done more than once per session      
         
-        print "API Connection SUCCESS!"
+        print( "API Connection SUCCESS!" )
         
     except Exception as ex:
-        print "API Connection FAILURE!" , str( ex )
+        print( "API Connection FAILURE!" , str( ex ) )
 
 def default_session():
     """ Set the session vars to reasonable values """
     session = Session()
-    session.RAW_FILE_DIR       = "output";                             print "RAW_FILE_DIR:" , cRAW_FILE_DIR
-    session.CHOPPED_SONG_DIR   = session.RAW_FILE_DIR + "/chopped";    print "CHOPPED_SONG_DIR:" , session.CHOPPED_SONG_DIR
-    session.PICKLE_DIR         = "input";                              print "PICKLE_DIR:" , session.PICKLE_DIR 
-    session.ACTIVE_PICKLE_PATH = session.PICKLE_DIR + "/session.pkl";  print "ACTIVE_PICKLE_PATH:" , session.ACTIVE_PICKLE_PATH
-    session.LOG_DIR            = "logs";                               print "LOG_DIR" , session.LOG_DIR
-    session.ACTIVE_SESSION     = bool( int( 1 ) );                     print "ACTIVE_SESSION:" , yesno( session.ACTIVE_SESSION )
-    session.ARTIST_PICKLE_PATH = session.PICKLE_DIR + "/artists.pkl";  print "ARTIST_PICKLE_PATH:" , session.ARTIST_PICKLE_PATH
+    session.RAW_FILE_DIR       = "output";                             print( "RAW_FILE_DIR:" , cRAW_FILE_DIR )
+    session.CHOPPED_SONG_DIR   = session.RAW_FILE_DIR + "/chopped";    print( "CHOPPED_SONG_DIR:" , session.CHOPPED_SONG_DIR )
+    session.PICKLE_DIR         = "input";                              print( "PICKLE_DIR:" , session.PICKLE_DIR )
+    session.ACTIVE_PICKLE_PATH = session.PICKLE_DIR + "/session.pkl";  print( "ACTIVE_PICKLE_PATH:" , session.ACTIVE_PICKLE_PATH )
+    session.LOG_DIR            = "logs";                               print( "LOG_DIR" , session.LOG_DIR )
+    session.ACTIVE_SESSION     = bool( int( 1 ) );                     print( "ACTIVE_SESSION:" , yesno( session.ACTIVE_SESSION ) )
+    session.ARTIST_PICKLE_PATH = session.PICKLE_DIR + "/artists.pkl";  print( "ARTIST_PICKLE_PATH:" , session.ARTIST_PICKLE_PATH )
     return session    
     
 def construct_session( session ):
@@ -216,7 +216,7 @@ def save_session( session ):
     """ Write session vars to the session file """
     # 1. If a file exists at this path, erase it
     if os.path.isfile( session.SESSION_PATH ):
-        print "Session" , session.SESSION_PATH , "was overwritten!"
+        print( "Session" , session.SESSION_PATH , "was overwritten!" )
         os.remove( session.SESSION_PATH )
     # 2. Write each line
     f = open( session.SESSION_PATH , "w+" )
@@ -227,7 +227,7 @@ def save_session( session ):
     f.write( 'LOG_DIR'            + ',' + str( session.LOG_DIR )             + '\n' )
     f.write( 'ACTIVE_SESSION'     + ',' + str( session.ACTIVE_SESSION )      + '\n' )
     f.write( 'ARTIST_PICKLE_PATH' + ',' + str( session.ARTIST_PICKLE_PATH )  + '\n' )
-    print "Session saved to" , session.SESSION_PATH
+    print( "Session saved to" , session.SESSION_PATH )
   
 def verify_session_writable( sssn ):
     """ Make sure that we can write to the relevant directories , If DNE then create && check """
@@ -237,7 +237,7 @@ def verify_session_writable( sssn ):
         os.path.join( SOURCEDIR , sssn.PICKLE_DIR )       ,
         os.path.join( SOURCEDIR , sssn.LOG_DIR )          ,
     )
-    print "Session dirs writable:" , yesno( allWrite )
+    print( "Session dirs writable:" , yesno( allWrite ) )
     return allWrite
 
 def set_session_active( active = 1 ):
@@ -268,15 +268,15 @@ def begin_session( inputPath , overridePath = None ):
     # 5. If there was an override file provided, load
     if overridePath:
         sesnDict = comma_sep_key_val_from_file( os.path.expanduser( overridePath ) );     
-        print "Loaded session file:" , overridePath
+        print( "Loaded session file:" , overridePath )
         for key , val in sesnDict.iteritems():
             try:
                 setattr( session , key , val )
-                print "Override: Set" , key , "to" , val
+                print( "Override: Set" , key , "to" , val )
             except:
-                print key , "is not a session variable!"
+                print( key , "is not a session variable!" )
     else:
-        print "There was no override file provided"
+        print( "There was no override file provided" )
     # 4. Construct pickle path
     session.ACTIVE_PICKLE_PATH = construct_pickle_path( session.RAW_FILE_DIR , inputPath )
     # 5. Unpickle session metadata

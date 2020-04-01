@@ -56,7 +56,7 @@ def find_in_path( term , strOut = False ):
     if strOut:
         return rtnStr
     else:
-        print rtnStr
+        print( rtnStr )
 
 def find_in_loaded( term , strOut = False ):
     """ Search for a term in loaded modules and print all the matching entries """
@@ -68,7 +68,7 @@ def find_in_loaded( term , strOut = False ):
     if strOut:
         return rtnStr
     else:
-        print rtnStr
+        print( rtnStr )
 
 def add_container_to_path( fName ): 
     """ Add the directory that contains 'fName' to Python path if it is not already there """

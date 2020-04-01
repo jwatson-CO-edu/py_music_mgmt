@@ -13,8 +13,8 @@ PARENTDIR = os.path.dirname( SOURCEDIR )
 # ~~ Path Utilities ~~
 def prepend_dir_to_path( pathName ): sys.path.insert( 0 , pathName ) # Might need this to fetch a lib in a parent directory
 prepend_dir_to_path( SOURCEDIR )
-from marchhare.marchhare import ( LogMH , parse_lines , ascii , SuccessTally , dict_A_add_B_new_only ,
-                                  ensure_dir , install_constants , get_EXT , nowTimeStampFine )
+from marchhare.Utils3 import ( LogMH , parse_lines , ascii , SuccessTally , dict_A_add_B_new_only ,
+                               ensure_dir , install_constants , get_EXT , nowTimeStampFine )
  
 """
 retrieve_yt.py
@@ -131,7 +131,7 @@ def ensure_raw_dirs( sssn , RAW_FILE_DIR ):
             sssn.LOG.prnt( "ERROR , ensure_raw_dirs: Could not create the directory" , enRawDir )
             created = False
             sssn.METADATA[ enID ][ 'rawDir' ] = None
-            print ex
+            print( ex )
         sssn.METADATA[ enID ][ 'FL_RAWDIR' ] = created
         tally.tally( created )
     sssn.METADATA[ '%PF_RAWDIRS' ] = tally.get_stats()
@@ -148,7 +148,7 @@ def download_videos_as_MP3( sssn , dlTimer , ydl , limitN = None ):
     numIDs = len( IDs )
     # 0.5. For each video ID
     for IDex , ID in enumerate( IDs ):
-        print "\n~~~ Downloading and Converting" , IDex+1 , "of" , numIDs , "at" , nowTimeStampFine() , "~~~\n" 
+        print( "\n~~~ Downloading and Converting" , IDex+1 , "of" , numIDs , "at" , nowTimeStampFine() , "~~~\n"  )
         ready       = True
         enDest      = None
         enCpSuccess = False
@@ -183,7 +183,7 @@ def download_videos_as_MP3( sssn , dlTimer , ydl , limitN = None ):
                 sssn.METADATA[ ID ][ 'FL_DLOK' ] = False
                 sssn.LOG.prnt( "ERROR , download_videos_as_MP3:" , 
                                        "Could not download from " , currURL )
-                print ex
+                print( ex )
                 traceback.print_exc()
                 tally.tally( sssn.METADATA[ ID ][ 'FL_DLOK' ] )
                 continue
@@ -206,7 +206,7 @@ def download_videos_as_MP3( sssn , dlTimer , ydl , limitN = None ):
                         enCpSuccess = False
                         sssn.LOG.prnt( "ERROR , download_videos_as_MP3:" , 
                                        "Could not move file from" , fSaved , "--to->" , enDest )
-                        print ex
+                        print( ex )
                     sssn.METADATA[ ID ][ 'FL_DLOK' ] = enCpSuccess
                     tally.tally( sssn.METADATA[ ID ][ 'FL_DLOK' ] )
                 else:
@@ -252,7 +252,8 @@ def remove_empty_kwargs( **kwargs ):
     """ Remove keyword arguments that are not set """
     good_kwargs = {}
     if kwargs is not None:
-        for key, value in kwargs.iteritems():
+        for key in kwargs.keys():
+            value = kwargs[key]
             if value:
                 good_kwargs[key] = value
     return good_kwargs
@@ -502,7 +503,7 @@ def extract_candidate_artist_and_track( inputStr ):
     if numComp > 2:
         # If there are more than 2 components, then only take the longest 2
         components.sort( lambda x , y : cmp( len(y) , len(x) ) ) # Sort Longest --to-> Shortest
-        print "WARN: There were more than 2 components! ," , components
+        print( "WARN: There were more than 2 components! ," , components )
         return components[:2]
     elif numComp == 2:
         return components
@@ -517,13 +518,13 @@ def obj_to_dict( obj ):
     try:
         if len( obj.__dict__ ) == 0:
             raise KeyError( "Empty Dict" )
-        print "About to return a dictionary with" , len( obj.__dict__ ) , "attributes"
+        print( "About to return a dictionary with" , len( obj.__dict__ ) , "attributes" )
         return obj.__dict__
     # Hard: Fetch and associate attributes
     except:
         objDict = {}
         attrs = dir( obj )
-        print "Found" , len( attrs ) , "attributes in the" , type( obj )
+        print( "Found" , len( attrs ) , "attributes in the" , type( obj ) )
         for attr in attrs:
             objDict[ attr ] = getattr( obj , attr )
         return objDict
@@ -537,7 +538,7 @@ def GN_dictify_response_obj( resultObj ):
             #print "key:" , str( item ) , ", val:" , resultObj[ item ]
             rtnDict[ item ] = resultObj[ item ]
     except TypeError:
-        print "WARN:" , type( resultObj ) , "is not iterable!"
+        print( "WARN:" , type( resultObj ) , "is not iterable!" )
     return rtnDict
 
 def count_nested_values( superDict , val ):
@@ -545,11 +546,11 @@ def count_nested_values( superDict , val ):
     debugPrnt = False
     # 1. Base Case : This is a value of the dictionary
     if type( superDict ) not in ( dict , pygn.pygn.gnmetadata , list ):
-        if debugPrnt: print "Base case with type" , type( superDict )
+        if debugPrnt: print( "Base case with type" , type( superDict ) )
         try:
-            if debugPrnt: print "Got" , superDict , ", Type:" , type( superDict )
+            if debugPrnt: print( "Got" , superDict , ", Type:" , type( superDict ) )
             num = superDict.count( val )
-            if debugPrnt: print "Base: Searching" , superDict , 'for' , val , ", Occurrences:" , num
+            if debugPrnt: print( "Base: Searching" , superDict , 'for' , val , ", Occurrences:" , num )
             return num
         except:
             return 0
@@ -561,20 +562,20 @@ def count_nested_values( superDict , val ):
         return total
     # 3. Recursive Case : This is an inner dictionary or object
     else:
-        if debugPrnt: print "Recursive case with type" , type( superDict )
+        if debugPrnt: print( "Recursive case with type" , type( superDict ) )
         total = 0
         if type( superDict ) == dict:
             for key , dVal in superDict.iteritems():
-                if debugPrnt: print "Reecurring on" , dVal , "..."
+                if debugPrnt: print( "Reecurring on" , dVal , "..." )
                 total += count_nested_values( dVal , val )
         elif type( superDict ) == pygn.pygn.gnmetadata:
             gotDict = GN_dictify_response_obj( superDict )
             #print gotDict
             for key , dVal in gotDict.iteritems():
-                if debugPrnt: print "Reecurring on" , dVal , "..."
+                if debugPrnt: print( "Reecurring on" , dVal , "..." )
                 total += count_nested_values( dVal , val )  
         else:
-            if debugPrnt: print "Found some other type:" , type( superDict )
+            if debugPrnt: print( "Found some other type:" , type( superDict ) )
         return total
     
 """
@@ -590,7 +591,7 @@ def GN_score_result_with_components( resultObj , components ):
     for comp in components:
         currCount = count_nested_values( resultObj , comp )
         total += currCount
-        if debugPrnt: print "Component:" , comp , ", Occurrences:" , currCount
+        if debugPrnt: print( "Component:" , comp , ", Occurrences:" , currCount )
     return total
 
 def GN_examine_response_obj( resultObj ):
@@ -598,9 +599,9 @@ def GN_examine_response_obj( resultObj ):
     # being able to 'pretty_print_dict' seems to imply that we can just iterate over keys in a for loop and access them with 'response[ key ]'
     try:
         for item in resultObj:
-            print "key:" , str( item ) , ", val:" , resultObj[ item ]
+            print( "key:" , str( item ) , ", val:" , resultObj[ item ] )
     except TypeError:
-        print "WARN:" , type( resultObj ) , "is not iterable!"
+        print( "WARN:" , type( resultObj ) , "is not iterable!" )
     
 def GN_most_likely_artist_and_track( GN_client , GN_user , components ):
     """ Given the strings 'op1' and 'op2' , Determine which of the two are the most likely artist and track according to GraceNote """
@@ -625,7 +626,7 @@ def GN_most_likely_artist_and_track( GN_client , GN_user , components ):
     if flagPrint: 
         pretty_print_dict( metadata )
         #GN_examine_response_obj( metadata )
-        print "Score for this result:" , score21
+        print( "Score for this result:" , score21 )
     # 2. Perform search (0,1)   
     # The search function requires a clientID, userID, and at least one of either { artist , album , track } to be specified.
     metadata = search(
@@ -643,7 +644,7 @@ def GN_most_likely_artist_and_track( GN_client , GN_user , components ):
     if flagPrint: 
         pretty_print_dict( metadata )
         #GN_examine_response_obj( metadata )
-        print "Score for this result:" , score12
+        print( "Score for this result:" , score12 )
     return rtnScores
 
 def fetch_metadata_by_yt_video_ID( youtube , METADATA_SPEC , ytVideoID ):
