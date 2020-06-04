@@ -211,7 +211,6 @@ def construct_session( session ):
     """ Ensure that the session makes sense """
     session.CHOPPED_SONG_DIR = session.RAW_FILE_DIR + "/chopped"
     
-    
 def save_session( session ):
     """ Write session vars to the session file """
     # 1. If a file exists at this path, erase it
